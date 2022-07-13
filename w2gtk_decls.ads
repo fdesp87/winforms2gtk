@@ -37,7 +37,8 @@ package W2gtk_Decls is
       One : Integer;
       Two : Integer;
    end record;
-   type Position_Enum is (None, CenterParent);
+   type Window_Position_Enum is (None, CenterParent);
+   type Image_Position_Enum is (Left, Right, Top, Bottom);
 
    type Display_Style is (Unset,
                           Icons_Only,         --  icons
@@ -58,7 +59,8 @@ package W2gtk_Decls is
                         GtkFileChooserDialog,
                         GtkFileFilter,
                         GtkEntryBuffer,
-                        GtkListStore);
+                        GtkListStore,
+                        GtkImage);
    type Window_Properties;
    type Window_Pointer is access all Window_Properties;
    type Widget_Properties;
@@ -76,7 +78,7 @@ package W2gtk_Decls is
             Font_Weight    : String_Access := null;
             Icon           : String_Access := null;
             ToolTip        : String_Access := null;
-            Start_Position : Position_Enum := None;
+            Start_Position : Window_Position_Enum := None;
             Client_Size    : Size_Pair;
             Margins        : Margin_Array  := Null_Margin;
             AutoScaleDim   : Size_Pair;
@@ -90,7 +92,7 @@ package W2gtk_Decls is
             Attached_To    : Widget_Pointer;
          when GtkFileFilter =>
             FilterString   : String_Access := null;
-         when GtkEntryBuffer | GtkListStore =>
+         when GtkEntryBuffer | GtkListStore | GtkImage =>
             Associated_Widget :  Widget_Pointer;
       end case;
    end record;
@@ -118,7 +120,7 @@ package W2gtk_Decls is
       WParent      : Window_Pointer := null; --  will be adjusted later
       Parent_Name  : String_Access  := null;
 
-      GParent      : Widget_Pointer := null; --  parent is a gtkframe
+      GParent      : Widget_Pointer := null; --  parent is gtkframe/gtktoolbar
 
       Windows_Type : String_Access  := null; --  this is the Windows type
 
@@ -132,21 +134,20 @@ package W2gtk_Decls is
 
       Enabled      : Boolean        := True;  --  sensitive
       Visible      : Boolean        := True;
+      Text         : String_Access  := null;
       TextAlign    : String_Access  := null;
       AutoSize     : Triboolean     := Indeterminate;
       Font_Name    : String_Access  := null;
       Font_Size    : String_Access  := null;
       Font_Weight  : String_Access  := null;
       Margins      : Margin_Array   := Null_Margin;
-      Text         : String_Access  := null;
-      DStyle       : Display_Style  := Unset;
+      DStyle       : Display_Style  := Unset; --  labels and buttons
       MaxLength    : Integer        := -1;
+      AutoToolTip  : Boolean        := False;
       ToolTip      : String_Access  := null;
-      ImeMode      : String_Access  := null;
-      WaitOnLoad   : Boolean        := False;
-      SizeMode     : String_Access  := null;
-      BgColor      : String_Access := null;
-      FgColor      : String_Access := null;
+      BgColor      : String_Access  := null;
+      FgColor      : String_Access  := null;
+      UlColor      : String_Access  := null;
       Signal_List  : Signal_Pointer;
 
       case Widget_Type is
@@ -205,9 +206,15 @@ package W2gtk_Decls is
          when GtkLabel =>
             BorderStyle : String_Access  := null;
 
+         when GtkImage =>
+            Image : String_Access := null;
+
          when GtkButton | GtkRadioButton | GtkCheckButton | GtkToggleButton =>
-            Active    : Boolean := True;
-            Underline : Boolean := False;
+            Active      : Boolean             := True;
+            Underline   : Boolean             := False;
+            ImagePath   : String_Access       := null;
+            ImageAlign  : Image_Position_Enum := Left;
+            Win_Image   : Window_Pointer      := null;
 
             case Widget_Type is
                when GtkButton =>
@@ -221,7 +228,11 @@ package W2gtk_Decls is
 
          when Chart =>
             Anchor : String_Access := null; --  temporary
-         when others => null;
+         when None => null;
+         when GtkFrame => null;
+         when GtkMenu => null;
+         when GtkSeparatorToolItem => null;
+         when ToolStripStatusLabel => null;
       end case;
    end record;
 
@@ -232,6 +243,7 @@ package W2gtk_Decls is
    procedure Debug (NLin : Integer; Msg : String);
 
    function Img (X : Integer) return String;
+   function Img (X : Float) return String;
 
    function Find_Widget (Start : Widget_Pointer;
                          WType : Widget_Enum) return Widget_Pointer;
@@ -261,6 +273,10 @@ package W2gtk_Decls is
    --  functions specific to RFile
    function Get_String (F : TIO.File_Type) return String;
    function Convert (WType : String) return Widget_Enum;
+   function Convert (WStyle : String) return Display_Style;
+   function Convert (IAlign : String) return Image_Position_Enum;
+   function To_Color (WColor : String) return String;
+   function Icon_Name (Src : String) return String;
    function Get_Widget_Name (F : TIO.File_Type) return String;
    function Get_Margin_Array (F : TIO.File_Type) return Margin_Array;
    function Get_Boolean (F : TIO.File_Type) return Boolean;

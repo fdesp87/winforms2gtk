@@ -39,6 +39,7 @@ Switches that are accepted by winforms2gtk:
 - -rf windows forms name with no extension
 - -gp path where place the generated files
 - -gf name (with no extension) of the generated files
+- -ip path to icons
 - -glade generate the glade file
 - -dump produce a dump of the windows and widgets
 - -debug produce lots of messages when progressing in the translation
@@ -88,17 +89,17 @@ Also currently the generated GTK widgets are:
 - GtkLabel 
 - GtkEntry
 - GtkComboBox
-- GtkButton 
-- GtkRadioButton 
-- GtkCheckButton
-- GtkToggleButton
+- GtkButton (with possibly image)
+- GtkRadioButton  (with possibly image)
+- GtkCheckButton (with possibly image)
+- GtkToggleButton (with possibly image)
 - GtkImage 
 - GtkSpinButton
 - GtkFrame
 - GtkStatusBar 
 - GtkFileChooserButton
 - GtkToolTip 
-- GtkCalendar,
+- GtkCalendar
 - GtkColorButton
 - GtkToolBar
 - Windows Forms ListBox
@@ -113,12 +114,18 @@ In addition, several Windows Forms elements are accepted however code is not gen
 This is a work in progress. Pending items to convert are:
 
 - Menu
+- NotePad
 - Treeview
 
 And also some of the generated widgets merit an improvement.
 
 It is also the intention to automatically generate the Ada specs as well the body skeleton
 for the GTK Callbacks of these windows and widgets.
+
+Testing
+-------
+Testing is performed by using the elements of an actual Windows application with about 
+70 forms with the listed Windows elements.
 
 Bug reports
 -----------

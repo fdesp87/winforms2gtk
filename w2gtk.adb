@@ -23,6 +23,7 @@ with GNAT.OS_Lib;           use GNAT.OS_Lib;
 procedure W2gtk is
    package TIO renames Ada.Text_IO;
 
+   Icon_Path       : String_Access;
    Resx_Path       : String_Access;
    Resx_File_Name  : String_Access;
    Glade_Path      : String_Access;
@@ -42,6 +43,7 @@ procedure W2gtk is
       TIO.Put_Line ("-rp wpath indicates the windows form path");
       TIO.Put_Line ("-rf wfile indicates the windows file name with"
                     & " no extension");
+      TIO.Put_Line ("-ip ipath path to icons");
       TIO.Put_Line ("-gp gpath indicates the glade path");
       TIO.Put_Line ("-gf gfile indicates the generates glade file name with"
                     & " no extension");
@@ -52,7 +54,8 @@ procedure W2gtk is
    end Print_Help;
 begin
    loop
-      case Getopt ("h -help rp= rf= gp= gf= debug dump glade") is
+      case Getopt ("h -help rp= rf= gp= gf= ip= "
+                   & "debug dump glade") is
          when 'h' | '-' =>
             Print_Help;
          when 'r' =>
@@ -83,6 +86,14 @@ begin
             elsif Full_Switch = "debug" then
                Debug := True;
             end if;
+         when 'i' =>
+            if Full_Switch = "ip" then
+               if Parameter /= "" then
+                  Icon_Path := new String'(Parameter);
+               else
+                  Icon_Path := new String'("");
+               end if;
+            end if;
          when others =>
             exit;
       end case;
@@ -108,7 +119,9 @@ begin
    end if;
 
    Result := Parse_VS_File (Debug, Dump,
-                            Resx_Path.all, Resx_File_Name.all);
+                            Resx_Path.all,
+                            Resx_File_Name.all,
+                            Icon_Path.all);
 
    if Result /= 0 then
       TIO.Put_Line ("Aborting...");
@@ -116,10 +129,12 @@ begin
    end if;
 
    if Result = 0 and then Glade then
-      Result := Generate_Glade_File (Glade_Path.all, Glade_File_Name.all);
+      Result := Generate_Glade_File (Glade_Path.all,
+                                     Glade_File_Name.all);
    end if;
 
    Free (Resx_Path);
+   Free (Icon_Path);
    Free (Resx_File_Name);
    Free (Glade_Path);
    Free (Glade_File_Name);

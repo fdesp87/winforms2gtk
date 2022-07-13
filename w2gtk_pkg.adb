@@ -37,7 +37,12 @@ package body W2gtk_Pkg is
    Test12 : constant String := ".ShowDialog()";
    Test13 : constant String := "System.Windows.Forms."
      & "DataVisualization.Charting";
-
+   Test14 : constant String := "Controls.Add(Me.";
+   Test15 : constant String := "Series.Add(";
+   Test16 : constant String := "ChartAreas.Add(";
+   Test17 : constant String := "Legends.Add(";
+   Text18 : constant String :=
+     "Dim resources As System.ComponentModel.ComponentResourceManager";
    --  specs
    function Adjust_To_Gtk return Integer;
    function Parse_Resource_File (TWin           : Window_Pointer;
@@ -45,7 +50,8 @@ package body W2gtk_Pkg is
                                  Resx_File_Name : String) return Integer;
    function Parse2_Designer_File (TWin           : Window_Pointer;
                                   Resx_Path      : String;
-                                  Resx_File_Name : String) return Integer;
+                                  Resx_File_Name : String;
+                                  Icon_Path      : String) return Integer;
    function Parse1_Designer_File (Resx_Path      : String;
                                   Resx_File_Name : String) return Integer;
    function Parse_VB_File (Resx_Path      : String;
@@ -105,50 +111,71 @@ package body W2gtk_Pkg is
       while TWin /= null loop
          TWdg := TWin.Widget_List;
          while TWdg /= null loop
-            if TWdg.Widget_Type = GtkFileChooserButton then
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               if TWdg.OpenFileFilter /= null
-                 and then TWdg.OpenFileFilter.all /= ""
-               then
-                  NWin1 := new Window_Properties (GtkFileFilter);
-                  NWin1.Name := new String'("filefilter"
+            case TWdg.Widget_Type is
+               when GtkFileChooserButton =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  if TWdg.OpenFileFilter /= null
+                    and then TWdg.OpenFileFilter.all /= ""
+                  then
+                     NWin1 := new Window_Properties (GtkFileFilter);
+                     NWin1.Name := new String'("filefilter"
+                                               & Img (Num_Aux_Widgets));
+                     NWin1.FilterString := TWdg.OpenFileFilter;
+                  end if;
+                  NWin0 := new Window_Properties (GtkFileChooserDialog);
+                  NWin0.Name := new String'("filechooserdialog"
                                             & Img (Num_Aux_Widgets));
-                  NWin1.FilterString := TWdg.OpenFileFilter;
-               end if;
-               NWin0 := new Window_Properties (GtkFileChooserDialog);
-               NWin0.Name := new String'("filechooserdialog"
-                                         & Img (Num_Aux_Widgets));
-               NWin0.Title := TWdg.OpenFileTitle;
-               NWin0.FilterName := NWin1.Name;
-               NWin0.Transient_For := TWin;
-               NWin0.Attached_To   := TWdg;
+                  NWin0.Title := TWdg.OpenFileTitle;
+                  NWin0.FilterName := NWin1.Name;
+                  NWin0.Transient_For := TWin;
+                  NWin0.Attached_To   := TWdg;
 
-               if TWdg.OpenFileDialog = null then
-                  TWdg.OpenFileDialog := NWin0.Name;
-               end if;
-               Insert_Front_Window (NWin0);
-               Debug (NLin, "Generated filechooserdialog " & NWin0.Name.all);
-               Insert_Front_Window (NWin1);
-               Debug (NLin, "Generated filefilter " & NWin1.Name.all);
-            elsif TWdg.Widget_Type = GtkCalendar then
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               NWin1 := new Window_Properties (GtkEntryBuffer);
-               NWin1.Name := new String'("entrybuffer_"
-                                         & Img (Num_Aux_Widgets));
-               NWin1.Associated_Widget := TWdg;
-               TWdg.Text_Buffer := NWin1;
-               Insert_Front_Window (NWin1);
-               Debug (NLin, "Generated entrybuffer " & NWin1.Name.all);
-            elsif TWdg.Widget_Type = GtkListBox then
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               NWin1 := new Window_Properties (GtkListStore);
-               NWin1.Name := new String'("liststore_"
-                                         & Img (Num_Aux_Widgets));
-               NWin1.Associated_Widget := TWdg;
-               TWdg.ListStore := NWin1;
-               Insert_Front_Window (NWin1);
-               Debug (NLin, "Generated liststore " & NWin1.Name.all);
-            end if;
+                  if TWdg.OpenFileDialog = null then
+                     TWdg.OpenFileDialog := NWin0.Name;
+                  end if;
+                  Insert_Front_Window (NWin0);
+                  Debug (NLin, "Generated filechooserdialog for "
+                         & NWin0.Name.all);
+                  Insert_Front_Window (NWin1);
+                  Debug (NLin, "Generated filefilter for "
+                         & NWin1.Name.all);
+
+               when GtkCalendar =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  NWin1 := new Window_Properties (GtkEntryBuffer);
+                  NWin1.Name := new String'("entrybuffer"
+                                            & Img (Num_Aux_Widgets));
+                  NWin1.Associated_Widget := TWdg;
+                  TWdg.Text_Buffer := NWin1;
+                  Insert_Front_Window (NWin1);
+                  Debug (NLin, "Generated entrybuffer for "
+                         & NWin1.Name.all);
+
+               when GtkListBox =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  NWin1 := new Window_Properties (GtkListStore);
+                  NWin1.Name := new String'("liststore"
+                                            & Img (Num_Aux_Widgets));
+                  NWin1.Associated_Widget := TWdg;
+                  TWdg.ListStore := NWin1;
+                  Insert_Front_Window (NWin1);
+                  Debug (NLin, "Generated liststore for "
+                         & NWin1.Name.all);
+
+               when GtkButton | GtkRadioButton
+                  | GtkCheckButton | GtkToggleButton =>
+                  if TWdg.ImagePath /= null then
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     NWin1 := new Window_Properties (GtkImage);
+                     NWin1.Name := new String'("gtkimage"
+                                               & Img (Num_Aux_Widgets));
+                     NWin1.Associated_Widget := TWdg;
+                     TWdg.Win_Image := NWin1;
+                     Insert_Front_Window (NWin1);
+                     Debug (NLin, "Generated gtkimage for " & NWin1.Name.all);
+                  end if;
+               when others => null;
+            end case;
             TWdg := TWdg.Next;
          end loop;
          TWin := TWin.Next;
@@ -175,14 +202,16 @@ package body W2gtk_Pkg is
                      if TWdgP = null then
                         TIO.Put_Line ("Widget " & TWdg.Name.all
                                       & " without parent");
-                        raise TIO.Data_Error;
+                        return -1;
                      end if;
                      if TWdgP.Widget_Type = GtkFrame or else
                        TWdgP.Widget_Type = GtkToolBar
                      then
                         TWdg.GParent := TWdgP;
-                        Debug (NLin, "Reparenting Widget " & TWdg.Name.all
-                               & " to Container " & TWdg.GParent.Name.all);
+                        Debug (NLin, "Reparenting Widget "
+                               & TWdg.Name.all
+                               & " to Container "
+                               & TWdg.GParent.Name.all);
                      end if;
                   end if;
                else
@@ -216,7 +245,11 @@ package body W2gtk_Pkg is
       use GNAT.Calendar.Time_IO;
       package WinIO is new Ada.Text_IO.Enumeration_IO (Enum => Window_Enum);
       package WdgIO is new Ada.Text_IO.Enumeration_IO (Enum => Widget_Enum);
-      package PIO is new Ada.Text_IO.Enumeration_IO (Enum => Position_Enum);
+      package DSIO is new Ada.Text_IO.Enumeration_IO (Enum => Display_Style);
+      package PIO is new Ada.Text_IO.Enumeration_IO
+        (Enum => Window_Position_Enum);
+      package IPIO is new Ada.Text_IO.Enumeration_IO
+        (Enum => Image_Position_Enum);
 
       procedure Dump_Window (TWin  : Window_Pointer; Id : Integer);
       procedure Dump_Widget (TWdgP : Widget_Pointer; Id : Integer);
@@ -260,7 +293,7 @@ package body W2gtk_Pkg is
                end if;
                TIO.New_Line;
                TIO.Put (Sp (Id) & "FGColor   ");
-               if TWin.BgColor /= null and then TWin.BgColor.all /= "" then
+               if TWin.FgColor /= null and then TWin.FgColor.all /= "" then
                   TIO.Put (TWin.FgColor.all);
                end if;
                TIO.New_Line;
@@ -347,7 +380,7 @@ package body W2gtk_Pkg is
                end loop;
 
             when GtkEntryBuffer =>
-               TIO.Put (Sp (Id) & "Assoc. Widget ");
+               TIO.Put (Sp (Id) & "Widget        ");
                if TWin.Associated_Widget /= null and then
                  TWin.Associated_Widget.Name /= null
                then
@@ -362,7 +395,16 @@ package body W2gtk_Pkg is
                                ISO_Date));
 
             when GtkListStore =>
-               TIO.Put (Sp (Id) & "Assoc. Widget ");
+               TIO.Put (Sp (Id) & "Widget        ");
+               if TWin.Associated_Widget /= null and then
+                 TWin.Associated_Widget.Name /= null
+               then
+                  TIO.Put (TWin.Associated_Widget.Name.all);
+               end if;
+               TIO.New_Line;
+
+            when GtkImage =>
+               TIO.Put (Sp (Id) & "Widget        ");
                if TWin.Associated_Widget /= null and then
                  TWin.Associated_Widget.Name /= null
                then
@@ -410,6 +452,10 @@ package body W2gtk_Pkg is
          end if;
          TIO.New_Line;
 
+         TIO.Put (Sp (Id + 2) & "DisplayStyle ");
+         DSIO.Put (TWdgP.DStyle);
+         TIO.New_Line;
+
          TIO.Put (Sp (Id + 2) & "MaxLength    ");
          TIO.Put_Line (Img (TWdgP.MaxLength));
 
@@ -445,6 +491,13 @@ package body W2gtk_Pkg is
          TIO.Put_Line (Sp (Id + 2) & "TabIndex     " & Img (TWdgP.TabIndex));
 
          TIO.Put_Line (Sp (Id + 2) & "Zorder       " & Img (TWdgP.Zorder));
+
+         TIO.Put (Sp (Id + 2) & "AutoToolTip ");
+         if TWdgP.AutoToolTip then
+            TIO.Put_Line ("True");
+         else
+            TIO.Put_Line ("False");
+         end if;
 
          TIO.Put (Sp (Id + 2) & "ToolTip      ");
          if TWdgP.ToolTip /= null then
@@ -596,6 +649,7 @@ package body W2gtk_Pkg is
                TIO.Put ("False");
             end if;
             TIO.New_Line;
+
             TIO.Put (Sp (Id + 2) & "ListStore    ");
             if TWdgP.ListStore /= null and then
               TWdgP.ListStore.Name /= null
@@ -648,7 +702,22 @@ package body W2gtk_Pkg is
             else
                TIO.Put_Line (Sp (Id + 2) & "Underline    False");
             end if;
+            TIO.Put (Sp (Id + 2) & "ImagePath    ");
+            if TWdgP.ImagePath /= null then
+               TIO.Put (TWdgP.ImagePath.all);
+            end if;
+            TIO.New_Line;
+            TIO.Put (Sp (Id + 2) & "ImageAlign   ");
+            IPIO.Put (TWdgP.ImageAlign);
+            TIO.New_Line;
 
+            TIO.Put (Sp (Id + 2) & "Win Image    ");
+            if TWdgP.Win_Image /= null and then
+              TWdgP.Win_Image.Name /= null
+            then
+               TIO.Put (TWdgP.Win_Image.Name.all);
+            end if;
+            TIO.New_Line;
             case TWdgP.Widget_Type is
             when GtkButton =>
                TIO.Put (Sp (Id + 2) & "ColorButton  ");
@@ -701,7 +770,13 @@ package body W2gtk_Pkg is
                TWdgChild := TWdgChild.Next;
             end loop;
 
-         when GtkImage => null;
+         when GtkImage =>
+            TIO.Put (Sp (Id + 2) & "ImagePath    ");
+            if TWdgP.Image /= null then
+               TIO.Put (TWdgP.Image.all);
+            end if;
+            TIO.New_Line;
+
          when GtkMenu => null;
          when GtkSeparatorToolItem => null;
          when ToolStripStatusLabel => null;
@@ -845,6 +920,14 @@ package body W2gtk_Pkg is
          end loop;
          TIO.Close (RFile);
          return 0;
+      exception
+         when Constraint_Error =>
+            TIO.Close (RFile);
+            TIO.Put_Line ("Constraint Error");
+            TIO.Put_Line (Resx_File_Name & ".resx"
+                          & ": Line" & NLin'Image
+                          & " " & Line (1 .. Len));
+            return -1;
       end Parse_Window_Properties;
 
       function Parse_Widget_Properties
@@ -911,40 +994,44 @@ package body W2gtk_Pkg is
                            WT : Widget_Pointer;
                         begin
                            if PName = "" then
-                              TIO.Put_Line ("Line" & NLin'Image &
-                                              ": cannot find widget name");
+                              TIO.Put_Line (Resx_File_Name & ".resx"
+                                            & ": Line" & NLin'Image
+                                            &  ": cannot find widget name");
                               TIO.Close (RFile);
                               return -1;
                            end if;
+
                            if PAttrib = "" then
-                              TIO.Put_Line ("Line" & NLin'Image &
-                                              ": cannot find widget property");
+                              TIO.Put_Line (Resx_File_Name & ".resx"
+                                            & ": Line" & NLin'Image
+                                            &  ": cannot find widget property"
+                                            & " for " & PName);
                               TIO.Close (RFile);
                               return -1;
                            end if;
+
                            WT := Find_Widget (TWin.Widget_List, PName);
                            if WT = null then
-                              TIO.Put_Line ("Widget " & PName
+                              TIO.Put_Line (Resx_File_Name & ".resx"
+                                            & ": Line" & NLin'Image
+                                            & ": widget " & PName
                                             & " not in Designer");
+                              TIO.Close (RFile);
                               return -1;
                            end if;
-                           if PAttrib = "RightToLeft" then
-                              null; --  ignore
-                           elsif PAttrib = "Image" then
-                              null; --  ignore
-                           elsif PAttrib = "ImageTransparentColor" then
-                              null; --  ignore
 
-                           elsif PAttrib = "Anchor" then
+                           if PAttrib = "Anchor" then
                               WT.Anchor := new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".Anchor "
                                      & WT.Anchor.all);
+
                            elsif PAttrib = "ZOrder" then
                               WT.Zorder := Get_Integer (Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".ZOrder "
                                      & Img (WT.Zorder));
+
                            elsif PAttrib = "Margin" then
                               WT.Margins := Get_Margin_Array (RFile);
                               Debug (NLin, "Set Widget Property " & PName
@@ -953,73 +1040,77 @@ package body W2gtk_Pkg is
                                        Img (WT.Margins (2)) & ", " &
                                        Img (WT.Margins (3)) & ", " &
                                        Img (WT.Margins (4)));
+
                            elsif PAttrib = "TabIndex" then
                               WT.TabIndex := Get_Integer (Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".TabIndex "
                                      & Img (WT.TabIndex));
+
                            elsif PAttrib = "Text" then
                               WT.Text := new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".Text "
                                      & WT.Text.all);
+
                            elsif PAttrib = "MaxLength" then
                               WT.MaxLength := Get_Integer (Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".MaxLength "
                                      & Img (WT.MaxLength));
-                           elsif PAttrib = "ToolTip" or else
-                             PAttrib = "ToolTipText"
+                           elsif (PAttrib = "ToolTip" or else
+                                  PAttrib = "ToolTipText")
                            then
                               WT.ToolTip := new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".ToolTip "
                                      & WT.ToolTip.all);
-                           elsif PAttrib = "SizeMode" then
-                              WT.SizeMode := new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".SizeMode "
-                                     & WT.SizeMode.all);
+
+                           elsif PAttrib = "AutoToolTip" then
+                              WT.AutoToolTip := Get_Boolean (RFile);
+
                            elsif PAttrib = "AutoSize" then
                               WT.AutoSize := To_TriBoolean
                                 (Get_Boolean (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".Autosize "
                                      & WT.AutoSize'Image);
+
                            elsif PAttrib = "Enabled" then
                               WT.Enabled := Get_Boolean (RFile);
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".Enabled "
                                      & WT.Enabled'Image);
+
                            elsif PAttrib = "Visible" then
                               WT.Visible := Get_Boolean (RFile);
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".Visible "
                                      & WT.Visible'Image);
-                           elsif PAttrib = "WaitOnLoad" then
-                              WT.WaitOnLoad := Get_Boolean (RFile);
-                              Debug (NLin, "Set Widget Property "
-                                     & PName
-                                     & ".WaitOnLoad " & WT.WaitOnLoad'Image);
+
                            elsif PAttrib = "TextAlign" then
                               WT.TextAlign := new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".TextAlign "
                                      & WT.TextAlign.all);
+
                            elsif PAttrib = "CheckAlign" then
                               WT.CheckAlign := new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".CheckAlign "
                                      & WT.CheckAlign.all);
+
                            elsif PAttrib = "Name" then
                               if PName /= Get_String (RFile) then
                                  TIO.Put_Line ("Line" & NLin'Image & ": " &
                                                  "name mistmatch");
-                                 raise TIO.Data_Error;
+                                 TIO.Close (RFile);
+                                 return -1;
                               end if;
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".Name "
                                      & WT.Name.all);
+
                            elsif PAttrib = "Size" then
                               P0 := Get_Pair (Get_String (RFile));
                               WT.Size.Horiz := P0.One;
@@ -1027,27 +1118,31 @@ package body W2gtk_Pkg is
                               Debug (NLin, "Set Widget Property "
                                      & PName & ".Size H=" &
                                        Img (P0.One) & ", V=" & Img (P0.Two));
+
                            elsif PAttrib = "Location" then
                               P0 := Get_Pair (Get_String (RFile));
                               WT.Location.From_Top := P0.Two;
                               WT.Location.From_Left := P0.One;
                               Debug (NLin, "Set Widget Property "
-                                     & PName &
-                                       ".Location H=" &
-                                       Img (P0.One) & ", V=" & Img (P0.Two));
+                                     & PName
+                                     &  ".Location H="
+                                     & Img (P0.One) & ", V=" & Img (P0.Two));
+
                            elsif PAttrib = "Type" then
                               WT.Windows_Type :=
                                 new String'(Get_Widget_Name (RFile));
                               Debug (NLin, "Set Widget Property "
-                                     & PName & ".Type " &
-                                       WT.Windows_Type.all);
+                                     & PName & ".Type "
+                                     & WT.Windows_Type.all);
+
                            elsif PAttrib = "Parent" then
                               WT.Parent_Name :=
                                 new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
-                                     & PName &
-                                       ".Parent Name " &
-                                       WT.Parent_Name.all);
+                                     & PName
+                                     & ".Parent Name "
+                                     & WT.Parent_Name.all);
+
                            elsif PAttrib = "Font" then
                               Get_Font (RFile, WT.Font_Name,
                                         WT.Font_Size, WT.Font_Weight);
@@ -1055,23 +1150,21 @@ package body W2gtk_Pkg is
                                      & PName & ".Font "
                                      & WT.Font_Name.all
                                      & ", " & WT.Font_Size.all);
+
                            elsif PAttrib = "PasswordChar" then
                               WT.PasswordChar :=
                                 new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName &
                                        ".PasswordChar" & WT.PasswordChar.all);
-                           elsif PAttrib = "ImeMode" then
-                              WT.ImeMode := new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName &
-                                       ".ImeMode " & WT.ImeMode.all);
+
                            elsif PAttrib = "OpenFile" then
                               WT.OpenFileDialog :=
                                 new String'(Get_String (RFile));
                               Debug (NLin, "Set Widget Property "
                                      & PName &
                                        ".OpenFile " & WT.OpenFileDialog.all);
+
                            elsif PAttrib = "TrayLocation" then
                               P0 := Get_Pair (Get_String (RFile));
                               WT.TrayLocation.From_Top  := P0.Two;
@@ -1080,6 +1173,7 @@ package body W2gtk_Pkg is
                                      & PName &
                                        ".TrayLocation H=" &
                                        Img (P0.One) & ", V=" & Img (P0.Two));
+
                            elsif PAttrib = "Filter" then
                               WT.OpenFileFilter :=
                                 new String'(Get_String (RFile));
@@ -1087,6 +1181,7 @@ package body W2gtk_Pkg is
                                      & PName
                                      & ".OpenFileFilter "
                                      & WT.OpenFileFilter.all);
+
                            elsif PAttrib = "Title" then
                               WT.OpenFileTitle :=
                                 new String'(Get_String (RFile));
@@ -1094,13 +1189,30 @@ package body W2gtk_Pkg is
                                      & PName
                                      & ".OpenFileTitle "
                                      & WT.OpenFileTitle.all);
-                           elsif PAttrib (PAttrib'First .. PAttrib'First + 4) =
+
+                           elsif PAttrib = "ImageAlign" then
+                              WT.ImageAlign := Convert (Get_String (RFile));
+                              Debug (NLin, "Set Widget Property "
+                                     & WT.Name.all & ".ImageAlign "
+                                     & WT.ImageAlign'Image);
+
+                           elsif PAttrib'Length > 4 and then
+                             PAttrib (PAttrib'First .. PAttrib'First + 4) =
                              "Items"
                            then
                               Debug (NLin, "Resource: Ignored Widget Property "
                                      & PName & " " & PAttrib);
+
                            elsif PAttrib = "HorizontalScrollbar" or
-                             PAttrib = "ItemHeight"
+                             PAttrib = "ItemHeight" or
+                             PAttrib = "Dock" or
+                             PAttrib = "ImeMode" or
+                             PAttrib = "WaitOnLoad" or
+                             PAttrib = "SizeMode" or
+                             PAttrib = "RightToLeft" or
+                             PAttrib = "Image" or
+                             PAttrib = "TextImageRelation" or
+                             PAttrib = "ImageTransparentColor"
                            then
                               Debug (NLin, "Resource: Ignored Widget Property "
                                      & PName & " " & PAttrib);
@@ -1113,7 +1225,9 @@ package body W2gtk_Pkg is
                               return -1;
                            end if;
                         exception
-                           when others =>
+                           when Constraint_Error =>
+                              TIO.Close (RFile);
+                              TIO.Put_Line ("Constraint Error");
                               TIO.Put_Line (Resx_File_Name & ".resx"
                                             & ": Line:" & NLin'Image
                                             & ": " & Property);
@@ -1125,6 +1239,14 @@ package body W2gtk_Pkg is
             end if;
          end loop;
          return 0;
+      exception
+         when Constraint_Error =>
+            TIO.Close (RFile);
+            TIO.Put_Line ("Constraint Error");
+            TIO.Put_Line (Resx_File_Name & ".resx"
+                          & ": Line" & NLin'Image
+                          & " " & Line (1 .. Len));
+            return -1;
       end Parse_Widget_Properties;
 
    begin
@@ -1134,20 +1256,13 @@ package body W2gtk_Pkg is
       end if;
 
       Result := Parse_Widget_Properties (TWin, Resx_Path, Resx_File_Name);
-
       return Result;
-   exception
-      when Constraint_Error =>
-         TIO.Close (DFile);
-         TIO.Put_Line (Resx_File_Name & ".resx"
-                       & ": Line" & NLin'Image
-                       & " " & Line (1 .. Len));
-         return -1;
    end Parse_Resource_File;
 
    function Parse2_Designer_File (TWin           : Window_Pointer;
                                   Resx_Path      : String;
-                                  Resx_File_Name : String) return Integer is
+                                  Resx_File_Name : String;
+                                  Icon_Path      : String) return Integer is
       use GNAT.Calendar.Time_IO;
 
       Idx0  : Integer;
@@ -1155,6 +1270,7 @@ package body W2gtk_Pkg is
       Idx2  : Integer;
       Idx3  : Integer;
       WT    : Widget_Pointer;
+      Ret   : Integer;
 
       procedure Get_Line;
       procedure Get_Line is
@@ -1186,7 +1302,9 @@ package body W2gtk_Pkg is
             if Child /= null then
                Child.Parent_Name := Parent.Name;
                Debug (NLin, "Set Widget Property "
-                      & WT.Name.all & ".Parent_Name " & Parent.Name.all);
+                      & WT.Name.all
+                      & ".Parent_Name "
+                      & Parent.Name.all);
             else
                raise TIO.Data_Error;
             end if;
@@ -1195,8 +1313,8 @@ package body W2gtk_Pkg is
          end loop;
       end Process_Toolbar_Items;
 
-      procedure Process_Widget;
-      procedure Process_Widget is
+      function Process_Widget return Integer;
+      function Process_Widget return Integer is
          function Get_Date (Idx : Integer) return Ada.Calendar.Time;
          function Get_Date (Idx : Integer) return Ada.Calendar.Time is
             Temp0 : Integer;
@@ -1240,13 +1358,33 @@ package body W2gtk_Pkg is
                end if;
             end if;
             TIO.Put_Line ("Ill-formed date:" & Line (Idx .. Len));
-            raise TIO.Data_Error;
+            raise Constraint_Error;
          end Get_Date;
+
+         procedure Parse_Panel_Member;
+         procedure Parse_Panel_Member is
+            Child : Widget_Pointer;
+         begin
+            Idx2 := Index (Line (Idx0 .. Len), Test14);
+            Idx2 := Idx2 + Test14'Length;
+            Idx3 := Index (Line (Idx2 .. Len), ")") - 1;
+            Child := Find_Widget (TWin.Widget_List, Line (Idx2 .. Idx3));
+            if Child = null then
+               TIO.Put_Line (Img (NLin) & ": "
+                             & Line (Idx0 + 1 .. Len) & ": widget not found");
+               raise Constraint_Error;
+            end if;
+            Child.Parent_Name := new String'(WT.Name.all);
+            Debug (NLin, "Set Widget Property "
+                   & Child.Name.all
+                   & ".Parent_Name "
+                   & WT.Name.all);
+         end Parse_Panel_Member;
 
       begin
          --  enter to read line with widget name
          if TIO.End_Of_File (DFile) then
-            return;
+            return 0;
          end if;
          Get_Line;
          Idx0 := Index (Line (1 .. Len), Test9);
@@ -1255,15 +1393,15 @@ package body W2gtk_Pkg is
          if WT = null then
             if TWin.Name.all = Line (Idx0 .. Len) then
                Len := 0;
-               return;
+               return 0;
             end if;
             TIO.Put_Line (Img (NLin) & ": "
                           & Line (Idx0 + 1 .. Len) & ": widget not found");
-            raise TIO.Data_Error;
+            return -1;
          end if;
          --  skip second test9-line
          if TIO.End_Of_File (DFile) then
-            return;
+            return 0;
          end if;
          Get_Line;
          --  read attributes
@@ -1279,6 +1417,24 @@ package body W2gtk_Pkg is
                if Idx1 not in Idx0 .. Len then
                   if Line (Idx0 .. Idx0 + 13) = "Items.AddRange" then
                      Idx1 := Idx0 + 14;
+                  elsif Contains (Line (Idx0 .. Len), Test14) and then
+                    WT.Widget_Type = GtkFrame
+                  then
+                     Parse_Panel_Member;
+                     Idx1 := -1; --  to skip more parsing
+                  elsif Contains (Line (Idx0 .. Len), Test15) then
+                     Idx1 := -1; --  to skip more parsing
+                  elsif Contains (Line (Idx0 .. Len), Test16) then
+                     Idx1 := -1; --  to skip more parsing
+                  elsif Contains (Line (Idx0 .. Len), Test17) then
+                     Idx1 := -1; --  to skip more parsing
+                  else
+                     TIO.Put_Line (Resx_File_Name
+                                   & ".Designer.vb (2)"
+                                   & ": Line" & NLin'Image
+                                   & ": Designer: cannot parse "
+                                   & Trim (Line (1 .. Len), Ada.Strings.Both));
+                     return -1;
                   end if;
                end if;
                if Idx1 in Idx0 .. Len then
@@ -1292,34 +1448,45 @@ package body W2gtk_Pkg is
                            TIO.Put_Line (Img (NLin)
                                          & ": name mistmatch between "
                                          & "Designer and Resource");
-                           raise TIO.Data_Error;
-                        end if;
-
-                     elsif Attrib = "DisplayStyle" then
-                        if Contains (Line (Idx1 .. Len), "DisplayStyle.Text")
-                        then
-                           WT.DStyle := Text_Only;
+                           raise Constraint_Error;
                         end if;
                         Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".DStyle Text_Only");
+                               & WT.Name.all & ".Name "
+                               & Line (Idx1 + 1 .. Len - 1));
+
+                     elsif Attrib = "DisplayStyle" then
+                        WT.DStyle := Convert (Line (Idx1 .. Len));
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".DStyle "
+                               & Line (Idx1 .. Len));
 
                      elsif Attrib = "TabStop" then
                         if Line (Idx1 .. Len) = "False" then
                            WT.TabStop := False;
                            Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".TabStop True");
+                                  & WT.Name.all & ".TabStop False");
                         elsif Line (Idx1 .. Len) = "True" then
                            WT.TabStop := True;
                            Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".TabStop False");
+                                  & WT.Name.all & ".TabStop True");
                         end if;
 
-                     elsif Attrib = "BackColor" then
-                        WT.BgColor := new String'(Line (Idx1 .. Len));
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".BgColor "
-                               & WT.BgColor.all);
-
+                     elsif Attrib = "AutoToolTip" then
+                        if Line (Idx1 .. Len) = "False" then
+                           WT.AutoToolTip := False;
+                           Debug (NLin, "Set Widget Property "
+                                  & WT.Name.all & ".AutoToolTip False");
+                        elsif Line (Idx1 .. Len) = "True" then
+                           WT.AutoToolTip := True;
+                           Debug (NLin, "Set Widget Property "
+                                  & WT.Name.all & ".AutoToolTip True");
+                           if WT.ToolTip = null then
+                              WT.ToolTip := new String'(WT.Name.all);
+                              Debug (NLin, "Set Widget Property "
+                                     & WT.Name.all & ".ToolTip "
+                                     & WT.Name.all);
+                           end if;
+                        end if;
                      elsif Attrib = "BorderStyle" then
                         if WT.Widget_Type = GtkEntry then
                            Idx2 := Index (Line (Idx1 .. Len),
@@ -1511,6 +1678,40 @@ package body W2gtk_Pkg is
                                & WT.Name.all & ".Start_Date"
                                & Image (WT.MaxDate, ISO_Date));
 
+                     elsif Attrib = "Image" and then
+                       (WT.Widget_Type = GtkButton or
+                          WT.Widget_Type = GtkRadioButton or
+                            WT.Widget_Type = GtkCheckButton or
+                              WT.Widget_Type = GtkToggleButton)
+                     then
+                        WT.ImagePath :=
+                          new String'(Icon_Path & "/"
+                                      & Icon_Name (Line (Idx1 .. Len)));
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".ImagePath "
+                               & WT.ImagePath.all);
+
+                     elsif Attrib = "ImageAlign" and then
+                       (WT.Widget_Type = GtkButton or
+                          WT.Widget_Type = GtkRadioButton or
+                            WT.Widget_Type = GtkCheckButton or
+                              WT.Widget_Type = GtkToggleButton)
+                     then
+                        WT.ImageAlign := Convert (Line (Idx1 .. Len));
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".ImageAlign "
+                               & Line (Idx1 .. Len));
+
+                     elsif Attrib = "Image" and then
+                       WT.Widget_Type = GtkImage
+                     then
+                        WT.Image :=
+                          new String'(Icon_Path & "/"
+                                      & Icon_Name (Line (Idx1 .. Len)));
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".Image "
+                               & WT.Image.all);
+
                      elsif Attrib = "ShowUpDown" and then
                        WT.Widget_Type = GtkCalendar
                      then
@@ -1531,18 +1732,18 @@ package body W2gtk_Pkg is
                            Debug (NLin, "Set Widget Property "
                                   & WT.Name.all & ".MultiSelect True");
 
-                     elsif Attrib = "ForeColor" and then
-                       WT.Widget_Type = GtkEntry
-                     then
-                        null;
-                        Debug (NLin, "Ignored Widget Property "
-                               & WT.Name.all & " " & Attrib);
-                     elsif Attrib = "BackColor" and then
-                       WT.Widget_Type = GtkEntry
-                     then
-                        null;
-                        Debug (NLin, "Designer: Ignored Widget Property "
-                               & WT.Name.all & " " & Attrib);
+                     elsif Attrib = "ForeColor" then
+                        WT.FgColor :=
+                          new String'(To_Color (Line (Idx1 .. Len)));
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & "." & "FgColor "
+                               & WT.FgColor.all);
+                     elsif Attrib = "BackColor" then
+                        WT.BgColor :=
+                          new String'(To_Color (Line (Idx1 .. Len)));
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & "." & "BgColor "
+                               & WT.BgColor.all);
                      elsif Attrib = "Cursor" or
                        Attrib = "Tag" or
                        Attrib = "FormattingEnabled" or
@@ -1561,13 +1762,17 @@ package body W2gtk_Pkg is
                        Attrib = "CheckFileExists" or
                        Attrib = "IsBalloon" or
                        Attrib = "UseEXDialog" or
-                       Attrib = "AutoToolTip" or
+                       Attrib = "Items.AddRange" or
                        Attrib = "Image"
                      then
-                        Debug (NLin, "Designer: Ignored Widget Property "
+                        Debug (NLin, Resx_File_Name
+                               & ".Designer.vb (2)"
+                               & ": Line" & NLin'Image
+                               & ": Designer: Ignored Widget Property: "
                                & WT.Name.all & " " & Attrib);
                      else
-                        TIO.Put_Line (Resx_File_Name & ".Designer.vb"
+                        TIO.Put_Line (Resx_File_Name
+                                      & ".Designer.vb (2)"
                                       & ": Line" & NLin'Image
                                       & ": Designer: unknown attribute: "
                                       & WT.Name.all & "." & Attrib
@@ -1577,6 +1782,7 @@ package body W2gtk_Pkg is
                end if;
             end if;
          end loop;
+         return 0;
       end Process_Widget;
 
    begin
@@ -1586,7 +1792,8 @@ package body W2gtk_Pkg is
 
       NLin := 0;
       Debug (NLin, "");
-      Debug (NLin, "Parsing Designer: Attributes");
+      Debug (NLin, "Parsing  (2) Designer: Attributes");
+      Ret := 0;
       while not TIO.End_Of_File (DFile) loop
          Get_Line;
          Idx0 := Index (Line (1 .. Len), "Me.SuspendLayout()");
@@ -1594,19 +1801,20 @@ package body W2gtk_Pkg is
             exit when TIO.End_Of_File (DFile);
             Get_Line;
             loop
-               Process_Widget;
-               exit when TIO.End_Of_File (DFile);
---               Get_Line;
+               Ret := Process_Widget;
+               exit when Ret < 0;
                exit when Len <= 0;
+               exit when TIO.End_Of_File (DFile);
             end loop;
          end if;
       end loop;
       TIO.Close (DFile);
-      return 0;
+      return Ret;
    exception
       when Constraint_Error =>
          TIO.Close (DFile);
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb"
+         TIO.Put_Line ("Constraint Error");
+         TIO.Put_Line (Resx_File_Name & ".Designer.vb (2)"
                        & ": Line" & NLin'Image
                        & " " & Line (1 .. Len));
          return -1;
@@ -1632,7 +1840,7 @@ package body W2gtk_Pkg is
       TIO.Get_Line (DFile, Line, Len);
       NLin := NLin + 1;
 
-      Debug (NLin, "Parsing Designer: Window");
+      Debug (NLin, "Parsing (1) Designer: Window");
       while not TIO.End_Of_File (DFile) loop
          TIO.Get_Line (DFile, Line, Len);
          if Line (Len) = ASCII.CR then
@@ -1643,9 +1851,9 @@ package body W2gtk_Pkg is
          if Idx0 in 1 .. Len then
             TWin := new Window_Properties (GtkWindow);
             if Idx0 + 14 >= Len then
-               TIO.Put_Line (Resx_File_Name & ".Designer.vb"
-                             & ": Could not find Window Name in Designer");
                TIO.Close (DFile);
+               TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
+                             & ": Could not find Window Name in Designer");
                return -1;
             end if;
             TWin.Name := new String'(Line (Idx0 + 14 .. Len));
@@ -1659,6 +1867,29 @@ package body W2gtk_Pkg is
       Found := False;
       while not TIO.End_Of_File (DFile) loop
          TIO.Get_Line (DFile, Line, Len);
+         if Line (Len) = ASCII.CR then
+            Len := Len - 1;
+         end if;
+         NLin := NLin + 1;
+         Idx0 := Index (Line (1 .. Len), Text18);
+         if Idx0 in 1 .. Len then
+            Found := True;
+            exit;
+         end if;
+      end loop;
+      if not Found then
+         TIO.Close (DFile);
+         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
+                       & ": Me.components not found");
+         return -1;
+      end if;
+
+      Found := False;
+      while not TIO.End_Of_File (DFile) loop
+         TIO.Get_Line (DFile, Line, Len);
+         if Line (Len) = ASCII.CR then
+            Len := Len - 1;
+         end if;
          NLin := NLin + 1;
          Idx0 := Index (Line (1 .. Len), "Me.");
          if Idx0 in 1 .. Len then
@@ -1666,16 +1897,15 @@ package body W2gtk_Pkg is
             exit;
          end if;
       end loop;
-
       if not Found then
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb"
-                       & ": Me.components not found in Designer file");
          TIO.Close (DFile);
+         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
+                       & ": Me.<widget> not found");
          return -1;
       end if;
 
       Debug (NLin, "");
-      Debug (NLin, "Parsing Designer: widgets");
+      Debug (NLin, "Parsing Designer (1): widgets");
       loop
          Idx0 := Index (Line (1 .. Len), "Me.");
          if Idx0 not in 1 .. Len then
@@ -1692,38 +1922,44 @@ package body W2gtk_Pkg is
             else
                Idx1 := Index (Line (Idx0 .. Len), " = New " & Test7);
                if Idx1 in Idx0 .. Len then
-                  Idx2 := Idx1 + Test8'Length;
+                  Idx2 := Idx1 + Test7'Length;
                else
                   exit;
                end if;
             end if;
          end if;
-         Idx3 := Len - 3;
+         Idx3 := Len - 2; --  don't count final ()
          WT := Find_Widget (TWin.Widget_List, Line (Idx2 .. Idx3));
          if WT /= null then
-            TIO.Put_Line (Resx_File_Name & ".Designer.vb: "
+            TIO.Close (DFile);
+            TIO.Put_Line (Resx_File_Name & ".Designer.vb (1): "
                           & " Line" & NLin'Image
                           & ": Repeated Widget " & Line (Idx2 .. Idx3));
-            TIO.Close (DFile);
             return -1;
          end if;
          WT := new Widget_Properties (Widget_Type =>
                                         Convert (Line (Idx2 .. Idx3)));
          if WT.Widget_Type = None then
-            TIO.Put_Line (Resx_File_Name & ".Designer.vb: "
+            TIO.Close (DFile);
+            TIO.Put_Line (Resx_File_Name & ".Designer.vb (1): "
                           & " Line" & NLin'Image
                           & ": unknown Widget " & Line (Idx2 .. Idx3));
-            TIO.Close (DFile);
+            TIO.Put_Line (Line (1 .. Len));
             return -1;
          end if;
+
          WT.Name := new String'(Line (Idx0 .. Idx1 - 1));
          Insert_Widget (TWin, WT);
          Debug (NLin, "Created "
                 & WT.Widget_Type'Image & " "
                 & WT.Name.all & " from "
                 & Line (Idx1 + 7 .. Idx3));
+
          exit when TIO.End_Of_File (DFile);
          TIO.Get_Line (DFile, Line, Len);
+         if Line (Len) = ASCII.CR then
+            Len := Len - 1;
+         end if;
          NLin := NLin + 1;
       end loop;
 
@@ -1732,7 +1968,8 @@ package body W2gtk_Pkg is
    exception
       when Constraint_Error =>
          TIO.Close (DFile);
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb"
+         TIO.Put_Line ("Constraint Error");
+         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
                        & ": Line" & NLin'Image
                        & " " & Line (1 .. Len));
          return -1;
@@ -1941,6 +2178,7 @@ package body W2gtk_Pkg is
                   Ret := Parse_Handler (Trim (Line (1 .. Len),
                                         Ada.Strings.Both));
                   if Ret < 0 then
+                     TIO.Close (VFile);
                      return Ret;
                   end if;
                   More := (Ret = 1);
@@ -1965,8 +2203,9 @@ package body W2gtk_Pkg is
                               TIO.Put_Line ("Warning: "
                                             & Resx_File_Name & ".vb"
                                             & ": Line" & NLin'Image
-                                            & ": cannot find widget in "
-                                            & "ShowDialog()");
+                                            & ": cannot find widget "
+                                            & WName & "." & "ShowDialog()."
+                                            & " Could be an external widget.");
                            else
                               if WTCD.Widget_Type = GtkColorButton then
                                  WT.Associated_ColorButton := WTCD;
@@ -1989,6 +2228,7 @@ package body W2gtk_Pkg is
                            end if;
                         exception
                            when others =>
+                              TIO.Close (VFile);
                               TIO.Put_Line (Resx_File_Name & ".vb"
                                             & ": Line" & NLin'Image
                                             & ": error finding widget in "
@@ -2012,7 +2252,8 @@ package body W2gtk_Pkg is
    function Parse_VS_File (Use_Debug      : Boolean;
                            Do_Dump        : Boolean;
                            Resx_Path      : String;
-                           Resx_File_Name : String) return Integer is
+                           Resx_File_Name : String;
+                           Icon_Path      : String) return Integer is
       Result : Integer;
       --  TWin   : Window_Pointer;
    begin
@@ -2028,7 +2269,9 @@ package body W2gtk_Pkg is
          return Result;
       end if;
 
-      Result := Parse2_Designer_File (Win_List, Resx_Path, Resx_File_Name);
+      Result := Parse2_Designer_File (Win_List,
+                                      Resx_Path, Resx_File_Name,
+                                      Icon_Path);
       if Result /= 0 then
          return Result;
       end if;
@@ -2075,6 +2318,8 @@ package body W2gtk_Pkg is
                Emit_GtkFileChooserDialog (TWin, 2);
             when GtkListStore =>
                Emit_GtkListStore (TWin, 2);
+            when GtkImage =>
+               Emit_GtkImage (TWin, 2);
          end case;
          TWin := TWin.Next;
       end loop;

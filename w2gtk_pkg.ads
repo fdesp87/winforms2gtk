@@ -19,7 +19,8 @@ package W2gtk_Pkg is
    function Parse_VS_File (Use_Debug      : Boolean;
                            Do_Dump        : Boolean;
                            Resx_Path      : String;
-                           Resx_File_Name : String) return Integer;
+                           Resx_File_Name : String;
+                           Icon_Path      : String) return Integer;
 
    function Generate_Glade_File (Glade_Path      : String;
                                  Glade_File_Name : String) return Integer;

@@ -62,6 +62,16 @@ package body W2gtk_Decls is
       end if;
    end Img;
 
+   function Img (X : Float) return String is
+      Z : constant String := X'Image;
+   begin
+      if X >= 0.0 then
+         return Z (Z'First + 1 .. Z'Last);
+      else
+         return Z;
+      end if;
+   end Img;
+
    -------------
    -- Convert --
    -------------
@@ -89,7 +99,7 @@ package body W2gtk_Decls is
       elsif Contains (WType, "ToggleButton") then
          return GtkToggleButton;
       elsif Contains (WType, "ToolStripButton") then
-         return GtkToggleButton;
+         return GtkButton;
       elsif Contains (WType, "ColorDialog") then
          return GtkColorButton;
       elsif Contains (WType, "Button") then --  must be after other buttons
@@ -119,11 +129,93 @@ package body W2gtk_Decls is
       elsif Contains (WType, "Chart") then
          return Chart;
       else
-         TIO.Put_Line (Img (NLin) & ": Unknown Windows widget:");
-         TIO.Put_Line ("   " & WType);
          return None;
       end if;
    end Convert;
+
+   -------------
+   -- Convert --
+   -------------
+
+   function Convert (WStyle : String) return Display_Style is
+   begin
+      if Contains (WStyle, "DisplayStyle.Text") then
+         return Text_Only;
+      elsif Contains (WStyle, "DisplayStyle.Image") then
+         return Icons_Only;
+      elsif Contains (WStyle, "DisplayStyle.ImageAndText") then
+         return Text_Below_Icons;
+      else
+         return Unset;
+      end if;
+   end Convert;
+
+   -------------
+   -- Convert --
+   -------------
+
+   function Convert (IAlign : String) return Image_Position_Enum is
+   begin
+      if Contains (IAlign, "BottomCenter") then
+         return Bottom;
+      elsif Contains (IAlign, "BottomLeft") then
+         return Left;
+      elsif Contains (IAlign, "BottomRight") then
+         return Right;
+      elsif Contains (IAlign, "MiddleCenter") then
+         return Top;
+      elsif Contains (IAlign, "MiddleLeft") then
+         return Left;
+      elsif Contains (IAlign, "MiddleRight") then
+         return Right;
+      elsif Contains (IAlign, "TopCenter") then
+         return Top;
+      elsif Contains (IAlign, "TopLeft") then
+         return Left;
+      elsif Contains (IAlign, "TopRight") then
+         return Right;
+      else
+         return Top;
+      end if;
+   end Convert;
+
+   --------------
+   -- To_Color --
+   --------------
+
+   function To_Color (WColor : String) return String is
+      Idx0 : Integer;
+   begin
+      Idx0 := Index (Source  => WColor,
+                     Pattern => ".",
+                     Going   => Ada.Strings.Backward);
+      if Idx0 in WColor'Range then
+         if WColor (Idx0 + 1 .. WColor'Last) = "Control" then
+            return "white";
+         else
+            return WColor (Idx0 + 1 .. WColor'Last);
+         end if;
+      else
+         return "black";
+      end if;
+   end To_Color;
+
+   ---------------
+   -- Icon_Name --
+   ---------------
+
+   function Icon_Name (Src : String) return String is
+      Idx0 : Integer;
+   begin
+      Idx0 := Index (Source  => Src,
+                     Pattern => ".",
+                     Going   => Ada.Strings.Backward);
+      if Idx0 in Src'Range then
+         return Src (Idx0 + 1 .. Src'Last) & ".png";
+      else
+         return "";
+      end if;
+   end Icon_Name;
 
    -----------------
    -- Find_Widget --
