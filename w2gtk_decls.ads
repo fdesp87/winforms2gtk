@@ -23,7 +23,10 @@ package W2gtk_Decls is
    package TIO renames Ada.Text_IO;
    package AC  renames Ada.Calendar;
 
-   --  imported from windows forms
+   type DialogResult_Enum is (None, OK, Cancel, Aborted, Retry, Ignore,
+                              Yes, No, TryAgain, Continue);
+
+
    type Margin_Array is array (Integer range 1 .. 4) of Integer;
    Null_Margin : constant Margin_Array := (others => -1);
 
@@ -653,8 +656,8 @@ package W2gtk_Decls is
                        Font_Weight : in out String_Access);
    function Num_Children (TWdg : Widget_Pointer) return Integer;
    function Normalize_Name (TWdg : Widget_Pointer) return String;
-   function To_Gtk (T : Window_Enum) return String;
-   function To_Gtk (T : Widget_Enum) return String;
+   function To_Gtk (T : Window_Pointer) return String;
+   function To_Gtk (T : Widget_Pointer) return String;
 
    RFile : TIO.File_Type; --  resource     (in)
    DFile : TIO.File_Type; --  designer     (in)

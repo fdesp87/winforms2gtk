@@ -96,7 +96,9 @@ package body W2gtk_Emit is
                                 Id   : Integer;
                                 Pos  : Integer);
    procedure Emit_GtkFileChooserButton (TWdg : Widget_Pointer; Id : Integer);
-   procedure Emit_Fixed_GtkWindow (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_GtkDialog_Body (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_Main_GtkWindow_Body (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_GtkDialog (TWin : Window_Pointer; Id : Integer);
    procedure Emit_Main_GtkWindow (TWin : Window_Pointer; Id : Integer);
 
    -----------------
@@ -2716,11 +2718,11 @@ package body W2gtk_Emit is
          raise;
    end Emit_GtkFileFilter;
 
-   --------------------------
-   -- Emit_Fixed_GtkWindow --
-   --------------------------
+   --------------------
+   -- Emit_GtkDialog --
+   --------------------
 
-   procedure Emit_Fixed_GtkWindow (TWin : Window_Pointer; Id : Integer) is
+   procedure Emit_GtkDialog_Body (TWin : Window_Pointer; Id : Integer) is
       TWdg : Widget_Pointer;
    begin
       Emit_Line (Sp (Id) & "<child>");
@@ -2829,6 +2831,7 @@ package body W2gtk_Emit is
          TWdg := TWdg.Next;
       end loop;
       Emit_Line (Sp (Id + 2) & "</object>");
+      Emit_Packing (Id + 2, 0, True, 0, True);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
@@ -2839,13 +2842,60 @@ package body W2gtk_Emit is
          end if;
          TIO.Put_Line ("Emit Widget_GtkWindow: " & TWdg.Name.all);
          raise;
-   end Emit_Fixed_GtkWindow;
+   end Emit_GtkDialog_Body;
+
+   procedure Emit_GtkDialog (TWin : Window_Pointer; Id : Integer) is
+   begin
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Line (Sp (Id) & "<object class=""GtkDialog"""
+                    & " id=""" & TWin.Name.all & """>");
+      else
+         Emit_Line (Sp (Id) & "<object class=""GtkDialog"">");
+      end if;
+      Emit_Property (Id + 2, "can-focus", False);
+      if TWin.Title /= null and then TWin.Title.all /= "" then
+         Emit_Line (Sp (Id + 2) & "<property name=""title"""
+                    & " translatable=""yes"">"
+                    & TWin.Title.all & "</property>");
+      elsif TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Line (Sp (Id + 2) & "<property name=""title"""
+                    & " translatable=""yes"">"
+                    & TWin.Name.all & "</property>");
+      end if;
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Name (TWin, Id + 2);
+      end if;
+      Emit_Property (Id + 2, "resizable", TWin.Resizable); --  false
+      Emit_Property (Id + 2, "modal", TWin.Modal);         --  true
+      if TWin.Client_Size.Horiz /= -1 then
+         Emit_Property (Id + 2, "default-width", TWin.Client_Size.Horiz);
+      end if;
+      if TWin.Client_Size.Vert /= -1 then
+         Emit_Property (Id + 2, "default-height", TWin.Client_Size.Vert);
+      end if;
+      if not (TWin.Resizable and then not TWin.Modal) then
+         Emit_Property (Id + 2, "window-position", "center-on-parent");
+         Emit_Property (Id + 2, "type-hint", "dialog");
+         Emit_Property (Id + 2, "gravity", "center");
+      end if;
+      Emit_GtkSignal (TWin, Id + 2);
+
+      Emit_Line (Sp (Id + 2) & "<child internal-child=""vbox"">");
+      Emit_Line (Sp (Id + 4) & "<object class=""GtkBox"">");
+      Emit_Property (Id + 4, "can-focus", False);
+      Emit_Property (Id + 4, "orientation", "vertical");
+      Emit_GtkDialog_Body (TWin, Id + 4);
+      Emit_Line (Sp (Id + 4) & "</object>");
+      Emit_Line (Sp (Id + 2) & "</child>");
+
+      Emit_Line (Sp (Id) & "</object>");
+   end Emit_GtkDialog;
 
    -------------------------
    -- Emit_Main_GtkWindow --
    -------------------------
 
-   procedure Emit_Main_GtkWindow (TWin : Window_Pointer; Id : Integer) is
+   procedure Emit_Main_GtkWindow_Body (TWin : Window_Pointer; Id : Integer) is
       TWdg : Widget_Pointer;
    begin
       TWdg := TWin.Widget_List;
@@ -2941,13 +2991,9 @@ package body W2gtk_Emit is
          end case;
          TWdg := TWdg.Next;
       end loop;
-   end Emit_Main_GtkWindow;
+   end Emit_Main_GtkWindow_Body;
 
-   --------------------
-   -- Emit_GtkWindow --
-   --------------------
-
-   procedure Emit_GtkWindow (TWin : Window_Pointer; Id : Integer) is
+   procedure Emit_Main_GtkWindow (TWin : Window_Pointer; Id : Integer) is
    begin
       if TWin.Name /= null and then TWin.Name.all /= "" then
          Emit_Line (Sp (Id) & "<object class=""GtkWindow"""
@@ -2973,8 +3019,8 @@ package body W2gtk_Emit is
       if TWin.Name /= null and then TWin.Name.all /= "" then
          Emit_Name (TWin, Id + 2);
       end if;
-      Emit_Property (Id + 2, "resizable", TWin.Resizable);
-      Emit_Property (Id + 2, "modal", TWin.Modal);
+      Emit_Property (Id + 2, "resizable", TWin.Resizable); --  true
+      Emit_Property (Id + 2, "modal", TWin.Modal);         --  false
       if TWin.Client_Size.Horiz /= -1 then
          Emit_Property (Id + 2, "default-width", TWin.Client_Size.Horiz);
       end if;
@@ -2988,12 +3034,20 @@ package body W2gtk_Emit is
       end if;
       Emit_GtkSignal (TWin, Id + 2);
 
+      Emit_Main_GtkWindow_Body (TWin, Id + 2);
+      Emit_Line (Sp (Id) & "</object>");
+   end Emit_Main_GtkWindow;
+
+   --------------------
+   -- Emit_GtkWindow --
+   --------------------
+   procedure Emit_GtkWindow (TWin : Window_Pointer; Id : Integer) is
+   begin
       if TWin.Resizable and then not TWin.Modal then
          Emit_Main_GtkWindow (TWin, Id + 2);
       else
-         Emit_Fixed_GtkWindow (TWin, Id + 2);
+         Emit_GtkDialog (TWin, Id + 2);
       end if;
-      Emit_Line (Sp (Id) & "</object>");
    end Emit_GtkWindow;
 
 end W2gtk_Emit;

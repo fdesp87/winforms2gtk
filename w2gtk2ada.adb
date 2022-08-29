@@ -478,7 +478,7 @@ package body W2Gtk2Ada is
          when PageSetupDialog => null;
          when others =>
             TIO.Put_Line (Sp (6) & "OC." & Capitalize (TWdg.Name.all) & " :=");
-            TIO.Put_Line (Sp (8) & To_Gtk (TWdg.Widget_Type)
+            TIO.Put_Line (Sp (8) & To_Gtk (TWdg)
                           & " (Builder.Get_Object (");
             TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all) & "));");
       end case;
@@ -488,14 +488,18 @@ package body W2Gtk2Ada is
    procedure Emit_Object (TWdg : Widget_Pointer) is
    begin
       TIO.Put_Line (Sp (6) & Capitalize (TWdg.Name.all) & " : "
-                    & To_Gtk (TWdg.Widget_Type) & ";");
+                    & To_Gtk (TWdg) & ";");
    end Emit_Object;
 
    procedure Emit_Object_Collection (Filename : String);
    procedure Emit_Object_Collection (Filename : String) is
       Temp_Win : Window_Pointer := Win_List;
    begin
-      TIO.Put_Line ("with Gtk.Window; use Gtk.Window;");
+      if Main_Window then
+         TIO.Put_Line ("with Gtk.Window; use Gtk.Window;");
+      else
+         TIO.Put_Line ("with Gtk.Dialog; use Gtk.Dialog;");
+      end if;
       if Have.ListStores > 0 then
          TIO.Put_Line ("with Gtk.List_Store; use Gtk.List_Store;");
       end if;
@@ -560,8 +564,6 @@ package body W2Gtk2Ada is
       if Have.Boxes > 0 then
          TIO.Put_Line ("with Gtk.Box; use Gtk.Box;");
       end if;
-      --  TIO.Put_Line ("with Gtk.; use Gtk.;");
-      --  TIO.Put_Line ("with Gtk.; use Gtk.;");
       TIO.Put_Line ("with Glib;");
       TIO.Put_Line ("with Glib.Object; use Glib.Object;");
       TIO.New_Line;
@@ -570,7 +572,7 @@ package body W2Gtk2Ada is
                     & "Glib.Object.GObject_Record with record");
       while Temp_Win /= null loop
          TIO.Put_Line (Sp (6) & Capitalize (Temp_Win.Name.all) & " : "
-                       & To_Gtk (Temp_Win.Window_Type) & ";");
+                       & To_Gtk (Temp_Win) & ";");
          Temp_Win := Temp_Win.Next;
       end loop;
       For_Each_Widget (Win_List, Emit_Object'Access);
@@ -609,7 +611,7 @@ package body W2Gtk2Ada is
          while Temp_Win /= null loop
             TIO.Put_Line (Sp (6) & "OC."
                           & Capitalize (Temp_Win.Name.all) & " :=");
-            TIO.Put_Line (Sp (8) & To_Gtk (Temp_Win.Window_Type)
+            TIO.Put_Line (Sp (8) & To_Gtk (Temp_Win)
                           & " (Builder.Get_Object (");
             TIO.Put_Line (Sp (8) & Quoted (Temp_Win.Name.all) & "));");
             Temp_Win := Temp_Win.Next;

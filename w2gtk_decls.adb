@@ -1259,10 +1259,15 @@ package body W2gtk_Decls is
    --  To_Gtk  --
    --------------
 
-   function To_Gtk (T : Window_Enum) return String is
+   function To_Gtk (T : Window_Pointer) return String is
    begin
-      case T is
-         when GtkWindow => return "Gtk_Window";
+      case T.Window_Type is
+         when GtkWindow =>
+            if T.Resizable and then not T.Modal then
+               return "Gtk_Window";
+            else
+               return "Gtk_Dialog";
+            end if;
          when GtkFileChooserDialog => return "Gtk_File_Chooser_Dialog";
          when GtkFileFilter => return "Gtk_File_Filter";
          when GtkEntryBuffer => return "Gtk_Entry_Buffer";
@@ -1272,9 +1277,9 @@ package body W2gtk_Decls is
       end case;
    end To_Gtk;
 
-   function To_Gtk (T : Widget_Enum) return String is
+   function To_Gtk (T : Widget_Pointer) return String is
    begin
-      case T is
+      case T.Widget_Type is
          when GtkLabel => return "Gtk_Label";
          when GtkNoteBook => return "Gtk_Notebook";
          when GtkTabChild => return "Gtk_Box";
