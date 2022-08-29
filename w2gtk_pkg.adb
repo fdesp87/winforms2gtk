@@ -15,34 +15,59 @@
 -- If not, see <http://www.gnu.org/licenses/>.                             --
 ------------------------------------------------------------------------------
 with Ada.Text_IO;
+with Ada.Integer_Text_IO;
 with Ada.Calendar;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
 with GNAT.Strings;            use GNAT.Strings;
 with GNAT.Calendar.Time_IO;
 with GNATCOLL.Tribooleans;    use GNATCOLL.Tribooleans;
+with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with W2gtk_Decls;             use W2gtk_Decls;
 with W2gtk_Emit;              use W2gtk_Emit;
+with Symbol_Tables;           use Symbol_Tables;
 
 package body W2gtk_Pkg is
    package TIO renames Ada.Text_IO;
+   package WinIO is new Ada.Text_IO.Enumeration_IO (Window_Enum);
+   package WdgIO is new Ada.Text_IO.Enumeration_IO (Widget_Enum);
+   package DSIO is new Ada.Text_IO.Enumeration_IO (Display_Style_Enum);
+   package FDIO is new Ada.Text_IO.Enumeration_IO (FlowDirection_Enum);
+   package PIO is new Ada.Text_IO.Enumeration_IO (Window_Position_Enum);
+   package IPIO is new Ada.Text_IO.Enumeration_IO (Image_Position_Enum);
+   package TAIO is new Ada.Text_IO.Enumeration_IO (TextAlign_Enum);
+   package CHHSMIO is new Ada.Text_IO.Enumeration_IO
+     (ColumnHeadersHeightSizeMode_Enum);
+   package RHWSMIO is new Ada.Text_IO.Enumeration_IO
+     (RowHeadersWidthSizeMode_Enum);
+   package RHBSIO is new Ada.Text_IO.Enumeration_IO
+     (RowHeadersBorderStyle_Enum);
+   package BSIO is new Ada.Text_IO.Enumeration_IO (BorderStyle_Enum);
+   package SMIO is new Ada.Text_IO.Enumeration_IO (SortMode_Enum);
+   package ASMIO is new Ada.Text_IO.Enumeration_IO (AutoSizeMode_Enum);
+   package ASCMIO is new Ada.Text_IO.Enumeration_IO (AutoSizeColumnMode_Enum);
+   package SBIO is new Ada.Text_IO.Enumeration_IO (ScrollBars_Enum);
 
    Test2  : constant String := "<data name=""$this.";
    Test5  : constant String := "<data name=""";
    Test1  : constant String := "<metadata name=""";
-   Test7  : constant String := "System.Windows.Forms.";
-   Test8  : constant String := "System.Drawing.Printing.";
    Test9  : constant String := (1 .. 8 => ' ') & "'";
    Test10 : constant String := "New Decimal(New Integer() {";
    Test11 : constant String := "Handles";
    Test12 : constant String := ".ShowDialog()";
-   Test13 : constant String := "System.Windows.Forms."
-     & "DataVisualization.Charting";
+   Test13 : constant String := "Private Sub InitializeComponent()";
+   Test8  : constant String := "Partial Class ";
+   Test7  : constant String := "Me.components = New System.ComponentModel";
+   Test18 : constant String := "Dim resources As System.ComponentModel";
+   Test19 : constant String := "Dim DataGridViewCellStyle";
+   Test20 : constant String := "DataGridViewCellStyle";
+
+   Test3  : constant String := "Items.AddRange";
+   Test4  : constant String := "DropDownItems.AddRange";
+   Test6  : constant String := "Columns.AddRange";
    Test14 : constant String := "Controls.Add(Me.";
    Test15 : constant String := "Series.Add(";
    Test16 : constant String := "ChartAreas.Add(";
    Test17 : constant String := "Legends.Add(";
-   Text18 : constant String :=
-     "Dim resources As System.ComponentModel.ComponentResourceManager";
    --  specs
    function Adjust_To_Gtk return Integer;
    function Parse_Resource_File (TWin           : Window_Pointer;
@@ -56,7 +81,7 @@ package body W2gtk_Pkg is
                                   Resx_File_Name : String) return Integer;
    function Parse_VB_File (Resx_Path      : String;
                            Resx_File_Name : String) return Integer;
-   procedure Dump;
+   procedure Dump (Path : String; File_Name : String);
    --  end of specs
 
    function Adjust_To_Gtk return Integer is
@@ -66,19 +91,146 @@ package body W2gtk_Pkg is
       Temp  : Widget_Pointer;
       NWin0 : Window_Pointer;
       NWin1 : Window_Pointer;
+
+      procedure Visit_GtkTree_Widget_For_GtkBox
+        (Parent : in out Widget_Pointer);
+      procedure Visit_GtkTree_Widget_For_GtkBox
+        (Parent : in out Widget_Pointer) is
+         Child : Widget_Pointer;
+      begin
+         if Parent = null then
+            return;
+         end if;
+
+         if Parent.Widget_Type = GtkBox
+           and then Parent.Num_Children = 1
+         then
+            Child := Parent.Child_List; --  which has only one element
+            if Child.Next /= null or else Child.Prev /= null then
+               raise Program_Error;
+            end if;
+            case Child.Widget_Type is
+               when GtkMenuBar | GtkBox | GtkToolBar
+                  | GtkNoteBook | BindingNavigator
+                  =>
+                  if Child.TextAlign /= Right then
+                     Debug (0, Parent.Name.all
+                            & ": replaced by "
+                            & Child.Name.all);
+                     Replace_Parent_By_Child (Parent, Child);
+                  end if;
+               when others => null;
+            end case;
+         end if;
+
+         Visit_GtkTree_Widget_For_GtkBox (Parent.Next);
+         Visit_GtkTree_Widget_For_GtkBox (Parent.Child_List);
+      end Visit_GtkTree_Widget_For_GtkBox;
+
+      procedure Visit_GtkTree_Widget_For_Toggle_Buttons
+        (TWdg : Widget_Pointer);
+      procedure Visit_GtkTree_Widget_For_Toggle_Buttons
+        (TWdg : Widget_Pointer)
+      is
+         Num : Integer;
+         WS  : Signal_Pointer;
+      begin
+         if TWdg = null then
+            return;
+         end if;
+
+         if TWdg.Widget_Type = GtkDataGridView
+           or else
+             TWdg.Widget_Type = GtkTreeGridView
+         then
+            Num  := Num_Children (TWdg);
+            if Num > 0 then
+               Temp := TWdg.Child_List;
+               while Temp /= null loop
+                  if Temp.Widget_Type = DataGridViewCheckBoxColumn then
+                     Temp.Active_Column := Num;
+                     Num := Num + 1;
+                     if not Temp.ReadOnly then
+                        Temp.Activatable_Column := Num;
+                        Debug (0, Temp.Name.all
+                               & ": activatable Column => "
+                               & Img (Num));
+                        Num := Num + 1;
+                        if Temp.Signal_List = null then
+                           WS := new Signal_Block;
+                           WS.Name := new String'("toggled");
+                           WS.Handler :=
+                             new String'("On_"
+                                         & Capitalize (Temp.Name.all)
+                                         & "_Toggled");
+                           WS.Line    := -1;
+                           Insert_Signal (Temp, WS);
+                           Debug (0, Temp.Name.all
+                                  & ": generated "
+                                  & WS.Handler.all);
+                        end if;
+                     end if;
+                  end if;
+                  Temp := Temp.Next;
+               end loop;
+            end if;
+         end if;
+
+         Visit_GtkTree_Widget_For_Toggle_Buttons (TWdg.Next);
+         Visit_GtkTree_Widget_For_Toggle_Buttons (TWdg.Child_List);
+      end Visit_GtkTree_Widget_For_Toggle_Buttons;
+
+      procedure Recast_To_GtkNormalMenuItem (TWdg : in out Widget_Pointer);
+      procedure Recast_To_GtkNormalMenuItem (TWdg : in out Widget_Pointer) is
+         Temp   : Widget_Pointer;
+         Parent : constant Widget_Pointer := TWdg.GParent;
+      begin
+         Temp := new Widget_Properties (GtkMenuNormalItem);
+         Copy_Common_Attributes (From => TWdg, To => Temp);
+         Temp.ImageMenu := TWdg.ImageMenu;
+         Replace (Parent, TWdg, Temp);
+         Release (TWdg);
+         TWdg := Temp;
+         Have.MenuNormalItems := Have.MenuNormalItems + 1;
+         Debug (0, "GtkMenuItemImage " & TWdg.Name.all
+                & " GtkMenuNormalItem");
+      end Recast_To_GtkNormalMenuItem;
+
+      procedure Visit_GtkMenuImageItem_Widget (TWdg : in out Widget_Pointer);
+      procedure Visit_GtkMenuImageItem_Widget (TWdg : in out Widget_Pointer) is
+      begin
+         if TWdg = null then
+            return;
+         end if;
+
+         if TWdg.Child_List = null then
+            if TWdg.Widget_Type = GtkMenuImageItem then
+               if TWdg.ImageMenu = null then
+                  Recast_To_GtkNormalMenuItem (TWdg);
+                  Have.MenuImageItems := Have.MenuImageItems - 1;
+               end if;
+            end if;
+         end if;
+
+         Visit_GtkMenuImageItem_Widget (TWdg.Next);
+         Visit_GtkMenuImageItem_Widget (TWdg.Child_List);
+      end Visit_GtkMenuImageItem_Widget;
+
    begin
       if Win_List = null then
          return -1;
       end if;
 
+      --  set some properties of toolstripstatuslabel
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: "
+             & "set some properties of toolstripstatuslabel");
       TWin := Win_List;
       while TWin /= null loop
-         --  set some properties of toolstripstatuslabel
          TWdg := TWin.Widget_List;
          while TWdg /= null loop
             if TWdg.Name /= null then
                if Contains (TWdg.Name.all, "ToolStripStatusLabel") then
-                  Debug (NLin, "Adjusting to GTK: ToolStripStatusLabel");
                   Temp := Find_Widget (TWin.Widget_List, GtkStatusBar);
                   if Temp /= null then
                      TWdg.Location.From_Top :=
@@ -87,6 +239,10 @@ package body W2gtk_Pkg is
                      TWdg.Location.From_Left :=
                        Integer'Max (0, TWdg.Location.From_Left) +
                        Temp.Location.From_Left;
+                     Debug (0,
+                            "ToolStripStatusLabel "
+                            & TWdg.Name.all
+                            & ": Location adjusted");
                   end if;
                end if;
             end if;
@@ -96,8 +252,8 @@ package body W2gtk_Pkg is
       end loop;
 
       --  process inheritable attributes (font, others?)
-      Debug (NLin, "");
-      Debug (NLin, "Adjusting to GTK: inheritable attributes");
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: inheritable attributes");
       TWin := Win_List;
       while TWin /= null loop
          Process_Inheritable (TWin);
@@ -105,8 +261,8 @@ package body W2gtk_Pkg is
       end loop;
 
       --  generate auxiliary elements
-      Debug (NLin, "");
-      Debug (NLin, "Adjusting to GTK: generate auxiliary elements");
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: generate auxiliary windows");
       TWin := Win_List;
       while TWin /= null loop
          TWdg := TWin.Widget_List;
@@ -119,12 +275,19 @@ package body W2gtk_Pkg is
                   then
                      NWin1 := new Window_Properties (GtkFileFilter);
                      NWin1.Name := new String'("filefilter"
-                                               & Img (Num_Aux_Widgets));
-                     NWin1.FilterString := TWdg.OpenFileFilter;
+                                               & "_" & TWdg.Name.all
+                                              );
+                     NWin1.Title := TWdg.OpenFileTitle;
+                     NWin1.FilterString := new
+                       String'(TWdg.OpenFileFilter.all);
+                     Free (TWdg.OpenFileFilter);
+                     TWdg.OpenFileFilter := NWin1.Name;
                   end if;
+
                   NWin0 := new Window_Properties (GtkFileChooserDialog);
                   NWin0.Name := new String'("filechooserdialog"
-                                            & Img (Num_Aux_Widgets));
+                                            & "_" & TWdg.Name.all
+                                           );
                   NWin0.Title := TWdg.OpenFileTitle;
                   NWin0.FilterName := NWin1.Name;
                   NWin0.Transient_For := TWin;
@@ -133,34 +296,63 @@ package body W2gtk_Pkg is
                   if TWdg.OpenFileDialog = null then
                      TWdg.OpenFileDialog := NWin0.Name;
                   end if;
-                  Insert_Front_Window (NWin0);
-                  Debug (NLin, "Generated filechooserdialog for "
-                         & NWin0.Name.all);
-                  Insert_Front_Window (NWin1);
-                  Debug (NLin, "Generated filefilter for "
-                         & NWin1.Name.all);
+                  Insert_Window_By_Front (NWin0);
+                  Debug (0, "Generated filechooserdialog for "
+                         & NWin0.Name.all
+                         & " for " & TWdg.Name.all
+                         & " (" & TWdg.Widget_Type'Image & ")");
+
+                  Insert_Window_By_Front (NWin1);
+                  Debug (0, "Generated filefilter "
+                         & NWin1.Name.all
+                         & " for " & TWdg.Name.all
+                         & " (" & TWdg.Widget_Type'Image & ")");
+
+               when GtkEntry | GtkComboBox =>
+                  if TWdg.Text_Buffer /= null
+                    and then TWdg.Text_Buffer.all /= ""
+                  then
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     NWin1 := new Window_Properties (GtkEntryBuffer);
+                     NWin1.Name := new String'("entrybuffer"
+                                               & "_" & TWdg.Name.all
+                                              );
+                     NWin1.Associated_Widget := TWdg;
+                     TWdg.Buffer := NWin1;
+                     Insert_Window_By_Front (NWin1);
+                     Debug (0, "Generated entrybuffer for "
+                            & NWin1.Name.all
+                            & " for " & TWdg.Name.all
+                            & " (" & TWdg.Widget_Type'Image & ")");
+                  end if;
 
                when GtkCalendar =>
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
                   NWin1 := new Window_Properties (GtkEntryBuffer);
                   NWin1.Name := new String'("entrybuffer"
-                                            & Img (Num_Aux_Widgets));
+                                            & "_" & TWdg.Name.all
+                                           );
                   NWin1.Associated_Widget := TWdg;
-                  TWdg.Text_Buffer := NWin1;
-                  Insert_Front_Window (NWin1);
-                  Debug (NLin, "Generated entrybuffer for "
-                         & NWin1.Name.all);
+                  TWdg.Buffer := NWin1;
+                  Insert_Window_By_Front (NWin1);
+                  Debug (0, "Generated entrybuffer for "
+                         & NWin1.Name.all
+                         & " for " & TWdg.Name.all
+                         & " (" & TWdg.Widget_Type'Image & ")");
 
                when GtkListBox =>
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
                   NWin1 := new Window_Properties (GtkListStore);
                   NWin1.Name := new String'("liststore"
-                                            & Img (Num_Aux_Widgets));
+                                            & "_" & TWdg.Name.all
+                                           );
                   NWin1.Associated_Widget := TWdg;
                   TWdg.ListStore := NWin1;
-                  Insert_Front_Window (NWin1);
-                  Debug (NLin, "Generated liststore for "
-                         & NWin1.Name.all);
+                  Insert_Window_By_Front (NWin1);
+                  Debug (0, "Generated liststore for "
+                         & NWin1.Name.all
+                         & " for " & TWdg.Name.all
+                         & " (" & TWdg.Widget_Type'Image & ")");
 
                when GtkButton | GtkRadioButton
                   | GtkCheckButton | GtkToggleButton =>
@@ -168,12 +360,48 @@ package body W2gtk_Pkg is
                      Num_Aux_Widgets := Num_Aux_Widgets + 1;
                      NWin1 := new Window_Properties (GtkImage);
                      NWin1.Name := new String'("gtkimage"
-                                               & Img (Num_Aux_Widgets));
+                                               & "_" & TWdg.Name.all
+                                              );
                      NWin1.Associated_Widget := TWdg;
                      TWdg.Win_Image := NWin1;
-                     Insert_Front_Window (NWin1);
-                     Debug (NLin, "Generated gtkimage for " & NWin1.Name.all);
+                     Insert_Window_By_Front (NWin1);
+                     Debug (0, "Generated gtkimage for "
+                            & NWin1.Name.all
+                            & " for " & TWdg.Name.all
+                            & " (" & TWdg.Widget_Type'Image & ")");
                   end if;
+
+               when GtkMenuImageItem =>
+                  if TWdg.ImageMenu /= null then
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     NWin1 := new Window_Properties (GtkImage);
+                     NWin1.Name := new String'("gtkimage"
+                                               & "_" & TWdg.Name.all
+                                              );
+                     NWin1.Associated_Widget := TWdg;
+                     TWdg.ImageMenuWin := NWin1;
+                     Insert_Window_By_Front (NWin1);
+                     Debug (0, "Generated gtkimage for "
+                            & NWin1.Name.all
+                            & " for " & TWdg.Name.all
+                            & " (" & TWdg.Widget_Type'Image & ")");
+                  end if;
+
+               when GtkDataGridView | GtkTreeGridView =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  NWin1 := new Window_Properties (GtkTreeStore);
+                  NWin1.Name := new String'("gtktreestore"
+                                            & "_"
+                                            & Normalize_Name (TWdg)
+                                           );
+                  NWin1.Associated_Widget := TWdg;
+                  TWdg.Model := NWin1;
+                  Insert_Window_By_Front (NWin1);
+                  Debug (0, "Generated gtktreestore for "
+                         & NWin1.Name.all
+                         & " for " & Normalize_Name (TWdg)
+                         & " (" & TWdg.Widget_Type'Image & ")");
+
                when others => null;
             end case;
             TWdg := TWdg.Next;
@@ -182,8 +410,8 @@ package body W2gtk_Pkg is
       end loop;
 
       --  set correct parent from parent name and set Gparent
-      Debug (NLin, "");
-      Debug (NLin, "Adjusting to GTK: reparenting to containers");
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: reparenting from parent name");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -194,7 +422,7 @@ package body W2gtk_Pkg is
                      TWdg.WParent := TWin;
                      Free (TWdg.Parent_Name);
                      TWdg.Parent_Name := new String'(TWdg.WParent.Name.all);
-                     Debug (NLin, "Reparenting Widget " & TWdg.Name.all
+                     Debug (0, "Reparenting Widget " & TWdg.Name.all
                             & " to Window " & TWdg.WParent.Name.all);
                   else
                      TWdgP := Find_Widget (TWin.Widget_List,
@@ -204,20 +432,16 @@ package body W2gtk_Pkg is
                                       & " without parent");
                         return -1;
                      end if;
-                     if TWdgP.Widget_Type = GtkFrame or else
-                       TWdgP.Widget_Type = GtkToolBar
-                     then
-                        TWdg.GParent := TWdgP;
-                        Debug (NLin, "Reparenting Widget "
-                               & TWdg.Name.all
-                               & " to Container "
-                               & TWdg.GParent.Name.all);
-                     end if;
+                     TWdg.GParent := TWdgP;
+                     Debug (0, "Reparenting Widget "
+                            & TWdg.Name.all
+                            & " to "
+                            & TWdg.GParent.Name.all);
                   end if;
                else
                   TWdg.WParent := TWin;
                   TWdg.Parent_Name := new String'(TWin.Name.all);
-                  Debug (NLin, "Reparenting Widget " & TWdg.Name.all
+                  Debug (0, "Reparenting Widget " & TWdg.Name.all
                          & " to Window " & TWdg.WParent.Name.all);
                end if;
                TWdg := TWdg.Next;
@@ -226,582 +450,1055 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      --  reorder the widgets placing each widget in the correct parent list
-      Debug (NLin, "");
-      Debug (NLin, "Adjusting to GTK: relinking to Containers");
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: set maxlength for non-editable gtkentries, "
+            & "comboboxes and labels");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
-            Relink_To_Containers (TWin);
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.AutoSize then
+                  case TWdg.Widget_Type is
+                     when GtkEntry =>
+                        if not TWdg.Editable then
+                           if TWdg.MaxLength < 1
+                             and then TWdg.Text /= null
+                           then
+                              TWdg.MaxLength := TWdg.Text.all'Length;
+                              Debug (0, TWdg.Name.all
+                                     & ".Maxlength = "
+                                     & Img (TWdg.MaxLength));
+                           end if;
+                        else
+                           TWdg.MaxLength := TWdg.Size.Horiz / 8;
+                        end if;
+                     when GtkComboBox =>
+                        TWdg.MaxLength := TWdg.Size.Horiz / 10;
+                     when GtkLabel =>
+                        if TWdg.MaxLength < 1
+                          and then TWdg.Text /= null
+                        then
+                           TWdg.MaxLength := TWdg.Text.all'Length;
+                           Debug (0, TWdg.Name.all
+                                  & ".Maxlength = "
+                                  & Img (TWdg.MaxLength));
+                        end if;
+                     when others => null;
+                  end case;
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
          end if;
          TWin := TWin.Next;
       end loop;
 
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: recast menus: "
+             & "GtkSeparatorToolItem in Menus => GtkSeparatorMenuItem");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.Widget_Type = GtkSeparatorToolItem then
+                  if TWdg.GParent.Widget_Type = GtkMenuBar or else
+                    TWdg.GParent.Widget_Type = GtkMenuItem or else
+                    TWdg.GParent.Widget_Type = GtkMenuImageItem
+                  then
+                     Temp := new Widget_Properties (GtkSeparatorMenuItem);
+                     Copy_Common_Attributes (From => TWdg, To => Temp);
+                     Replace (TWin, TWdg, Temp);
+                     Release (TWdg);
+                     TWdg := Temp;
+                     Have.MenuSeparators := Have.MenuSeparators + 1;
+                     Have.ToolSeparators := Have.ToolSeparators - 1;
+                     Debug (0, "GtkSeparatorToolItem " & TWdg.Name.all
+                            & " => GtkSeparatorMenuItem");
+                  end if;
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      --  until now, each gtkwindow had a linear widget list
+
+      --  reorder the widgets placing each widget in the correct parent list
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: relinking to the correct parent list");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            Relink_Children_To_Parent (TWin);
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      --  remove a gtkbox parent which contains only one child container
+      Debug (0, "");
+      Debug (0, "Removing gtkbox with only one child container");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            Visit_GtkTree_Widget_For_GtkBox (TWin.Widget_List);
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      --  generating format columns for toggle buttons
+      Debug (0, "");
+      Debug (0, "Preparing toggle buttons");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            Visit_GtkTree_Widget_For_Toggle_Buttons (TWin.Widget_List);
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      --  recast menus: gtkmenuimageitem with no image => gtknormalmenuitem
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: recast menus:"
+             & "gtkmenuimageitem with no image => gtknormalmenuitem and");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            Visit_GtkMenuImageItem_Widget (TWin.Widget_List);
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      Debug (0, "End of Adjust");
       return 0;
    end Adjust_To_Gtk;
 
-   procedure Dump is
+   procedure Dump (Path : String; File_Name : String) is
       TWin  : Window_Pointer;
-      use GNAT.Calendar.Time_IO;
-      package WinIO is new Ada.Text_IO.Enumeration_IO (Enum => Window_Enum);
-      package WdgIO is new Ada.Text_IO.Enumeration_IO (Enum => Widget_Enum);
-      package DSIO is new Ada.Text_IO.Enumeration_IO (Enum => Display_Style);
-      package PIO is new Ada.Text_IO.Enumeration_IO
-        (Enum => Window_Position_Enum);
-      package IPIO is new Ada.Text_IO.Enumeration_IO
-        (Enum => Image_Position_Enum);
 
+      use GNAT.Calendar.Time_IO;
+      procedure Dump_DGVS;
       procedure Dump_Window (TWin  : Window_Pointer; Id : Integer);
       procedure Dump_Widget (TWdgP : Widget_Pointer; Id : Integer);
 
-      procedure Dump_Window (TWin  : Window_Pointer; Id : Integer) is
-         TWdg : Widget_Pointer;
-         TS   : Signal_Pointer;
+      procedure Put_Property (PName : String);
+      procedure Put_Property (PName : String) is
       begin
-         TIO.New_Line;
-         WinIO.Put (TWin.Window_Type); TIO.New_Line;
-         TIO.Put (Sp (Id) & "Title         ");
-         if TWin.Title /= null then
-            TIO.Put_Line (TWin.Title.all);
-         else
-            TIO.New_Line;
+         TIO.Put (LFile, Sp (3)
+                  & PName
+                  & Sp (24 - PName'Length));
+      end Put_Property;
+
+      procedure Put_Integer (N : Integer);
+      procedure Put_Integer (N : Integer) is
+      begin
+         TIO.Put (LFile, Img (N));
+         TIO.New_Line (LFile);
+      end Put_Integer;
+
+      procedure Put_String_Access (SA : String_Access;
+                                   Quoted : Boolean := False);
+      procedure Put_String_Access (SA : String_Access;
+                                   Quoted : Boolean := False) is
+      begin
+         if SA /= null then
+            if Quoted then
+               TIO.Put (LFile, """" & SA.all & """");
+            else
+               TIO.Put (LFile, SA.all);
+            end if;
          end if;
-         TIO.Put (Sp (Id) & "Name          ");
-         if TWin.Name /= null then
-            TIO.Put_Line (TWin.Name.all);
+         TIO.New_Line (LFile);
+      end Put_String_Access;
+
+      procedure Put_Boolean (B : Boolean);
+      procedure Put_Boolean (B : Boolean) is
+      begin
+         if B then
+            TIO.Put (LFile, "True");
          else
-            TIO.New_Line;
+            TIO.Put (LFile, "False");
          end if;
+         TIO.New_Line (LFile);
+      end Put_Boolean;
+
+      procedure Dump_DGVS is
+      begin
+         if DGVS = null then
+            return;
+         end if;
+         for I in DGVS.all'Range loop
+            TIO.Put_Line (LFile, "DataGridViewStyle" & Img (DGVS (I).Num));
+
+            Put_Property ("Alignment");
+            Put_String_Access (DGVS (I).Alignment);
+
+            Put_Property ("BgColor");
+            Put_String_Access (DGVS (I).BgColor);
+
+            Put_Property ("FgColor");
+            Put_String_Access (DGVS (I).FgColor);
+
+            Put_Property ("SelBgColor");
+            Put_String_Access (DGVS (I).SelBgColor);
+
+            Put_Property ("SelFgColor");
+            Put_String_Access (DGVS (I).SelFgColor);
+
+            Put_Property ("Font");
+            if DGVS (I).Font_Name /= null then
+               TIO.Put (LFile, DGVS (I).Font_Name.all);
+               if DGVS (I).Font_Size /= null then
+                  TIO.Put (LFile, " " & DGVS (I).Font_Size.all);
+               end if;
+               if DGVS (I).Font_Weight /= null then
+                  TIO.Put (LFile, " " & DGVS (I).Font_Weight.all);
+               end if;
+            end if;
+            TIO.New_Line (LFile);
+
+            Put_Property ("Format");
+            Put_String_Access (DGVS (I).Format);
+
+            Put_Property ("Padding");
+            TIO.Put (LFile, "Top " & Img (DGVS (I).Padding (1))
+                     & ", Bottom " & Img (DGVS (I).Padding (3))
+                     & ", Start " & Img (DGVS (I).Padding (2))
+                     & ", End " & Img (DGVS (I).Padding (4)));
+            TIO.New_Line (LFile);
+
+            Put_Property ("WrapMode");
+            Put_Boolean (To_Boolean (DGVS (I).WrapMode));
+
+            Put_Property ("NullValue");
+            Put_String_Access (DGVS (I).NullValue);
+
+         end loop;
+      end Dump_DGVS;
+
+      procedure Dump_Window (TWin  : Window_Pointer; Id : Integer) is
+
+         procedure Put_Property (PName : String);
+         procedure Put_Property (PName : String) is
+         begin
+            TIO.Put (LFile, Sp (3)
+                     & PName
+                     & Sp (24 - PName'Length));
+         end Put_Property;
+
+         procedure Dump_Signal_List;
+         procedure Dump_Signal_List is
+            TS : Signal_Pointer;
+         begin
+            TS := TWin.Signal_List;
+            while TS /= null loop
+               Put_Property ("Signal");
+               TIO.Put (LFile, TS.Name.all
+                        & " ("
+                        & Convert_Signal_To_Gtk (TWin, TS.Name.all)
+                        & ") ");
+               if TS.Handler /= null then
+                  TIO.Put (LFile, " => " & Capitalize (TS.Name.all));
+               end if;
+               TIO.New_Line (LFile);
+               TS := TS.Next;
+            end loop;
+         end Dump_Signal_List;
+
+         procedure Put_Widget_Pointer_Name (WP : Widget_Pointer);
+         procedure Put_Widget_Pointer_Name (WP : Widget_Pointer) is
+         begin
+            if WP /= null and then WP.Name /= null then
+               TIO.Put (LFile, WP.Name.all);
+            end if;
+            TIO.New_Line (LFile);
+         end Put_Widget_Pointer_Name;
+
+         procedure Dump_Children;
+         procedure Dump_Children is
+            TWdg : Widget_Pointer;
+         begin
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               Dump_Widget (TWdg, Id + 3);
+               TWdg := TWdg.Next;
+            end loop;
+         end Dump_Children;
+
+         procedure Dump_Associated_Widget;
+         procedure Dump_Associated_Widget is
+         begin
+            Put_Property ("Associated Widget");
+            Put_Widget_Pointer_Name (TWin.Associated_Widget);
+         end Dump_Associated_Widget;
+
+      begin
+         TIO.New_Line (LFile);
+         WinIO.Put (LFile, TWin.Window_Type);
+         TIO.New_Line (LFile);
+
+         Put_Property ("Name");
+         Put_String_Access (TWin.Name);
+
+         Put_Property ("Title");
+         Put_String_Access (TWin.Title, True);
 
          case TWin.Window_Type is
             when GtkWindow =>
-               TIO.Put (Sp (Id) & "Font          ");
+               Put_Property ("Resizable");
+               Put_Boolean (TWin.Resizable);
+
+               Put_Property ("Modal");
+               Put_Boolean (TWin.Modal);
+
+               Put_Property ("Font");
                if TWin.Font_Name /= null then
-                  TIO.Put (TWin.Font_Name.all);
+                  TIO.Put (LFile, TWin.Font_Name.all);
                   if TWin.Font_Size /= null then
-                     TIO.Put (" " & TWin.Font_Size.all);
+                     TIO.Put (LFile, " " & TWin.Font_Size.all);
                   end if;
                   if TWin.Font_Weight /= null then
-                     TIO.Put (" " & TWin.Font_Weight.all);
+                     TIO.Put (LFile, " " & TWin.Font_Weight.all);
                   end if;
                end if;
-               TIO.New_Line;
+               TIO.New_Line (LFile);
 
-               TIO.Put (Sp (Id) & "BGColor   ");
-               if TWin.BgColor /= null and then TWin.BgColor.all /= "" then
-                  TIO.Put (TWin.BgColor.all);
-               end if;
-               TIO.New_Line;
-               TIO.Put (Sp (Id) & "FGColor   ");
-               if TWin.FgColor /= null and then TWin.FgColor.all /= "" then
-                  TIO.Put (TWin.FgColor.all);
-               end if;
-               TIO.New_Line;
+               Put_Property ("Icon");
+               Put_String_Access (TWin.Icon);
 
-               TIO.Put (Sp (Id) & "Icon          ");
-               if TWin.Icon /= null then
-                  TIO.Put_Line (TWin.Icon.all);
-               else
-                  TIO.New_Line;
-               end if;
+               Put_Property ("ToolTip");
+               Put_String_Access (TWin.ToolTip, True);
 
-               TIO.Put (Sp (Id) & "ToolTip       ");
-               if TWin.ToolTip /= null then
-                  TIO.Put_Line (TWin.ToolTip.all);
-               else
-                  TIO.New_Line;
-               end if;
+               Put_Property ("Position");
+               PIO.Put (LFile, TWin.Start_Position);
+               TIO.New_Line (LFile);
 
-               TIO.Put (Sp (Id) & "Position      ");
-               PIO.Put (TWin.Start_Position);
-               TIO.New_Line;
+               Put_Property ("Size");
+               TIO.Put (LFile, "H=" & Img (TWin.Client_Size.Horiz));
+               TIO.Put (LFile, ", V=" & Img (TWin.Client_Size.Vert));
+               TIO.New_Line (LFile);
 
-               TIO.Put (Sp (Id) & "Size          H="
-                        & Img (TWin.Client_Size.Horiz));
-               TIO.Put (", V=" & Img (TWin.Client_Size.Vert));
-               TIO.New_Line;
-
-               TIO.Put (Sp (Id) & "Margin        Top "
-                        & Img (TWin.Margins (1))
+               Put_Property ("Margin");
+               TIO.Put (LFile, "Top " & Img (TWin.Margins (1))
                         & ", Bottom " & Img (TWin.Margins (3))
                         & ", Start " & Img (TWin.Margins (2))
                         & ", End " & Img (TWin.Margins (4)));
-               TIO.New_Line;
+               TIO.New_Line (LFile);
 
-               TIO.Put (Sp (Id) & "AutoScale     Horiz " &
-                          Img (TWin.AutoScaleDim.Horiz));
-               TIO.Put (", Vert " & Img (TWin.AutoScaleDim.Vert));
-               TIO.New_Line;
+               Put_Property ("AutoScale");
+               TIO.Put (LFile, "Horiz " & Img (TWin.AutoScaleDim.Horiz));
+               TIO.Put (LFile, ", Vert " & Img (TWin.AutoScaleDim.Vert));
+               TIO.New_Line (LFile);
 
-               TIO.Put (Sp (Id) & "TryHeight     " &
-                          Img (TWin.TrayHeight));
-               TIO.New_Line;
+               Put_Property ("TryHeight");
+               Put_Integer (TWin.TrayHeight);
 
-               TS := TWin.Signal_List;
-               while TS /= null loop
-                  TIO.Put_Line (Sp (Id) & "Signal        " & TS.Name.all);
-                  TS := TS.Next;
-               end loop;
+               Put_Property ("BGColor");
+               Put_String_Access (TWin.BgColor);
 
-               TWdg := TWin.Widget_List;
-               while TWdg /= null loop
-                  Dump_Widget (TWdg, Id + 2);
-                  TWdg := TWdg.Next;
-               end loop;
+               Put_Property ("FGColor");
+               Put_String_Access (TWin.FgColor);
+
+               Dump_Signal_List;
+               Dump_Children;
 
             when GtkFileChooserDialog =>
-               TIO.Put (Sp (Id) & "Filter Name   ");
-               if TWin.FilterName /= null then
-                  TIO.Put_Line (TWin.FilterName.all);
-               else
-                  TIO.New_Line;
-               end if;
-               TIO.Put_Line (Sp (Id) & "Transient for "
-                             & TWin.Transient_For.Name.all);
-               TIO.Put_Line (Sp (Id) & "Attached to   "
-                             & TWin.Attached_To.Name.all);
-               TS := TWin.Signal_List;
-               while TS /= null loop
-                  TIO.Put_Line (Sp (Id) & "Signal        " & TS.Name.all);
-                  TS := TS.Next;
-               end loop;
+               Put_Property ("Filter Name");
+               Put_String_Access (TWin.FilterName);
+
+               Put_Property ("Transient for");
+               Put_String_Access (TWin.Transient_For.Name);
+
+               Put_Property ("Attached to");
+               Put_String_Access (TWin.Attached_To.Name);
+
+               Dump_Signal_List;
 
             when GtkFileFilter =>
-               TIO.Put (Sp (Id) & "Filter String");
+               Put_Property ("");
+               TIO.Put (LFile, Sp (Id) & "Filter String");
                if TWin.FilterString /= null then
-                  TIO.Put_Line (TWin.FilterString.all);
-               else
-                  TIO.New_Line;
+                  TIO.Put (TWin.FilterString.all);
                end if;
-               TS := TWin.Signal_List;
-               while TS /= null loop
-                  TIO.Put_Line (Sp (Id) & "Signal        " & TS.Name.all);
-                  TS := TS.Next;
-               end loop;
+               TIO.New_Line (LFile);
+
+               Dump_Signal_List;
 
             when GtkEntryBuffer =>
-               TIO.Put (Sp (Id) & "Widget        ");
-               if TWin.Associated_Widget /= null and then
-                 TWin.Associated_Widget.Name /= null
-               then
-                  TIO.Put (TWin.Associated_Widget.Name.all);
-               end if;
-               TIO.New_Line;
-               TIO.Put_Line (Sp (Id) & "Min_Date      "
-                             & Image (TWin.Associated_Widget.MinDate,
-                               ISO_Date));
-               TIO.Put_Line (Sp (Id) & "Max_Date      "
-                             & Image (TWin.Associated_Widget.MaxDate,
-                               ISO_Date));
+               Dump_Associated_Widget;
+
+               case TWin.Associated_Widget.Widget_Type is
+                  when GtkCalendar =>
+                     Put_Property ("Min_Date");
+                     TIO.Put_Line (LFile,
+                                   Image (TWin.Associated_Widget.MinDate,
+                                   ISO_Date));
+
+                     Put_Property ("Max_Date");
+                     TIO.Put_Line (LFile,
+                                   Image (TWin.Associated_Widget.MaxDate,
+                                     ISO_Date));
+
+                  when GtkEntry | GtkComboBox =>
+                     declare
+                        Idx0 : Integer;
+                        Idx1 : Integer;
+                        Txt  : constant String :=
+                          TWin.Associated_Widget.Text_Buffer.all;
+                     begin
+                        Idx0 := Index (Txt, (1 .. 1 => ASCII.CR));
+                        if Idx0 not in Txt'Range then
+                           Put_Property ("Text Buffer");
+                           TIO.Put_Line (LFile, Txt);
+                        else
+                           Put_Property ("Text Buffer");
+                           TIO.Put_Line (LFile, Txt (Txt'First .. Idx0 - 1));
+                           loop
+                              Idx0 := Idx0 + 1; -- skip CR
+                              Idx1 := Index (Txt (Idx0 .. Txt'Last),
+                                             (1 .. 1 => ASCII.CR));
+                              exit when Idx1 not in Idx0 .. Txt'Last;
+                              Put_Property ("");
+                              TIO.Put_Line (LFile, Txt (Idx0 .. Idx1 - 1));
+                              Idx0 := Idx1; -- idx0 now is CR
+                           end loop;
+                           if Idx0 < Txt'Last then
+                              Put_Property ("");
+                              TIO.Put_Line (LFile, Txt (Idx0 .. Txt'Last));
+                           end if;
+                        end if;
+                     end;
+                  when others => null;
+               end case;
+               Dump_Signal_List;
 
             when GtkListStore =>
-               TIO.Put (Sp (Id) & "Widget        ");
-               if TWin.Associated_Widget /= null and then
-                 TWin.Associated_Widget.Name /= null
-               then
-                  TIO.Put (TWin.Associated_Widget.Name.all);
-               end if;
-               TIO.New_Line;
+               Dump_Associated_Widget;
+               Dump_Signal_List;
 
             when GtkImage =>
-               TIO.Put (Sp (Id) & "Widget        ");
-               if TWin.Associated_Widget /= null and then
-                 TWin.Associated_Widget.Name /= null
-               then
-                  TIO.Put (TWin.Associated_Widget.Name.all);
-               end if;
-               TIO.New_Line;
+               Dump_Associated_Widget;
+               Put_Property ("Image");
+               case TWin.Associated_Widget.Widget_Type is
+                  when GtkButton | GtkRadioButton
+                     | GtkCheckButton | GtkToggleButton =>
+                     TIO.Put_Line (LFile,
+                                   TWin.Associated_Widget.ImagePath.all);
+                  when GtkMenuNormalItem | GtkMenuImageItem
+                     | GtkMenuRadioItem | GtkMenuCheckItem =>
+                     TIO.Put_Line (LFile,
+                                   TWin.Associated_Widget.ImageMenu.all);
+                  when others => null;
+               end case;
+               Dump_Signal_List;
+
+            when GtkTreeStore =>
+               Dump_Associated_Widget;
+
          end case;
       end Dump_Window;
 
       procedure Dump_Widget (TWdgP : Widget_Pointer; Id : Integer) is
-         TWdgChild : Widget_Pointer;
-         TS   : Signal_Pointer;
+
+         procedure Put_Property (PName : String);
+         procedure Put_Property (PName : String) is
+         begin
+            TIO.Put (LFile, Sp (Id + 3)
+                     & PName
+                     & Sp (24 - PName'Length));
+         end Put_Property;
+
+         procedure Put_Window_Pointer_Name (WP : Window_Pointer);
+         procedure Put_Window_Pointer_Name (WP : Window_Pointer) is
+         begin
+            if WP /= null and then WP.Name /= null then
+               TIO.Put (LFile, WP.Name.all);
+            end if;
+            TIO.New_Line (LFile);
+         end Put_Window_Pointer_Name;
+
+         procedure Put_Widget_Pointer_Name (WP : Widget_Pointer);
+         procedure Put_Widget_Pointer_Name (WP : Widget_Pointer) is
+         begin
+            if WP /= null and then WP.Name /= null then
+               TIO.Put (LFile, WP.Name.all);
+            end if;
+            TIO.New_Line (LFile);
+         end Put_Widget_Pointer_Name;
+
+         procedure Dump_Children;
+         procedure Dump_Children is
+            TWdgChild : Widget_Pointer;
+         begin
+            TWdgChild := TWdgP.Child_List;
+            while TWdgChild /= null loop
+               Dump_Widget (TWdgChild, Id + 3);
+               TWdgChild := TWdgChild.Next;
+            end loop;
+         end Dump_Children;
+
+         procedure Dump_Signals;
+         procedure Dump_Signals is
+            TS : Signal_Pointer;
+         begin
+            TS := TWdgP.Signal_List;
+            while TS /= null loop
+               Put_Property ("Signal");
+               TIO.Put (LFile, TS.Name.all
+                        & " ("
+                        & Convert_Signal_To_Gtk (TWdgP, TS.Name.all)
+                        & ") ");
+               if TS.Handler /= null then
+                  TIO.Put (LFile, " => " & Capitalize (TS.Handler.all));
+               end if;
+               TIO.New_Line (LFile);
+               TS := TS.Next;
+            end loop;
+         end Dump_Signals;
+
       begin
+         TIO.New_Line (LFile);
          --  common fields
-         TIO.Put (Sp (Id));
-         WdgIO.Put (TWdgP.Widget_Type);
-         TIO.New_Line;
+         TIO.Put (LFile, Sp (Id));
+         WdgIO.Put (LFile, TWdgP.Widget_Type);
+         TIO.New_Line (LFile);
 
-         TIO.Put (Sp (Id + 2) & "Name         " & TWdgP.Name.all & " ("
-                  & TWdgP.Windows_Type.all & ")");
-         TIO.New_Line;
+         Put_Property ("Number of Children");
+         Put_Integer (TWdgP.Num_Children);
 
-         TIO.Put (Sp (Id + 2) & "Parent       ");
+         Put_Property ("Windows Form");
+         Put_String_Access (TWdgP.Windows_Type);
+
+         Put_Property ("Name");
+         Put_String_Access (TWdgP.Name);
+
+         Put_Property ("Parent");
          if TWdgP.Parent_Name /= null then
-            TIO.Put (TWdgP.Parent_Name.all);
-         end if;
-         if TWdgP.GParent /= null
+            Put_String_Access (TWdgP.Parent_Name);
+         elsif TWdgP.GParent /= null
            and then TWdgP.GParent.Windows_Type /= null
          then
-            TIO.Put (" (");
-            WdgIO.Put (TWdgP.GParent.Widget_Type);
-            TIO.Put (")");
-         else
-            if TWdgP.WParent /= null then
-               TIO.Put (" (");
-               WinIO.Put (TWdgP.WParent.Window_Type);
-               TIO.Put (")");
-            end if;
+            WdgIO.Put (LFile, TWdgP.GParent.Widget_Type);
+            TIO.New_Line (LFile);
+         elsif TWdgP.WParent /= null then
+            WinIO.Put (LFile, TWdgP.WParent.Window_Type);
+            TIO.New_Line (LFile);
          end if;
-         TIO.New_Line;
 
-         TIO.Put (Sp (Id + 2) & "Text         ");
-         if TWdgP.Text /= null then
-            TIO.Put (TWdgP.Text.all);
+         if TWdgP.Child_Num > 0 then
+            Put_Property ("Child Number");
+            Put_Integer (TWdgP.Child_Num);
          end if;
-         TIO.New_Line;
 
-         TIO.Put (Sp (Id + 2) & "DisplayStyle ");
-         DSIO.Put (TWdgP.DStyle);
-         TIO.New_Line;
+         Put_Property ("Location");
+         TIO.Put (LFile, "x=" & Img (TWdgP.Location.From_Left));
+         TIO.Put_Line (LFile, ", y=" & Img (TWdgP.Location.From_Top));
 
-         TIO.Put (Sp (Id + 2) & "MaxLength    ");
-         TIO.Put_Line (Img (TWdgP.MaxLength));
+         Put_Property ("Size");
+         TIO.Put (LFile, "H=" & Img (TWdgP.Size.Horiz));
+         TIO.Put_Line (LFile, ", V=" & Img (TWdgP.Size.Vert));
 
-         TIO.Put (Sp (Id + 2) & "Font         ");
+         Put_Property ("TabIndex");
+         Put_Integer (TWdgP.TabIndex);
+
+         Put_Property ("TabStop");
+         Put_Boolean (TWdgP.TabStop);
+
+         Put_Property ("Zorder");
+         Put_Integer (TWdgP.Zorder);
+
+         Put_Property ("Enabled");
+         Put_Boolean (TWdgP.Enabled);
+
+         Put_Property ("Visible");
+         Put_Boolean (TWdgP.Visible);
+
+         Put_Property ("Text");
+         Put_String_Access (TWdgP.Text, True);
+
+         Put_Property ("TextAlign");
+         TAIO.Put (LFile, TWdgP.TextAlign);
+         TIO.New_Line (LFile);
+
+         Put_Property ("AutoSize");
+         Put_Boolean (TWdgP.AutoSize);
+
+         Put_Property ("AutoSizeMode");
+         ASMIO.Put (LFile, TWdgP.AutoSizeMode);
+         TIO.New_Line (LFile);
+
+         Put_Property ("Font");
          if TWdgP.Font_Name /= null then
-            TIO.Put (TWdgP.Font_Name.all);
+            TIO.Put (LFile, TWdgP.Font_Name.all);
             if TWdgP.Font_Size /= null then
-               TIO.Put (" " & TWdgP.Font_Size.all);
+               TIO.Put (LFile, " " & TWdgP.Font_Size.all);
             end if;
             if TWdgP.Font_Weight /= null then
-               TIO.Put (" " & TWdgP.Font_Weight.all);
+               TIO.Put (LFile, " " & TWdgP.Font_Weight.all);
             end if;
          end if;
-         TIO.New_Line;
+         TIO.New_Line (LFile);
 
-         TIO.Put (Sp (Id + 2) & "BGColor      ");
-         if TWdgP.BgColor /= null and then TWdgP.BgColor.all /= "" then
-            TIO.Put (TWdgP.BgColor.all);
-         end if;
-         TIO.New_Line;
-         TIO.Put (Sp (Id + 2) & "FGColor      ");
-         if TWdgP.FgColor /= null and then TWdgP.FgColor.all /= "" then
-            TIO.Put (TWdgP.FgColor.all);
-         end if;
-         TIO.New_Line;
-
-         TIO.Put (Sp (Id + 2) & "TabStop      ");
-         if TWdgP.TabStop  then
-            TIO.Put_Line ("True");
-         else
-            TIO.Put_Line ("False");
-         end if;
-         TIO.Put_Line (Sp (Id + 2) & "TabIndex     " & Img (TWdgP.TabIndex));
-
-         TIO.Put_Line (Sp (Id + 2) & "Zorder       " & Img (TWdgP.Zorder));
-
-         TIO.Put (Sp (Id + 2) & "AutoToolTip ");
-         if TWdgP.AutoToolTip then
-            TIO.Put_Line ("True");
-         else
-            TIO.Put_Line ("False");
-         end if;
-
-         TIO.Put (Sp (Id + 2) & "ToolTip      ");
-         if TWdgP.ToolTip /= null then
-            TIO.Put_Line (TWdgP.ToolTip.all);
-         else
-            TIO.New_Line;
-         end if;
-
-         TIO.Put (Sp (Id + 2) & "Location     x=" &
-                    Img (TWdgP.Location.From_Left) &
-                    ", y=" & Img (TWdgP.Location.From_Top));
-         TIO.New_Line;
-
-         TIO.Put (Sp (Id + 2) & "Size         H=" & Img (TWdgP.Size.Horiz));
-         TIO.Put (", V=" & Img (TWdgP.Size.Vert));
-         TIO.New_Line;
-
-         TIO.Put_Line (Sp (Id + 2) & "Margin       Top "
-                       & Img (TWdgP.Margins (1))
+         Put_Property ("Margin");
+         TIO.Put_Line (LFile, "Top " & Img (TWdgP.Margins (1))
                        & ", Bottom " & Img (TWdgP.Margins (3))
                        & ", Start " & Img (TWdgP.Margins (2))
                        & ", End " & Img (TWdgP.Margins (4)));
 
-         TIO.Put (Sp (Id + 2) & "Visible      ");
-         if TWdgP.Visible then
-            TIO.Put_Line ("True");
-         else
-            TIO.Put_Line ("False");
-         end if;
+         Put_Property ("Padding");
+         Put_Integer (TWdgP.Padding);
 
-         TIO.Put (Sp (Id + 2) & "Enabled      ");
-         if TWdgP.Enabled then
-            TIO.Put_Line ("True");
-         else
-            TIO.Put_Line ("False");
-         end if;
+         Put_Property ("DisplayStyle");
+         DSIO.Put (LFile, TWdgP.DStyle);
+         TIO.New_Line (LFile);
 
-         TIO.Put (Sp (Id + 2) & "TextAlign    ");
-         if TWdgP.TextAlign /= null then
-            TIO.Put_Line (TWdgP.TextAlign.all);
-         else
-            TIO.New_Line;
-         end if;
+         Put_Property ("MaxLength");
+         Put_Integer (TWdgP.MaxLength);
 
-         TIO.Put (Sp (Id + 2) & "AutoSize     ");
-         if To_Boolean (TWdgP.AutoSize) then
-            TIO.Put_Line ("True");
-         elsif not To_Boolean (TWdgP.AutoSize) then
-            TIO.Put_Line ("False");
-         else
-            TIO.New_Line;
-         end if;
+         Put_Property ("AutoToolTip");
+         Put_Boolean (TWdgP.AutoToolTip);
 
+         Put_Property ("ToolTip");
+         Put_String_Access (TWdgP.ToolTip, True);
+
+         Put_Property ("UseVisualStyleBackColor");
+         Put_Boolean (TWdgP.UseVisualStyleBackColor);
+
+         Put_Property ("BGColor");
+         Put_String_Access (TWdgP.BgColor);
+
+         Put_Property ("FGColor");
+         Put_String_Access (TWdgP.FgColor);
+
+         Put_Property ("UlColor");
+         Put_String_Access (TWdgP.UlColor);
+
+         Put_Property ("Flow Direction");
+         FDIO.Put (LFile, TWdgP.FlowDirection);
+         TIO.New_Line (LFile);
+
+         Put_Property ("----");
+         TIO.New_Line (LFile);
          case TWdgP.Widget_Type is
-         when None => null;
-         when GtkEntry | GtkComboBox =>
-            TIO.Put (Sp (Id + 2) & "Has_Frame    ");
-            if TWdgP.Has_Frame then
-               TIO.Put_Line ("True");
-            else
-               TIO.Put_Line ("False");
-            end if;
+            when No_Widget =>
+               null;
 
-            TIO.Put (Sp (Id + 2) & "Editable     ");
-            if TWdgP.Editable then
-               TIO.Put_Line ("True");
-            else
-               TIO.Put_Line ("False");
-            end if;
+            when GtkMenuItem => null;
 
-            TIO.Put (Sp (Id + 2) & "PasswordChar ");
-            if TWdgP.PasswordChar /= null then
-               TIO.Put_Line (TWdgP.PasswordChar.all);
-            else
-               TIO.New_Line;
-            end if;
+            when GtkSeparatorMenuItem => null;
 
-         when GtkSpinButton =>
-            TIO.Put_Line (Sp (Id + 2) & "Start        "
-                          & Img (TWdgP.StartValue));
-            TIO.Put_Line (Sp (Id + 2) & "MaxValue     "
-                          & Img (TWdgP.MaxValue));
-            TIO.Put_Line (Sp (Id + 2) & "MinValue     "
-                          & Img (TWdgP.MinValue));
-            TIO.Put_Line (Sp (Id + 2) & "Step         "
-                          & Img (TWdgP.Step));
+            when GtkMenuNormalItem | GtkMenuImageItem
+               | GtkMenuRadioItem | GtkMenuCheckItem =>
+               Put_Property ("ImageMenu Window");
+               Put_Window_Pointer_Name (TWdgP.ImageMenuWin);
 
-         when GtkFileChooserButton | PrintDocument | PrintDialog
-            | FolderBrowserDialog  | GtkToolTip    | GtkColorButton
-            | GtkStatusBar =>
+               Put_Property ("ImageMenu");
+               Put_String_Access (TWdgP.ImageMenu);
 
-            TIO.Put_Line (Sp (Id + 2) & "TrayLocation x=" &
-                            Img (TWdgP.TrayLocation.From_Left) &
-                            ", y=" & Img (TWdgP.TrayLocation.From_Top));
-
-            case TWdgP.Widget_Type is
-               when GtkFileChooserButton =>
-                  TIO.Put (Sp (Id + 2) & "OpenFileDialog ");
-                  if TWdgP.OpenFileDialog /= null and then
-                    TWdgP.OpenFileDialog.all /= ""
-                  then
-                     TIO.Put (TWdgP.OpenFileDialog.all);
-                  end if;
-                  TIO.New_Line;
-                  TIO.Put (Sp (Id + 2) & "TrayLocation x=" &
-                             Img (TWdgP.TrayLocation.From_Left) &
-                             ", y=" & Img (TWdgP.TrayLocation.From_Top));
-                  TIO.New_Line;
-                  TIO.Put (Sp (Id + 2) & "OpenFileFilter ");
-                  if TWdgP.OpenFileFilter /= null and then
-                    TWdgP.OpenFileFilter.all /= ""
-                  then
-                     TIO.Put (TWdgP.OpenFileFilter.all);
-                  end if;
-                  TIO.New_Line;
-                  TIO.Put (Sp (Id + 2) & "OpenFileTitle  ");
-                  if TWdgP.OpenFileTitle /= null and then
-                    TWdgP.OpenFileTitle.all /= ""
-                  then
-                     TIO.Put (TWdgP.OpenFileTitle.all);
-                  end if;
-                  TIO.New_Line;
-
-               when GtkColorButton =>
-                  if TWdgP.AnyColor then
-                     TIO.Put_Line (Sp (Id + 2) & "AnyColor     True");
-                  else
-                     TIO.Put_Line (Sp (Id + 2) & "AnyColor     False");
-                  end if;
-                  if TWdgP.FullOpen then
-                     TIO.Put_Line (Sp (Id + 2) & "FullOpen     True");
-                  else
-                     TIO.Put_Line (Sp (Id + 2) & "FullOpen     False");
-                  end if;
-                  TIO.Put (Sp (Id + 2) & "Ass. Button  ");
-                  if TWdgP.Associated_Button /= null then
-                     TIO.Put (TWdgP.Associated_Button.Name.all);
-                  end if;
-                  TIO.New_Line;
-
-               when others => null;
-            end case;
-
-         when GtkListBox =>
-            TIO.Put (Sp (Id + 2) & "MultiSelect  ");
-            if TWdgP.MultiSelect then
-               TIO.Put ("True");
-            else
-               TIO.Put ("False");
-            end if;
-            TIO.New_Line;
-
-            TIO.Put (Sp (Id + 2) & "ListStore    ");
-            if TWdgP.ListStore /= null and then
-              TWdgP.ListStore.Name /= null
-            then
-               TIO.Put (TWdgP.ListStore.Name.all);
-            end if;
-            TIO.New_Line;
-
-         when GtkCalendar =>
-            TIO.Put_Line (Sp (Id + 2) & "StartDate    "
-                          & Image (TWdgP.Start_Date, ISO_Date));
-            TIO.Put_Line (Sp (Id + 2) & "MinDate      "
-                          & Image (TWdgP.MinDate, ISO_Date));
-            TIO.Put_Line (Sp (Id + 2) & "MaxDate      "
-                          & Image (TWdgP.MaxDate, ISO_Date));
-            if TWdgP.Format_Date /= null and then TWdgP.Format_Date.all /= ""
-            then
-               TIO.Put_Line (Sp (Id + 2) & "Format       "
-                             & TWdgP.Format_Date.all);
-            end if;
-            if TWdgP.ShowUpDown then
-               TIO.Put_Line (Sp (Id + 2) & "ShowUpDown   True");
-            else
-               TIO.Put_Line (Sp (Id + 2) & "ShowUpDown   False");
-            end if;
-            TIO.Put (Sp (Id + 2) & "TextBuffer   ");
-            if TWdgP.Text_Buffer /= null and then
-              TWdgP.Text_Buffer.Name /= null
-            then
-               TIO.Put (TWdgP.Text_Buffer.Name.all);
-            end if;
-            TIO.New_Line;
-
-         when GtkLabel =>
-            TIO.Put (Sp (Id + 2) & "BorderStyle  ");
-            if TWdgP.BorderStyle /= null and then TWdgP.BorderStyle.all /= ""
-            then
-               TIO.Put (TWdgP.BorderStyle.all);
-            end if;
-            TIO.New_Line;
-
-         when GtkButton | GtkRadioButton | GtkCheckButton | GtkToggleButton =>
-            if TWdgP.Active then
-               TIO.Put_Line (Sp (Id + 2) & "Active       True");
-            else
-               TIO.Put_Line (Sp (Id + 2) & "Active       False");
-            end if;
-            if TWdgP.Underline then
-               TIO.Put_Line (Sp (Id + 2) & "Underline    True");
-            else
-               TIO.Put_Line (Sp (Id + 2) & "Underline    False");
-            end if;
-            TIO.Put (Sp (Id + 2) & "ImagePath    ");
-            if TWdgP.ImagePath /= null then
-               TIO.Put (TWdgP.ImagePath.all);
-            end if;
-            TIO.New_Line;
-            TIO.Put (Sp (Id + 2) & "ImageAlign   ");
-            IPIO.Put (TWdgP.ImageAlign);
-            TIO.New_Line;
-
-            TIO.Put (Sp (Id + 2) & "Win Image    ");
-            if TWdgP.Win_Image /= null and then
-              TWdgP.Win_Image.Name /= null
-            then
-               TIO.Put (TWdgP.Win_Image.Name.all);
-            end if;
-            TIO.New_Line;
-            case TWdgP.Widget_Type is
-            when GtkButton =>
-               TIO.Put (Sp (Id + 2) & "ColorButton  ");
-               if TWdgP.Associated_ColorButton /= null then
-                  TIO.Put (TWdgP.Associated_ColorButton.Name.all);
-               end if;
-               TIO.New_Line;
-
-            when GtkCheckButton =>
-               TIO.Put (Sp (Id + 2) & "CheckAlign   ");
-               if TWdgP.CheckAlign /= null then
-                  TIO.Put_Line (TWdgP.CheckAlign.all);
+            when GtkDataGridView | GtkTreeGridView
+               | ExpandableColumn | DataGridViewTextBoxColumn
+               | DataGridViewCheckBoxColumn
+               =>
+               Put_Property ("Default CellStyle");
+               if TWdgP.DefaultCellStyle in DGVS.all'Range then
+                  TIO.Put_Line (LFile, Test20 & Img (TWdgP.DefaultCellStyle));
                else
-                  TIO.New_Line;
+                  TIO.New_Line (LFile);
                end if;
-            when others => null;
-            end case;
 
-         when GtkFrame | GtkToolBar =>
-            case TWdgP.Widget_Type is
-               when GtkToolBar =>
-                  TIO.Put_Line (Sp (Id + 2) & "TrayLocation x=" &
-                                  Img (TWdgP.TrayLocation.From_Left) &
-                                  ", y=" & Img (TWdgP.TrayLocation.From_Top));
-                  TIO.Put (Sp (Id + 2) & "Horizontal   ");
-                  if TWdgP.TB_Horiz then
-                     TIO.Put_Line ("True");
-                  else
-                     TIO.Put_Line ("False");
-                  end if;
-                  TIO.Put (Sp (Id + 2) & "Show Arrows  ");
-                  if TWdgP.Show_Arrows then
-                     TIO.Put_Line ("True");
-                  else
-                     TIO.Put_Line ("False");
-                  end if;
-                  TIO.Put (Sp (Id + 2) & "Grip Visible ");
-                  if TWdgP.Grip_Visible then
-                     TIO.Put_Line ("True");
-                  else
-                     TIO.Put_Line ("False");
-                  end if;
+               Put_Property ("ReadOnly");
+               Put_Boolean (TWdgP.ReadOnly);
 
-               when others => null;
-            end case;
+               case TWdgP.Widget_Type is
+                  when GtkDataGridView | GtkTreeGridView =>
+                     Put_Property ("ColumnHeadersVisible");
+                     Put_Boolean (TWdgP.ColumnHeadersVisible);
 
-            TWdgChild := TWdgP.Child_List;
-            while TWdgChild /= null loop
-               Dump_Widget (TWdgChild, Id + 2);
-               TWdgChild := TWdgChild.Next;
-            end loop;
+                     Put_Property ("Col. H. Def. CellStyle");
+                     if TWdgP.ColumnHeadersDefaultCellStyle in DGVS.all'Range
+                     then
+                        TIO.Put (LFile, Test20
+                                 & Img (TWdgP.ColumnHeadersDefaultCellStyle));
+                     end if;
+                     TIO.New_Line (LFile);
 
-         when GtkImage =>
-            TIO.Put (Sp (Id + 2) & "ImagePath    ");
-            if TWdgP.Image /= null then
-               TIO.Put (TWdgP.Image.all);
-            end if;
-            TIO.New_Line;
+                     Put_Property ("Row H. Def. CellStyle");
+                     if TWdgP.RowHeadersDefaultCellStyle in DGVS.all'Range
+                     then
+                        TIO.Put (LFile, Test20
+                                 & Img (TWdgP.RowHeadersDefaultCellStyle));
+                     end if;
+                     TIO.New_Line (LFile);
 
-         when GtkMenu => null;
-         when GtkSeparatorToolItem => null;
-         when ToolStripStatusLabel => null;
-         when Chart =>
-               TIO.Put (Sp (Id + 2) & "Anchor  ");
-               if TWdgP.Anchor /= null then
-                  TIO.Put (TWdgP.Anchor.all);
-               end if;
-               TIO.New_Line;
+                     Put_Property ("Col. H. HeightSizeMode");
+                     CHHSMIO.Put (LFile, TWdgP.ColumnHeadersHeightSizeMode);
+                     TIO.New_Line (LFile);
+
+                     Put_Property ("AllowUserToAddRows");
+                     Put_Boolean (TWdgP.AllowUserToAddRows);
+
+                     Put_Property ("AllowUserToDeleteRows");
+                     Put_Boolean (TWdgP.AllowUserToDeleteRows);
+
+                     Put_Property ("AllowUserToDeleteRows");
+                     Put_Boolean (TWdgP.AllowUserToDeleteRows);
+
+                     Put_Property ("EnableHeadersVisualStyles");
+                     Put_Boolean (TWdgP.EnableHeadersVisualStyles);
+
+                     Put_Property ("RowMultiSelect");
+                     Put_Boolean (TWdgP.RowMultiSelect);
+
+                     Put_Property ("RowHeadersVisible");
+                     Put_Boolean (TWdgP.RowHeadersVisible);
+
+                     Put_Property ("EditModeProgramatically");
+                     Put_Boolean (TWdgP.EditModeProgramatically);
+
+                     Put_Property ("ImageList");
+                     Put_Widget_Pointer_Name (TWdgP.ImageList);
+
+                     Put_Property ("RowHeadersWidthSizeMode");
+                     RHWSMIO.Put (LFile, TWdgP.RowHeadersWidthSizeMode);
+                     TIO.New_Line (LFile);
+
+                     Put_Property ("RowHeadersBorderStyle");
+                     RHBSIO.Put (LFile, TWdgP.RowHeadersBorderStyle);
+                     TIO.New_Line (LFile);
+
+                     Put_Property ("ScrollBars");
+                     SBIO.Put (LFile, TWdgP.ScrollBars);
+                     TIO.New_Line (LFile);
+
+                     Put_Property ("Model");
+                     Put_Window_Pointer_Name (TWdgP.Model);
+
+                  when ExpandableColumn
+                     | DataGridViewTextBoxColumn
+                     | DataGridViewCheckBoxColumn
+                     =>
+                     Put_Property ("Fixed Width");
+                     Put_Integer (TWdgP.Fixed_Width);
+
+                     Put_Property ("Min Width");
+                     Put_Integer (TWdgP.Min_Width);
+
+                     Put_Property ("Max Width");
+                     Put_Integer (TWdgP.Max_Width);
+
+                     Put_Property ("UserAddedColumn");
+                     Put_Boolean (TWdgP.UserAddedColumn);
+
+                     Put_Property ("Level");
+                     Put_Integer (TWdgP.Level);
+
+                     Put_Property ("PaddingX");
+                     Put_Integer (TWdgP.PaddingX);
+
+                     Put_Property ("PaddingY");
+                     Put_Integer (TWdgP.PaddingY);
+
+                     Put_Property ("Resizable");
+                     Put_Boolean (TWdgP.Resizable);
+
+                     Put_Property ("SortMode");
+                     SMIO.Put (LFile, TWdgP.SortMode);
+                     TIO.New_Line (LFile);
+
+                     Put_Property ("AutoSizeColumnMode");
+                     ASCMIO.Put (LFile, TWdgP.AutoSizeColumnMode);
+                     TIO.New_Line (LFile);
+
+                     Put_Property ("DefaultNodeImage");
+                     Put_Widget_Pointer_Name (TWdgP.DefaultNodeImage);
+
+                     Put_Property ("Frozen");
+                     Put_Boolean (TWdgP.Frozen);
+
+                     case TWdgP.Widget_Type is
+                        when DataGridViewCheckBoxColumn =>
+                           Put_Property ("Active Column");
+                           Put_Integer (TWdgP.Active_Column);
+
+                           Put_Property ("Activatable Column");
+                           Put_Integer (TWdgP.Activatable_Column);
+                        when others => null;
+                     end case;
+
+                  when others => null;
+               end case;
+
+            when GtkNoteBook =>
+               Put_Property ("Scrollable");
+               Put_Boolean (TWdgP.Scrollable);
+
+               Put_Property ("Enable Popup");
+               Put_Boolean (TWdgP.Enable_Popups);
+
+               Put_Property ("Show Tabs");
+               Put_Boolean (TWdgP.Show_Tabs);
+
+               Put_Property ("Show Borders");
+               Put_Boolean (TWdgP.Show_Border);
+
+               Put_Property ("Pack Start");
+               Put_Boolean (TWdgP.Pack_Start);
+
+               Put_Property ("Tab CloseButton Visible");
+               Put_Boolean (TWdgP.CloseButtonOnTabsInactiveVisible);
+
+               Put_Property ("Selected Index");
+               Put_Integer (TWdgP.SelectedIndex);
+
+            when GtkTabChild =>
+               Put_Property ("Button");
+               Put_Widget_Pointer_Name (TWdgP.The_Button);
+
+            when GtkEntry | GtkComboBox | GtkCalendar =>
+               Put_Property ("Buffer");
+               Put_Window_Pointer_Name (TWdgP.Buffer);
+
+               Put_Property ("Text Buffer");
+               Put_String_Access (TWdgP.Text_Buffer);
+
+               case TWdgP.Widget_Type is
+                  when GtkEntry | GtkComboBox =>
+                     Put_Property ("Editable");
+                     Put_Boolean (TWdgP.Editable);
+
+                     Put_Property ("Has Frame");
+                     Put_Boolean (TWdgP.Has_Frame);
+
+                     Put_Property ("PasswordChar");
+                     Put_String_Access (TWdgP.PasswordChar);
+
+                     if TWdgP.Widget_Type = GtkComboBox then
+                        Put_Property ("Sorted");
+                        Put_Boolean (TWdgP.Editable);
+                     end if;
+
+                  when GtkCalendar =>
+                     Put_Property ("StartDate");
+                     TIO.Put_Line (Image (TWdgP.Start_Date, ISO_Date));
+
+                     Put_Property ("MinDate");
+                     TIO.Put_Line (Image (TWdgP.MinDate, ISO_Date));
+
+                     Put_Property ("MaxDate");
+                     TIO.Put_Line (Image (TWdgP.MaxDate, ISO_Date));
+
+                     Put_Property ("Format Date");
+                     Put_String_Access (TWdgP.Format_Date);
+
+                     Put_Property ("ShowUpDown");
+                     Put_Boolean (TWdgP.ShowUpDown);
+
+                  when others => null;
+               end case;
+
+            when GtkSpinButton =>
+               Put_Property ("Start");
+               Put_Integer (TWdgP.StartValue);
+
+               Put_Property ("MaxValue");
+               Put_Integer (TWdgP.MaxValue);
+
+               Put_Property ("MinValue");
+               Put_Integer (TWdgP.MinValue);
+
+               Put_Property ("Step");
+               Put_Integer (TWdgP.Step);
+
+            when GtkFileChooserButton
+               | PrintDocument | PrintDialog | PageSetupDialog
+               | FolderBrowserDialog | GtkToolTip | GtkColorButton
+               | GtkStatusBar | GtkToolBar | GtkMenuBar | BackgroundWorker
+               | BindingNavigator
+               =>
+
+               Put_Property ("TrayLocation");
+               TIO.Put (LFile, "x=" & Img (TWdgP.TrayLocation.From_Left));
+               TIO.Put (LFile, ", y=" & Img (TWdgP.TrayLocation.From_Top));
+               TIO.New_Line (LFile);
+
+               case TWdgP.Widget_Type is
+                  when GtkFileChooserButton =>
+                     Put_Property ("OpenFileDialog");
+                     Put_String_Access (TWdgP.OpenFileDialog);
+
+                     Put_Property ("OpenFileFilter");
+                     Put_String_Access (TWdgP.OpenFileFilter);
+
+                     Put_Property ("OpenFileTitle");
+                     Put_String_Access (TWdgP.OpenFileTitle);
+
+                  when GtkColorButton =>
+                     Put_Property ("AnyColor");
+                     Put_Boolean (TWdgP.AnyColor);
+
+                     Put_Property ("FullOpen");
+                     Put_Boolean (TWdgP.FullOpen);
+
+                     Put_Property ("Associated Button");
+                     Put_Widget_Pointer_Name (TWdgP.Associated_Button);
+
+                  when GtkToolBar | GtkMenuBar | BindingNavigator =>
+                     Put_Property ("Image Scaling Size");
+                     TIO.Put (LFile, "H="
+                              & Img (TWdgP.ImageScalingSize.One));
+                     TIO.Put_Line (LFile, ", V="
+                              & Img (TWdgP.ImageScalingSize.Two));
+
+                     case TWdgP.Widget_Type is
+                        when GtkToolBar | BindingNavigator =>
+                           Put_Property ("Horizontal");
+                           Put_Boolean (TWdgP.TB_Horiz);
+
+                           Put_Property ("Show Arrows");
+                           Put_Boolean (TWdgP.Show_Arrows);
+
+                           Put_Property ("Grip Visible");
+                           Put_Boolean (TWdgP.Grip_Visible);
+
+                           case TWdgP.Widget_Type is
+                              when BindingNavigator =>
+                                 Put_Property ("AddNewItem");
+                                 Put_Widget_Pointer_Name (TWdgP.AddNewItem);
+
+                                 Put_Property ("CountItem");
+                                 Put_Widget_Pointer_Name (TWdgP.CountItem);
+
+                                 Put_Property ("DeleteItem");
+                                 Put_Widget_Pointer_Name (TWdgP.DeleteItem);
+
+                                 Put_Property ("MoveFirstItem");
+                                 Put_Widget_Pointer_Name (TWdgP.MoveFirstItem);
+
+                                 Put_Property ("MoveLastItem");
+                                 Put_Widget_Pointer_Name (TWdgP.MoveLastItem);
+
+                                 Put_Property ("MoveNextItem");
+                                 Put_Widget_Pointer_Name (TWdgP.MoveNextItem);
+
+                                 Put_Property ("MovePreviousItem");
+                                 Put_Widget_Pointer_Name
+                                   (TWdgP.MovePreviousItem);
+
+                                 Put_Property ("PositionItem");
+                                 Put_Widget_Pointer_Name (TWdgP.PositionItem);
+                              when others => null;
+                           end case;
+                        when others => null;
+                     end case;
+
+                  when PageSetupDialog =>
+                     Put_Property ("EnableMetric");
+                     Put_Boolean (TWdgP.EnableMetric);
+
+                     Put_Property ("MinMargins");
+                     TIO.Put_Line (LFile,
+                              "Top " & Img (TWdgP.MinMargins (1))
+                              & ", Bottom " & Img (TWdgP.MinMargins (3))
+                              & ", Start " & Img (TWdgP.MinMargins (2))
+                              & ", End " & Img (TWdgP.MinMargins (4)));
+
+               when BackgroundWorker =>
+                     Put_Property ("Report Progress");
+                     Put_Boolean (TWdgP.WorkerReportsProgress);
+
+                     Put_Property ("Support Cancellation");
+                     Put_Boolean (TWdgP.WorkerSupportsCancellation);
+
+                  when others => null;
+               end case;
+
+            when GtkListBox =>
+               Put_Property ("MultiSelect");
+               Put_Boolean (TWdgP.MultiSelect);
+
+               Put_Property ("ListStore    ");
+               Put_Window_Pointer_Name (TWdgP.ListStore);
+
+            when GtkImage =>
+               Put_Property ("ImagePath");
+               Put_String_Access (TWdgP.Image);
+
+            when GtkButton | GtkRadioButton
+               | GtkCheckButton | GtkToggleButton
+               | GtkLabel | ToolStripStatusLabel
+               =>
+               Put_Property ("Underline");
+               Put_Boolean (TWdgP.Underline);
+
+               case TWdgP.Widget_Type is
+                  when GtkLabel | ToolStripStatusLabel =>
+                     Put_Property ("BorderStyle");
+                     BSIO.Put (LFile, TWdgP.BorderStyle);
+                     TIO.New_Line (LFile);
+
+                  when GtkButton | GtkRadioButton
+                     | GtkCheckButton | GtkToggleButton
+                     =>
+                     Put_Property ("Active");
+                     Put_Boolean (TWdgP.Active);
+
+                     Put_Property ("ImagePath");
+                     Put_String_Access (TWdgP.ImagePath);
+
+                     Put_Property ("ImageAlign");
+                     IPIO.Put (LFile, TWdgP.ImageAlign);
+                     TIO.New_Line (LFile);
+
+                     Put_Property ("Windows Image");
+                     Put_Window_Pointer_Name (TWdgP.Win_Image);
+
+                     case TWdgP.Widget_Type is
+                     when GtkButton =>
+                        Put_Property ("Associates ColorButton");
+                        Put_Widget_Pointer_Name (TWdgP.Associated_ColorButton);
+
+                     when GtkCheckButton =>
+                        Put_Property ("CheckAlign");
+                        Put_String_Access (TWdgP.CheckAlign);
+
+                     when others => null;
+                     end case;
+                  when others => null;
+               end case;
+
+            when Chart =>
+               Put_Property ("Anchor");
+               Put_String_Access (TWdgP.Anchor);
+
+            when GtkFrame =>
+               null;
+
+            when GtkBox =>
+               null;
+
+            when GtkSeparatorToolItem =>
+               null;
 
          end case;
 
-         TS := TWdgP.Signal_List;
-         while TS /= null loop
-            TIO.Put_Line (Sp (Id + 2) & "Signal       " & TS.Name.all);
-            TS := TS.Next;
-         end loop;
+         Dump_Signals;
+         Dump_Children;
 
       end Dump_Widget;
    begin
+      Debug (0, "Generating Dump");
+      TIO.Create (File => LFile,
+                  Mode => TIO.Out_File,
+                  Name => Path & "/" & File_Name & ".dump");
+      Dump_DGVS;
       TWin := Win_List;
       while TWin /= null loop
-         Dump_Window (TWin, 2);
+         Dump_Window (TWin, 0);
          TWin := TWin.Next;
       end loop;
+      TIO.Close (LFile);
+      Debug (0, "End of generating Dump");
    end Dump;
 
    function Parse_Resource_File (TWin           : Window_Pointer;
@@ -820,6 +1517,7 @@ package body W2gtk_Pkg is
          Idx0 : Integer;
          Idx1 : Integer;
          P0   : Pair;
+         Win_Prop : Window_Property_Enum;
 
       begin
          --  loop to get window properties
@@ -838,25 +1536,35 @@ package body W2gtk_Pkg is
             if Idx0 in 1 .. Len then
                Idx1 := Index (Line (Idx0 + Test2'Length .. Len), """");
                if Idx1 in Idx0 + Test2'Length .. Len then
-                  declare
-                     Property : constant String :=
-                       Line (Idx0 + Test2'Length .. Idx1 - 1);
-                  begin
-                     if Property = "ClientSize" then
+                  Win_Prop := Symbol_Tables.Get_Property
+                    (Line (Idx0 + Test2'Length .. Idx1 - 1));
+
+                  case Win_Prop is
+                     when Str_Accept_Button =>
+                        null;
+                     when Str_Cancel_Button =>
+                        null;
+                     when Str_ClientSize =>
                         P0 := Get_Pair (Get_String (RFile));
                         TWin.Client_Size.Horiz := P0.One;
                         TWin.Client_Size.Vert  := P0.Two;
                         Debug (NLin, "Set Window Property ClientSize H=" &
                                  Img (P0.One) & ", V=" & Img (P0.Two));
-                     elsif Property = "AutoScaleDimensions" then
+
+                     when Str_AutoScaleDimensions =>
                         P0 := Get_Pair (Get_String (RFile));
                         TWin.AutoScaleDim.Horiz := P0.One;
                         TWin.AutoScaleDim.Vert  := P0.Two;
                         Debug (NLin, "Set Window Property AutoScaleDim H=" &
                                  Img (P0.One) & ", V=" & Img (P0.Two));
-                     elsif Property = "Icon" then
+
+                     when Str_Icon =>
                         TWin.Icon := new String'("");
-                     elsif Property = "StartPosition" then
+                        Debug (NLin, Resx_File_Name & ".resx"
+                               & ": ignored window property "
+                               & "Icon");
+
+                     when Str_StartPosition =>
                         declare
                            Temp : constant String := Get_String (RFile);
                         begin
@@ -865,50 +1573,60 @@ package body W2gtk_Pkg is
                               Debug (NLin, "Set Window Property CenterParent");
                            end if;
                         end;
-                     elsif Property = "Margin" then
+
+                     when Str_Margin =>
                         TWin.Margins := Get_Margin_Array (RFile);
                         Debug (NLin, "Set Window Property Margins " &
                                  Img (TWin.Margins (1)) & ", " &
                                  Img (TWin.Margins (2)) & ", " &
                                  Img (TWin.Margins (3)) & ", " &
                                  Img (TWin.Margins (4)));
-                     elsif Property = "Font" then
+
+                     when Str_Font =>
                         Get_Font (RFile, TWin.Font_Name,
                                   TWin.Font_Size, TWin.Font_Weight);
                         Debug (NLin, "Set Window Property Font "
                                & TWin.Font_Name.all & ", "
                                & TWin.Font_Size.all);
-                     elsif Property = "Type" then
+
+                     when Str_Type =>
                         null; --  should be Form
-                     elsif Property = "ToolTip" then
+
+                     when Str_ToolTip =>
                         TWin.ToolTip := new String'(Get_String (RFile));
                         Debug (NLin, "Set Window Property Tooltip " &
                                  TWin.ToolTip.all);
-                     elsif Property = "TrayHeight" then
+
+                     when Str_TrayHeight =>
                         TWin.TrayHeight := Get_Integer (Get_String (RFile));
                         Debug (NLin, "Set Window Property TrayHeight " &
                                  TWin.ToolTip.all);
-                     elsif Property = "Text" then
+
+                     when Str_Text =>
                         TWin.Title := new String'(Get_String (RFile));
                         Debug (NLin, "Set Window Property Title " &
                                  TWin.Title.all);
-                     elsif Property = "Name" then
+
+                     when Str_Name =>
                         if TWin.Name = null then
                            TWin.Name := new String'(Get_String (RFile));
-                           Debug (NLin, "Set Window Property Name " &
-                                    TWin.Name.all);
+                           Debug (NLin, "Set Window Property Name "
+                                  & TWin.Name.all);
                         end if;
-                     elsif Property = "RightToLeft" then
-                        null; --  ignore
-                     else
+
+                     when Str_RightToLeft =>
+                        Debug (NLin, Resx_File_Name & ".resx"
+                               & ": ignored window property "
+                               & "RightToLeft");
+
+                     when No_Property =>
                         TIO.Put_Line (Resx_File_Name & ".resx"
                                       & ": Line" & NLin'Image
                                       & ": unknown window property: "
-                                      & Property);
+                                      & Line (Idx0 + Test2'Length .. Len));
                         TIO.Close (RFile);
                         return -1;
-                     end if;
-                  end;
+                  end case;
                else
                   TIO.Put_Line (Resx_File_Name & ".resx"
                                 & ": Line" & NLin'Image &
@@ -974,269 +1692,351 @@ package body W2gtk_Pkg is
                Idx0  := Index (Line (1 .. Len), Test1);
                Disp0 := Test1'Length;
             end if;
-            if Idx0 in 1 .. Len then
-               Idx1 := Index (Line (Idx0 + Disp0 .. Len), """");
-               Idx2 := Index (Line (Idx0 .. Idx1), "$this.");
-               if Idx1 in Idx0 + Test2'Length .. Len and then
-                 not (Idx2 in Idx0 .. Idx1)
-               then
-                  declare
-                     Property : constant String :=
-                       Line (Idx0 + Disp0 .. Idx1 - 1);
-                  begin
-                     Idx0 := Index (Property, ".");
-                     if Idx0 in Property'Range then
-                        declare
-                           PName   : constant String :=
-                             Property (Property'First .. Idx0 - 1);
-                           PAttrib : constant String :=
-                             Property (Idx0 + 1 .. Property'Last);
-                           WT : Widget_Pointer;
-                        begin
-                           if PName = "" then
-                              TIO.Put_Line (Resx_File_Name & ".resx"
-                                            & ": Line" & NLin'Image
-                                            &  ": cannot find widget name");
-                              TIO.Close (RFile);
-                              return -1;
-                           end if;
-
-                           if PAttrib = "" then
-                              TIO.Put_Line (Resx_File_Name & ".resx"
-                                            & ": Line" & NLin'Image
-                                            &  ": cannot find widget property"
-                                            & " for " & PName);
-                              TIO.Close (RFile);
-                              return -1;
-                           end if;
-
-                           WT := Find_Widget (TWin.Widget_List, PName);
-                           if WT = null then
-                              TIO.Put_Line (Resx_File_Name & ".resx"
-                                            & ": Line" & NLin'Image
-                                            & ": widget " & PName
-                                            & " not in Designer");
-                              TIO.Close (RFile);
-                              return -1;
-                           end if;
-
-                           if PAttrib = "Anchor" then
-                              WT.Anchor := new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Anchor "
-                                     & WT.Anchor.all);
-
-                           elsif PAttrib = "ZOrder" then
-                              WT.Zorder := Get_Integer (Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".ZOrder "
-                                     & Img (WT.Zorder));
-
-                           elsif PAttrib = "Margin" then
-                              WT.Margins := Get_Margin_Array (RFile);
-                              Debug (NLin, "Set Widget Property " & PName
-                                     & ". Margins " &
-                                       Img (WT.Margins (1)) & ", " &
-                                       Img (WT.Margins (2)) & ", " &
-                                       Img (WT.Margins (3)) & ", " &
-                                       Img (WT.Margins (4)));
-
-                           elsif PAttrib = "TabIndex" then
-                              WT.TabIndex := Get_Integer (Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".TabIndex "
-                                     & Img (WT.TabIndex));
-
-                           elsif PAttrib = "Text" then
-                              WT.Text := new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Text "
-                                     & WT.Text.all);
-
-                           elsif PAttrib = "MaxLength" then
-                              WT.MaxLength := Get_Integer (Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".MaxLength "
-                                     & Img (WT.MaxLength));
-                           elsif (PAttrib = "ToolTip" or else
-                                  PAttrib = "ToolTipText")
-                           then
-                              WT.ToolTip := new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".ToolTip "
-                                     & WT.ToolTip.all);
-
-                           elsif PAttrib = "AutoToolTip" then
-                              WT.AutoToolTip := Get_Boolean (RFile);
-
-                           elsif PAttrib = "AutoSize" then
-                              WT.AutoSize := To_TriBoolean
-                                (Get_Boolean (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Autosize "
-                                     & WT.AutoSize'Image);
-
-                           elsif PAttrib = "Enabled" then
-                              WT.Enabled := Get_Boolean (RFile);
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Enabled "
-                                     & WT.Enabled'Image);
-
-                           elsif PAttrib = "Visible" then
-                              WT.Visible := Get_Boolean (RFile);
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Visible "
-                                     & WT.Visible'Image);
-
-                           elsif PAttrib = "TextAlign" then
-                              WT.TextAlign := new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".TextAlign "
-                                     & WT.TextAlign.all);
-
-                           elsif PAttrib = "CheckAlign" then
-                              WT.CheckAlign := new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".CheckAlign "
-                                     & WT.CheckAlign.all);
-
-                           elsif PAttrib = "Name" then
-                              if PName /= Get_String (RFile) then
-                                 TIO.Put_Line ("Line" & NLin'Image & ": " &
-                                                 "name mistmatch");
-                                 TIO.Close (RFile);
-                                 return -1;
-                              end if;
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Name "
-                                     & WT.Name.all);
-
-                           elsif PAttrib = "Size" then
-                              P0 := Get_Pair (Get_String (RFile));
-                              WT.Size.Horiz := P0.One;
-                              WT.Size.Vert  := P0.Two;
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Size H=" &
-                                       Img (P0.One) & ", V=" & Img (P0.Two));
-
-                           elsif PAttrib = "Location" then
-                              P0 := Get_Pair (Get_String (RFile));
-                              WT.Location.From_Top := P0.Two;
-                              WT.Location.From_Left := P0.One;
-                              Debug (NLin, "Set Widget Property "
-                                     & PName
-                                     &  ".Location H="
-                                     & Img (P0.One) & ", V=" & Img (P0.Two));
-
-                           elsif PAttrib = "Type" then
-                              WT.Windows_Type :=
-                                new String'(Get_Widget_Name (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Type "
-                                     & WT.Windows_Type.all);
-
-                           elsif PAttrib = "Parent" then
-                              WT.Parent_Name :=
-                                new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName
-                                     & ".Parent Name "
-                                     & WT.Parent_Name.all);
-
-                           elsif PAttrib = "Font" then
-                              Get_Font (RFile, WT.Font_Name,
-                                        WT.Font_Size, WT.Font_Weight);
-                              Debug (NLin, "Set Widget Property "
-                                     & PName & ".Font "
-                                     & WT.Font_Name.all
-                                     & ", " & WT.Font_Size.all);
-
-                           elsif PAttrib = "PasswordChar" then
-                              WT.PasswordChar :=
-                                new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName &
-                                       ".PasswordChar" & WT.PasswordChar.all);
-
-                           elsif PAttrib = "OpenFile" then
-                              WT.OpenFileDialog :=
-                                new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName &
-                                       ".OpenFile " & WT.OpenFileDialog.all);
-
-                           elsif PAttrib = "TrayLocation" then
-                              P0 := Get_Pair (Get_String (RFile));
-                              WT.TrayLocation.From_Top  := P0.Two;
-                              WT.TrayLocation.From_Left := P0.One;
-                              Debug (NLin, "Set Widget Property "
-                                     & PName &
-                                       ".TrayLocation H=" &
-                                       Img (P0.One) & ", V=" & Img (P0.Two));
-
-                           elsif PAttrib = "Filter" then
-                              WT.OpenFileFilter :=
-                                new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName
-                                     & ".OpenFileFilter "
-                                     & WT.OpenFileFilter.all);
-
-                           elsif PAttrib = "Title" then
-                              WT.OpenFileTitle :=
-                                new String'(Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & PName
-                                     & ".OpenFileTitle "
-                                     & WT.OpenFileTitle.all);
-
-                           elsif PAttrib = "ImageAlign" then
-                              WT.ImageAlign := Convert (Get_String (RFile));
-                              Debug (NLin, "Set Widget Property "
-                                     & WT.Name.all & ".ImageAlign "
-                                     & WT.ImageAlign'Image);
-
-                           elsif PAttrib'Length > 4 and then
-                             PAttrib (PAttrib'First .. PAttrib'First + 4) =
-                             "Items"
-                           then
-                              Debug (NLin, "Resource: Ignored Widget Property "
-                                     & PName & " " & PAttrib);
-
-                           elsif PAttrib = "HorizontalScrollbar" or
-                             PAttrib = "ItemHeight" or
-                             PAttrib = "Dock" or
-                             PAttrib = "ImeMode" or
-                             PAttrib = "WaitOnLoad" or
-                             PAttrib = "SizeMode" or
-                             PAttrib = "RightToLeft" or
-                             PAttrib = "Image" or
-                             PAttrib = "TextImageRelation" or
-                             PAttrib = "ImageTransparentColor"
-                           then
-                              Debug (NLin, "Resource: Ignored Widget Property "
-                                     & PName & " " & PAttrib);
-                           else
-                              TIO.Put_Line (Resx_File_Name & ".resx"
-                                            & ": Line" & NLin'Image &
-                                              ": unknown widget property: " &
-                                              Property);
-                              TIO.Close (RFile);
-                              return -1;
-                           end if;
-                        exception
-                           when Constraint_Error =>
-                              TIO.Close (RFile);
-                              TIO.Put_Line ("Constraint Error");
-                              TIO.Put_Line (Resx_File_Name & ".resx"
-                                            & ": Line:" & NLin'Image
-                                            & ": " & Property);
-                              return -1;
-                        end;
-                     end if;
-                  end;
-               end if;
+            if Idx0 not in 1 .. Len then
+               goto Continue_Loop;
             end if;
+
+            Idx1 := Index (Line (Idx0 + Disp0 .. Len), """");
+            Idx2 := Index (Line (Idx0 .. Idx1), "$this.");
+            if not (Idx1 in Idx0 + Test2'Length .. Len and then
+                      not (Idx2 in Idx0 .. Idx1))
+            then
+               goto Continue_Loop;
+            end if;
+
+            declare
+               Property : constant String := Line (Idx0 + Disp0 .. Idx1 - 1);
+            begin
+               Idx0 := Index (Property, ".");
+               if Idx0 not in Property'Range then
+                  goto Continue_Loop;
+               end if;
+
+               declare
+                  PName   : constant String :=
+                    Property (Property'First .. Idx0 - 1);
+                  PAttrib : constant String :=
+                    Property (Idx0 + 1 .. Property'Last);
+                  WT      : Widget_Pointer;
+                  Attr    : Widget_Attribute_Enum;
+               begin
+                  if PName = "" then
+                     TIO.Put_Line (Resx_File_Name & ".resx"
+                                   & ": Line" & NLin'Image
+                                   &  ": cannot find widget name");
+                     TIO.Close (RFile);
+                     return -1;
+                  end if;
+
+                  if PAttrib = "" then
+                     TIO.Put_Line (Resx_File_Name & ".resx"
+                                   & ": Line" & NLin'Image
+                                   &  ": cannot find widget property"
+                                   & " for " & PName);
+                     TIO.Close (RFile);
+                     return -1;
+                  end if;
+
+                  WT := Find_Widget (TWin.Widget_List, PName);
+                  if WT = null then
+                     if Contains (Line (1 .. Len), "BindingNavigator")
+                     then
+                        Debug (NLin, "Resource: Ignored Widget Property "
+                               & Line (1 .. Len));
+                        goto Continue_Loop;
+                     end if;
+                     TIO.Put_Line (Resx_File_Name & ".resx"
+                                   & ": Line" & NLin'Image
+                                   & ": widget " & PName
+                                   & " not in Designer");
+                     TIO.Close (RFile);
+                     return -1;
+                  end if;
+
+                  if Starts_With (PAttrib, "Items") then
+                     if WT.Widget_Type = GtkComboBox then
+                        if WT.Text_Buffer = null then
+                           WT.Text_Buffer := new String'(Get_String (RFile));
+                        else
+                           declare
+                              Temp : String_Access;
+                           begin
+                              Temp := new String'(WT.Text_Buffer.all
+                                                  & ASCII.CR
+                                                  & Get_String (RFile));
+                              Free (WT.Text_Buffer);
+                              WT.Text_Buffer := Temp;
+                           end;
+                        end if;
+                     else
+                        Debug (NLin, "Resource: Ignored Widget Property "
+                               & PName & " " & PAttrib);
+                     end if;
+                     goto Continue_Loop;
+
+                  elsif Contains (Property, "BindingNavigator") then
+                     Debug (NLin, "Resource: Ignored Widget Property "
+                            & PName & " " & PAttrib);
+                     goto Continue_Loop;
+                  end if;
+
+                  Attr := Symbol_Tables.Get_Attribute (PAttrib);
+
+                  case Attr is
+                     when Attr_Anchor =>
+                        WT.Anchor := new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Anchor "
+                               & WT.Anchor.all);
+
+                     when Attr_ZOrder =>
+                        WT.Zorder := Get_Integer (Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".ZOrder "
+                               & Img (WT.Zorder));
+
+                     when Attr_Margin | Attr_Padding =>
+                        WT.Margins := Get_Margin_Array (RFile);
+                        Debug (NLin, "Set Widget Property " & PName
+                               & ". Margins " &
+                                 Img (WT.Margins (1)) & ", " &
+                                 Img (WT.Margins (2)) & ", " &
+                                 Img (WT.Margins (3)) & ", " &
+                                 Img (WT.Margins (4)));
+
+                     when Attr_TabIndex =>
+                        WT.TabIndex := Get_Integer (Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".TabIndex "
+                               & Img (WT.TabIndex));
+
+                     when Attr_Text =>
+                        if WT.Widget_Type = GtkTabChild then
+                           WT.Text := new String'(Trim (Get_String (RFile),
+                                                  Ada.Strings.Both));
+                        else
+                           WT.Text := new String'(Get_String (RFile));
+                        end if;
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Text "
+                               & WT.Text.all);
+
+                     when Attr_MaxLength =>
+                        WT.MaxLength := Get_Integer (Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".MaxLength "
+                               & Img (WT.MaxLength));
+
+                     when Attr_ToolTip | Attr_ToolTipText =>
+                        WT.ToolTip := new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".ToolTip "
+                               & WT.ToolTip.all);
+
+                     when Attr_AutoToolTip =>
+                        WT.AutoToolTip := Get_Boolean (RFile);
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".AutoToolTip "
+                               & WT.AutoToolTip'Image);
+
+
+                     when Attr_AutoSize =>
+                        WT.AutoSize := Get_Boolean (RFile);
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Autosize "
+                               & WT.AutoSize'Image);
+
+                     when Attr_Enabled =>
+                        WT.Enabled := Get_Boolean (RFile);
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Enabled "
+                               & WT.Enabled'Image);
+
+                     when Attr_UserAddedColumn =>
+                        WT.UserAddedColumn := Get_Boolean (RFile);
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".UserAddedColumn "
+                               & WT.UserAddedColumn'Image);
+
+                     when Attr_Visible =>
+                        WT.Visible := Get_Boolean (RFile);
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Visible "
+                               & WT.Visible'Image);
+
+                     when Attr_TextAlign | Attr_BoxTextAlign =>
+                        TAIO.Get (Get_String (RFile), WT.TextAlign, Idx2);
+                        declare
+                           Temp : String (1 .. 12);
+                        begin
+                           TAIO.Put (Temp, WT.TextAlign);
+                           Debug (NLin, "Set Widget Property "
+                                  & PName & ".TextAlign "
+                                  & Temp);
+                        end;
+
+                     when Attr_CheckAlign =>
+                        WT.CheckAlign := new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".CheckAlign "
+                               & WT.CheckAlign.all);
+
+                     when Attr_Name =>
+                        if PName /= Get_String (RFile) then
+                           TIO.Put_Line ("Line" & NLin'Image & ": " &
+                                           "name mistmatch");
+                           TIO.Close (RFile);
+                           return -1;
+                        end if;
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Name "
+                               & WT.Name.all);
+
+                     when Attr_Size =>
+                        P0 := Get_Pair (Get_String (RFile));
+                        WT.Size.Horiz := P0.One;
+                        WT.Size.Vert  := P0.Two;
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Size H=" &
+                                 Img (P0.One) & ", V=" & Img (P0.Two));
+
+                     when Attr_Location =>
+                        P0 := Get_Pair (Get_String (RFile));
+                        WT.Location.From_Top := P0.Two;
+                        WT.Location.From_Left := P0.One;
+                        Debug (NLin, "Set Widget Property "
+                               & PName
+                               &  ".Location H="
+                               & Img (P0.One) & ", V=" & Img (P0.Two));
+
+                     when Attr_Type =>
+                        WT.Windows_Type :=
+                          new String'(Get_Widget_Name (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Type "
+                               & WT.Windows_Type.all);
+
+                     when Attr_Parent =>
+                        WT.Parent_Name :=
+                          new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName
+                               & ".Parent Name "
+                               & WT.Parent_Name.all);
+
+                     when Attr_Font =>
+                        Get_Font (RFile, WT.Font_Name,
+                                  WT.Font_Size, WT.Font_Weight);
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Font "
+                               & WT.Font_Name.all
+                               & ", " & WT.Font_Size.all
+                               & ", " & WT.Font_Weight.all);
+
+                     when Attr_PasswordChar =>
+                        WT.PasswordChar :=
+                          new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName &
+                                 ".PasswordChar" & WT.PasswordChar.all);
+
+                     when Attr_OpenFile =>
+                        WT.OpenFileDialog :=
+                          new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName &
+                                 ".OpenFile " & WT.OpenFileDialog.all);
+
+                     when Attr_TrayLocation =>
+                        P0 := Get_Pair (Get_String (RFile));
+                        WT.TrayLocation.From_Top  := P0.Two;
+                        WT.TrayLocation.From_Left := P0.One;
+                        Debug (NLin, "Set Widget Property "
+                               & PName &
+                                 ".TrayLocation H=" &
+                                 Img (P0.One) & ", V=" & Img (P0.Two));
+
+                     when Attr_Filter =>
+                        WT.OpenFileFilter :=
+                          new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName
+                               & ".OpenFileFilter "
+                               & WT.OpenFileFilter.all);
+
+                     when Attr_Title =>
+                        WT.OpenFileTitle :=
+                          new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName
+                               & ".OpenFileTitle "
+                               & WT.OpenFileTitle.all);
+
+                     when Attr_ImageAlign =>
+                        WT.ImageAlign := Convert (Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".ImageAlign "
+                               & WT.ImageAlign'Image);
+
+                     when Attr_FixedWidth =>
+                        WT.Fixed_Width :=
+                          Get_Integer (Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Fixed_Width "
+                               & Img (WT.Fixed_Width));
+
+                     when Attr_MinimumWidth =>
+                        WT.Fixed_Width :=
+                          Get_Integer (Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Min_Width "
+                               & Img (WT.Fixed_Width));
+
+                     when Attr_MaximumWidth =>
+                        WT.Min_Width :=
+                          Get_Integer (Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Max_Width "
+                               & Img (WT.Min_Width));
+
+                     when Attr_HeaderText =>
+                        WT.Text := new String'(Get_String (RFile));
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Text "
+                               & WT.Text.all);
+
+                     when Attr_ItemSize =>
+                        P0 := Get_Pair (Get_String (RFile));
+                        WT.Size.Horiz := P0.One;
+                        WT.Size.Vert  := P0.Two;
+                        Debug (NLin, "Set Widget Property "
+                               & PName & ".Size H=" &
+                                 Img (P0.One) & ", V=" & Img (P0.Two));
+
+                     when Attr_Ignored | Attr_Image =>
+                        Debug (NLin, Resx_File_Name & ".resx"
+                               & ": ignored widget property "
+                               & PName & " " & PAttrib);
+
+                     when others =>
+                        TIO.Put_Line (Resx_File_Name & ".resx"
+                                      & ": Line" & NLin'Image &
+                                        ": unknown widget property: " &
+                                        Property);
+                        TIO.Close (RFile);
+                        return -1;
+                  end case;
+               exception
+                  when Constraint_Error =>
+                     TIO.Close (RFile);
+                     TIO.Put_Line ("Constraint Error");
+                     TIO.Put_Line (Resx_File_Name & ".resx"
+                                   & ": Line:" & NLin'Image
+                                   & ": " & Property);
+                     return -1;
+               end;
+            end;
+            << Continue_Loop >>
          end loop;
          return 0;
       exception
@@ -1256,6 +2056,8 @@ package body W2gtk_Pkg is
       end if;
 
       Result := Parse_Widget_Properties (TWin, Resx_Path, Resx_File_Name);
+
+      Debug (0, "End of Parsing Resources");
       return Result;
    end Parse_Resource_File;
 
@@ -1264,13 +2066,17 @@ package body W2gtk_Pkg is
                                   Resx_File_Name : String;
                                   Icon_Path      : String) return Integer is
       use GNAT.Calendar.Time_IO;
+      package IIO renames Ada.Integer_Text_IO;
 
       Idx0  : Integer;
       Idx1  : Integer;
       Idx2  : Integer;
       Idx3  : Integer;
       WT    : Widget_Pointer;
+      Attr  : Widget_Attribute_Enum;
       Ret   : Integer;
+      Num  : Integer;
+      Last : Integer;
 
       procedure Get_Line;
       procedure Get_Line is
@@ -1282,8 +2088,8 @@ package body W2gtk_Pkg is
          end if;
       end Get_Line;
 
-      procedure Process_Toolbar_Items (Parent : Widget_Pointer);
-      procedure Process_Toolbar_Items (Parent : Widget_Pointer) is
+      procedure Add_Items (Parent : Widget_Pointer);
+      procedure Add_Items (Parent : Widget_Pointer) is
          Child : Widget_Pointer;
       begin
          Idx0 := Index (Line (1 .. Len), "{");
@@ -1297,21 +2103,38 @@ package body W2gtk_Pkg is
             end if;
             Idx0 := Idx0 + 3;
             Idx1 := Index (Line (Idx0 .. Len), ",");
-            exit when Idx1 not in Idx0 .. Len;
-            Child := Find_Widget (TWin.Widget_List, Line (Idx0 .. Idx1 - 1));
-            if Child /= null then
-               Child.Parent_Name := Parent.Name;
-               Debug (NLin, "Set Widget Property "
-                      & WT.Name.all
-                      & ".Parent_Name "
-                      & Parent.Name.all);
-            else
-               raise TIO.Data_Error;
+            --  exit when Idx1 not in Idx0 .. Len;
+            if Idx1 not in Idx0 .. Len then
+               Idx1 := Index (Line (Idx0 .. Len), "}");
             end if;
+            Child := Find_Widget (TWin.Widget_List, Line (Idx0 .. Idx1 - 1));
+            if Child = null then
+               TIO.Put_Line (Img (NLin) & ": "
+                             & Line (Idx0 .. Len) & ": widget not found");
+               raise Constraint_Error;
+            end if;
+            if Child.Parent_Name /= null then
+               if Child.Parent_Name.all /= Parent.Name.all then
+                  TIO.Put_Line ("Designer 2: " & Img (NLin) & ": "
+                                & "Warning: " & Child.Name.all & ": "
+                                & "Mismatch with Resource File: "
+                                & Child.Parent_Name.all & " / "
+                                & Parent.Name.all);
+               end if;
+               Free (Child.Parent_Name);
+            end if;
+            Child.Parent_Name := new String'(Parent.Name.all);
+            Parent.Num_Children := Parent.Num_Children + 1;
+            Child.Child_Num := Parent.Num_Children;
+            Debug (NLin, "Set Widget Property "
+                   & Child.Name.all
+                   & ".Parent_Name "
+                   & Parent.Name.all
+                   & ", child number=" & Img (Child.Child_Num));
             Idx0 := Idx1 + 1; -- skip semicolon
-            exit when Line (Idx0) = '}';
+            exit when Line (Idx0) = ')';
          end loop;
-      end Process_Toolbar_Items;
+      end Add_Items;
 
       function Process_Widget return Integer;
       function Process_Widget return Integer is
@@ -1361,8 +2184,8 @@ package body W2gtk_Pkg is
             raise Constraint_Error;
          end Get_Date;
 
-         procedure Parse_Panel_Member;
-         procedure Parse_Panel_Member is
+         procedure Parse_One_Member (Parent : Widget_Pointer);
+         procedure Parse_One_Member (Parent : Widget_Pointer) is
             Child : Widget_Pointer;
          begin
             Idx2 := Index (Line (Idx0 .. Len), Test14);
@@ -1374,13 +2197,165 @@ package body W2gtk_Pkg is
                              & Line (Idx0 + 1 .. Len) & ": widget not found");
                raise Constraint_Error;
             end if;
-            Child.Parent_Name := new String'(WT.Name.all);
+            if Child.Parent_Name /= null then
+               if Child.Parent_Name.all /= Parent.Name.all then
+                  TIO.Put_Line ("Designer 2: " & Img (NLin) & ": "
+                                & "Warning: " & Child.Name.all & ": "
+                                & "Mismatch with Resource File: "
+                                & Child.Parent_Name.all & " / "
+                                & Parent.Name.all);
+               end if;
+               Free (Child.Parent_Name);
+            end if;
+            Child.Parent_Name := new String'(Parent.Name.all);
+            Parent.Num_Children := Parent.Num_Children + 1;
+            Child.Child_Num := Parent.Num_Children;
             Debug (NLin, "Set Widget Property "
                    & Child.Name.all
                    & ".Parent_Name "
                    & WT.Name.all);
-         end Parse_Panel_Member;
+         end Parse_One_Member;
 
+         function Check_DataGridViewCellStyle return Integer;
+         function Check_DataGridViewCellStyle return Integer is
+            DGVS_Num : Integer;
+            Last     : Integer;
+            DGVS_Attr : DGVS_Attribute_Enum;
+         begin
+            Idx0 := Index (Line (1 .. Len), Sp (8) & Test20);
+            if Idx0 not in 1 .. Len then
+               return 1; --  continue reading
+            end if;
+            Idx0 := Idx0 + 8; --  to deal with the leading spaces
+            Idx1 := Index (Line (Idx0 + Test20'Length .. Len), ".");
+            IIO.Get (Line (Idx0 + Test20'Length .. Len), DGVS_Num, Last);
+            if DGVS_Num > Max_DGVS then
+               TIO.Put_Line (Img (NLin) & ": "
+                             & Line (Idx0 + Test20'Length .. Idx1 - 1)
+                             & ": DataGridViewStyle not found");
+               return -1;
+            end if;
+            Idx1 := Idx1 + 1;
+            Idx2 := Index (Line (Idx1 .. Len), " = ");
+            DGVS_Attr := Symbol_Tables.Get_DGVS_Attribute (Line (Idx1 ..
+                                                             Idx2 - 1));
+            Idx2 := Idx2 + 3;
+
+            case DGVS_Attr is
+               when DGVS_Attr_Alignment =>
+                  Idx3 := Index (Line (Idx2 .. Len), "Alignment");
+                  if Idx3 not in Idx1 .. Len then
+                     raise TIO.Data_Error;
+                  end if;
+                  DGVS (DGVS_Num).Alignment :=
+                    new String'(Line (Idx3 + 10 .. Len));
+                  Debug (NLin, "Set DGVS property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".Alignment "
+                         & DGVS (DGVS_Num).Alignment.all);
+
+               when DGVS_Attr_BgColor =>
+                  DGVS (DGVS_Num).BgColor :=
+                    new String'(To_Color (Line (Idx2 .. Len)));
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".BgColor "
+                         & DGVS (DGVS_Num).BgColor.all);
+
+               when DGVS_Attr_FgColor =>
+                  DGVS (DGVS_Num).FgColor :=
+                    new String'(To_Color (Line (Idx2 .. Len)));
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".FgColor "
+                         & DGVS (DGVS_Num).FgColor.all);
+
+               when DGVS_Attr_SelBgColor =>
+                  DGVS (DGVS_Num).SelBgColor :=
+                    new String'(To_Color (Line (Idx2 .. Len)));
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".SelBgColor "
+                         & DGVS (DGVS_Num).SelBgColor.all);
+
+               when DGVS_Attr_SelFgColor =>
+                  DGVS (DGVS_Num).SelFgColor :=
+                    new String'(To_Color (Line (Idx2 .. Len)));
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".SelFgColor "
+                         & DGVS (DGVS_Num).FgColor.all);
+
+               when DGVS_Attr_Font =>
+                  Get_Font (Data        => Line (Idx2 .. Len),
+                            Font_Name   => DGVS (DGVS_Num).Font_Name,
+                            Font_Size   => DGVS (DGVS_Num).Font_Size,
+                            Font_Weight => DGVS (DGVS_Num).Font_Weight);
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".Font " & DGVS (DGVS_Num).Font_Name.all
+                         & ", " & DGVS (DGVS_Num).Font_Size.all
+                         & ", " & DGVS (DGVS_Num).Font_Weight.all);
+
+               when DGVS_Attr_Format =>
+                  DGVS (DGVS_Num).Format := new String'(Line (Idx2 .. Len));
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".Format "
+                         & DGVS (DGVS_Num).Format.all);
+
+               when DGVS_Attr_Padding =>
+                  Idx3 := Index (Line (Idx2 .. Len), "(");
+                  DGVS (DGVS_Num).Padding :=
+                    Get_Margin_Array (Line (Idx3 + 1 .. Len - 1));
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ". Margins "
+                         & Img (DGVS (DGVS_Num).Padding (1)) & ", "
+                         & Img (DGVS (DGVS_Num).Padding (2)) & ", "
+                         & Img (DGVS (DGVS_Num).Padding (3)) & ", "
+                         & Img (DGVS (DGVS_Num).Padding (4)));
+
+               when DGVS_Attr_WrapMode =>
+                  if Index (Line (Idx2 .. Len), "True") in Idx2 .. Len then
+                     DGVS (DGVS_Num).WrapMode := True;
+                     Debug (NLin, "Set DGVS Property "
+                            & "DataGridViewStyle" & Img (DGVS_Num)
+                            & ".WrapMode "
+                            & "True");
+                  elsif Index (Line (Idx2 .. Len), "False") in Idx2 .. Len then
+                     DGVS (DGVS_Num).WrapMode := False;
+                     Debug (NLin, "Set DGVS Property "
+                            & "DataGridViewStyle" & Img (DGVS_Num)
+                            & ".WrapMode "
+                            & "False");
+                  end if;
+
+               when DGVS_Attr_NullValue =>
+                  DGVS (DGVS_Num).NullValue := new String'(Line (Idx2 .. Len));
+                  Debug (NLin, "Set DGVS Property "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & ".NullValue "
+                         & DGVS (DGVS_Num).NullValue.all);
+
+               when DGVS_Attr_Ignored =>
+                  Debug (NLin, Resx_File_Name
+                         & ".Designer.vb (2)"
+                         & ": Ignored DGVS property: "
+                         & "DataGridViewStyle" & Img (DGVS_Num)
+                         & " " & Line (Idx0 .. Idx1 - 1));
+
+               when DGVS_No_Attribute =>
+                  TIO.Put_Line (Resx_File_Name
+                                & ".Designer.vb (2)"
+                                & ": Line" & NLin'Image
+                                & ": unknown DGVS property: "
+                                & Line (Idx1 .. Len));
+            end case;
+            return 0; --  skip to end of loop
+         end Check_DataGridViewCellStyle;
+
+         P0 : Pair;
       begin
          --  enter to read line with widget name
          if TIO.End_Of_File (DFile) then
@@ -1395,8 +2370,9 @@ package body W2gtk_Pkg is
                Len := 0;
                return 0;
             end if;
-            TIO.Put_Line (Img (NLin) & ": "
-                          & Line (Idx0 + 1 .. Len) & ": widget not found");
+            TIO.Put_Line ("Designer 2: " & Img (NLin) & ": "
+                          & Line (Idx0 .. Len)
+                          & ": widget not found");
             return -1;
          end if;
          --  skip second test9-line
@@ -1410,377 +2386,1025 @@ package body W2gtk_Pkg is
             Get_Line;
             --  first test9 of following widget
             exit when Line (Line'First .. Len) = Test9;
+            Ret := Check_DataGridViewCellStyle;
+            if Ret = 0 then
+               goto Continue_Loop;
+            elsif Ret = -1 then
+               return -1;
+            end if;
             Idx0 := Index (Line (1 .. Len), "Me." & WT.Name.all & ".");
-            if Idx0 in Line'Range then
-               Idx0 := Idx0 + 3 + WT.Name.all'Length + 1;
-               Idx1 := Index (Line (Idx0 .. Len), " = ");
-               if Idx1 not in Idx0 .. Len then
-                  if Line (Idx0 .. Idx0 + 13) = "Items.AddRange" then
-                     Idx1 := Idx0 + 14;
-                  elsif Contains (Line (Idx0 .. Len), Test14) and then
-                    WT.Widget_Type = GtkFrame
-                  then
-                     Parse_Panel_Member;
-                     Idx1 := -1; --  to skip more parsing
-                  elsif Contains (Line (Idx0 .. Len), Test15) then
-                     Idx1 := -1; --  to skip more parsing
-                  elsif Contains (Line (Idx0 .. Len), Test16) then
-                     Idx1 := -1; --  to skip more parsing
-                  elsif Contains (Line (Idx0 .. Len), Test17) then
-                     Idx1 := -1; --  to skip more parsing
-                  else
-                     TIO.Put_Line (Resx_File_Name
-                                   & ".Designer.vb (2)"
-                                   & ": Line" & NLin'Image
-                                   & ": Designer: cannot parse "
-                                   & Trim (Line (1 .. Len), Ada.Strings.Both));
-                     return -1;
-                  end if;
+            if Idx0 not in Line'Range then
+               goto Continue_Loop;
+            end if;
+
+            Idx0 := Idx0 + 3 + WT.Name.all'Length + 1;
+            Idx1 := Index (Line (Idx0 .. Len), " = ");
+            if Idx1 not in Idx0 .. Len then
+               if Line (Idx0 .. Idx0 + Test3'Length - 1) = Test3 then
+                  Idx1 := Idx0 + Test3'Length;
+               elsif Line (Idx0 .. Idx0 + Test4'Length - 1) = Test4 then
+                  Idx1 := Idx0 + Test4'Length;
+               elsif Line (Idx0 .. Idx0 + Test6'Length - 1) = Test6 then
+                  Idx1 := Idx0 + Test6'Length;
+               elsif Contains (Line (Idx0 .. Len), Test14)
+                 and then
+                   (WT.Widget_Type = GtkFrame or
+                      WT.Widget_Type = GtkTabChild or
+                        WT.Widget_Type = GtkNoteBook or
+                          WT.Widget_Type = GtkBox)
+               then
+                  Parse_One_Member (WT);
+                  goto Continue_Loop;
+               elsif Contains (Line (Idx0 .. Len), Test15)
+                 or else
+                   Contains (Line (Idx0 .. Len), Test16)
+                   or else
+                     Contains (Line (Idx0 .. Len), Test17)
+               then
+                  Debug (NLin, Resx_File_Name
+                         & ".Designer.vb (2)"
+                         & ": Line" & NLin'Image
+                         & ": Designer: Ignored Widget Property: "
+                         & WT.Name.all & " " & Line (Idx0 .. Len));
+                  goto Continue_Loop;
+
+               else
+                  TIO.Put_Line (Resx_File_Name
+                                & ".Designer.vb (2)"
+                                & ": Line" & NLin'Image
+                                & ": Designer: cannot parse "
+                                & Trim (Line (1 .. Len), Ada.Strings.Both));
+                  return -1;
                end if;
-               if Idx1 in Idx0 .. Len then
+            end if;
+            if Idx1 not in Idx0 .. Len then
+               goto Continue_Loop;
+            end if;
+
+            Attr := Symbol_Tables.Get_Attribute (Line (Idx0 .. Idx1 - 1));
+            if Attr = Attr_AutoSizeMode and then
+              (WT.Widget_Type in ExpandableColumn
+                                   | DataGridViewTextBoxColumn
+                                     | DataGridViewCheckBoxColumn)
+            then
+               Attr := Attr_AutoSizeColumnMode;
+            end if;
+            Idx1 := Idx1 + 3;
+
+            case Attr is
+               when Attr_Text =>
+                  if WT.Text /= null
+                    and then WT.Text.all /= Line (Idx1 + 1 .. Len - 1)
+                  then
+                     TIO.Put_Line (Img (NLin)
+                                   & ": text mistmatch between "
+                                   & "Designer and Resource");
+                     raise Constraint_Error;
+                  else
+                     WT.Text := new String'(Line (Idx1 + 1 .. Len - 1));
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Text "
+                            & Line (Idx1 + 1 .. Len - 1));
+                  end if;
+
+               when Attr_Name =>
+                  if WT.Name.all /= Line (Idx1 + 1 .. Len - 1) then
+                     TIO.Put_Line (Img (NLin)
+                                   & ": name mistmatch between "
+                                   & "Designer and Resource");
+                     raise Constraint_Error;
+                  end if;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all & ".Text "
+                         & Line (Idx1 + 1 .. Len - 1));
+
+               when Attr_Location =>
+                  Idx2 := Index (Line (Idx1 .. Len), "(");
+                  P0 := Get_Pair (Line (Idx2 + 1 .. Len));
+                  WT.Location.From_Top  := P0.Two;
+                  WT.Location.From_Left := P0.One;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".Location H="
+                         & Img (P0.One) & ", V=" & Img (P0.Two));
+
+               when Attr_Size =>
+                  Idx2 := Index (Line (Idx1 .. Len), "(");
+                  P0 := Get_Pair (Line (Idx2 + 1 .. Len));
+                  WT.Size.Horiz := P0.Two;
+                  WT.Size.Vert  := P0.One;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".Size H="
+                         & Img (P0.One) & ", V=" & Img (P0.Two));
+
+               when Attr_FlowDirection =>
+                  if Contains (Line (Idx1 .. Len), "TopDown") then
+                     WT.FlowDirection := TopDown;
+                  elsif Contains (Line (Idx1 .. Len), "RightToLeft") then
+                     WT.FlowDirection := RightToLeft;
+                  elsif Contains (Line (Idx1 .. Len), "LeftToRight") then
+                     WT.FlowDirection := LeftToRight;
+                  elsif Contains (Line (Idx1 .. Len), "BottomUp") then
+                     WT.FlowDirection := BottomUp;
+                  end if;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".Horizontal "
+                         & WT.FlowDirection'Image);
+
+               when Attr_TabIndex =>
+                  WT.TabIndex := Get_Integer (Line (Idx1 .. Len));
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".TabIndex "
+                         & Img (WT.TabIndex));
+
+               when Attr_Items_AddRange =>
+                  case WT.Widget_Type is
+                     when GtkToolBar | BindingNavigator
+                        | GtkMenuBar | GtkStatusBar =>
+                        Add_Items (WT);
+                     when GtkComboBox =>
+                        null;
+                     when others =>
+                        raise Program_Error;
+                  end case;
+
+               when Attr_Columns_AddRange =>
+                  case WT.Widget_Type is
+                     when GtkTreeGridView | GtkDataGridView =>
+                        Add_Items (WT);
+                     when others =>
+                        raise Program_Error;
+                  end case;
+
+               when Attr_DropDownItems_AddRange =>
+                  if WT.Widget_Type = GtkMenuImageItem then
+                     Add_Items (WT);
+                  else
+                     raise Program_Error;
+                  end if;
+
+               when Attr_DisplayStyle =>
+                  WT.DStyle := Convert (Line (Idx1 .. Len));
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all & ".DStyle "
+                         & Line (Idx1 .. Len));
+
+               when Attr_TabStop =>
+                  if Line (Idx1 .. Len) = "False" then
+                     WT.TabStop := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".TabStop False");
+                  elsif Line (Idx1 .. Len) = "True" then
+                     WT.TabStop := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".TabStop True");
+                  end if;
+
+               when Attr_AutoToolTip =>
+                  if Line (Idx1 .. Len) = "False" then
+                     WT.AutoToolTip := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AutoToolTip False");
+                  elsif Line (Idx1 .. Len) = "True" then
+                     WT.AutoToolTip := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AutoToolTip True");
+                     if WT.ToolTip = null then
+                        WT.ToolTip := new String'(WT.Name.all);
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".ToolTip "
+                               & WT.Name.all);
+                     end if;
+                  end if;
+
+               when Attr_BorderStyle =>
+                  if WT.Widget_Type = GtkEntry then
+                     Idx2 := Index (Line (Idx1 .. Len),
+                                    "BorderStyle.None");
+                     if Idx2 in Idx1 .. Len then
+                        WT.Has_Frame := False;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".Has_Frame False");
+                     end if;
+
+                  elsif WT.Widget_Type = GtkLabel then
+                     Idx2 := Index (Line (Idx1 .. Len), "BorderStyle");
+                     if Idx2 not in Idx1 .. Len then
+                        raise TIO.Data_Error;
+                     end if;
+                     if Contains (Line (Idx2 + 12 .. Len), "None") then
+                        WT.BorderStyle := None;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".BorderStyle "
+                               & "None");
+                     elsif Contains (Line (Idx2 + 12 .. Len), "FixedSingle")
+                     then
+                        WT.BorderStyle := FixedSingle;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".BorderStyle "
+                               & "FixedSingle");
+                     elsif Contains (Line (Idx2 + 12 .. Len), "Fixed3D") then
+                        WT.BorderStyle := Fixed3D;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".BorderStyle "
+                               & "Fixed3D");
+                     else
+                        raise TIO.Data_Error;
+                     end if;
+                  end if;
+
+               when Attr_Alignment =>
+                  Idx2 := Index (Line (Idx1 .. Len), "Alignment");
+                  if Idx2 not in Idx1 .. Len then
+                     raise TIO.Data_Error;
+                  end if;
+                  TAIO.Get (Line (Idx2 + 10 .. Len), WT.TextAlign, Idx0);
                   declare
-                     Attrib : constant String := Line (Idx0 .. Idx1 - 1);
+                     Temp : String (1 .. 12);
                   begin
-                     Idx1 := Idx1 + 3;
+                     TAIO.Put (Temp, WT.TextAlign);
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".TextAlign "
+                            & Temp);
+                  end;
 
-                     if Attrib = "Name" then
-                        if WT.Name.all /= Line (Idx1 + 1 .. Len - 1) then
-                           TIO.Put_Line (Img (NLin)
-                                         & ": name mistmatch between "
-                                         & "Designer and Resource");
-                           raise Constraint_Error;
-                        end if;
+               when Attr_ImageScalingSize =>
+                  Idx2 := Index (Line (Idx1 .. Len), "(");
+                  WT.ImageScalingSize := Get_Pair (Line (Idx2 + 1 .. Len - 1));
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all & ".ImageScalingSize "
+                         & Img (WT.ImageScalingSize.One)
+                         & ", " & Img (WT.ImageScalingSize.Two));
+
+               when Attr_GripStyle =>
+                  if WT.Widget_Type = GtkToolBar then
+                     if Contains (Line (Idx1 .. Len), "Hidden") then
+                        WT.Grip_Visible := False;
                         Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Name "
-                               & Line (Idx1 + 1 .. Len - 1));
-
-                     elsif Attrib = "DisplayStyle" then
-                        WT.DStyle := Convert (Line (Idx1 .. Len));
+                               & WT.Name.all & ".Grip_Visible False");
+                     elsif Contains (Line (Idx1 .. Len), "Visible") then
+                        WT.Grip_Visible := True;
                         Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".DStyle "
-                               & Line (Idx1 .. Len));
+                               & WT.Name.all & ".Grip_Visible True");
+                     end if;
+                  end if;
 
-                     elsif Attrib = "TabStop" then
-                        if Line (Idx1 .. Len) = "False" then
-                           WT.TabStop := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".TabStop False");
-                        elsif Line (Idx1 .. Len) = "True" then
-                           WT.TabStop := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".TabStop True");
-                        end if;
+               when Attr_Checked =>
+                  if (WT.Widget_Type = GtkRadioButton or
+                        WT.Widget_Type = GtkButton or
+                          WT.Widget_Type = GtkCheckButton or
+                            WT.Widget_Type = GtkToggleButton)
+                  then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.Active := False;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".Active False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.Active := True;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".Active True");
+                     end if;
+                  end if;
 
-                     elsif Attrib = "AutoToolTip" then
-                        if Line (Idx1 .. Len) = "False" then
-                           WT.AutoToolTip := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".AutoToolTip False");
-                        elsif Line (Idx1 .. Len) = "True" then
-                           WT.AutoToolTip := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".AutoToolTip True");
-                           if WT.ToolTip = null then
-                              WT.ToolTip := new String'(WT.Name.all);
-                              Debug (NLin, "Set Widget Property "
-                                     & WT.Name.all & ".ToolTip "
-                                     & WT.Name.all);
-                           end if;
-                        end if;
-                     elsif Attrib = "BorderStyle" then
-                        if WT.Widget_Type = GtkEntry then
-                           Idx2 := Index (Line (Idx1 .. Len),
-                                          "BorderStyle.None");
-                           if Idx2 in Idx1 .. Len then
-                              WT.Has_Frame := False;
-                              Debug (NLin, "Set Widget Property "
-                                     & WT.Name.all & ".Has_Frame False");
-                           end if;
+               when Attr_CheckState =>
+                  if (WT.Widget_Type = GtkRadioButton or
+                        WT.Widget_Type = GtkButton or
+                          WT.Widget_Type = GtkCheckButton or
+                            WT.Widget_Type = GtkToggleButton)
+                  then
+                     if Contains (Line (Idx1 .. Len), "Checked") then
+                        WT.Active := True;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".Active True");
+                     else
+                        WT.Active := False;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".Active False");
+                     end if;
+                  end if;
 
-                        elsif WT.Widget_Type = GtkLabel then
-                           Idx2 := Index (Line (Idx1 .. Len), "BorderStyle");
-                           if Idx2 not in Idx1 .. Len then
-                              raise TIO.Data_Error;
-                           end if;
-                           WT.BorderStyle :=
-                             new String'(Line (Idx2 + 12 .. Len));
-                              Debug (NLin, "Set Widget Property "
-                                     & WT.Name.all & ".BorderStyle "
-                                     & WT.BorderStyle.all);
-                        end if;
+               when Attr_AnyColor =>
+                  if WT.Widget_Type = GtkColorButton then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.AnyColor := False;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".AnyColor False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.AnyColor := True;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".AnyColor True");
+                     end if;
+                  end if;
 
-                     elsif Attrib = "GripStyle" and then
-                       WT.Widget_Type = GtkToolBar
-                     then
-                        if Contains (Line (Idx1 .. Len), "Hidden") then
-                           WT.Grip_Visible := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".Grip_Visible False");
-                        elsif Contains (Line (Idx1 .. Len), "Visible") then
-                           WT.Grip_Visible := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".Grip_Visible True");
-                        end if;
+               when Attr_FullOpen =>
+                  if WT.Widget_Type = GtkColorButton then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.FullOpen := False;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".FullOpen False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.FullOpen := True;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".FullOpen True");
+                     end if;
+                  end if;
 
-                     elsif Attrib = "Checked" and then
-                       (WT.Widget_Type = GtkRadioButton or
-                          WT.Widget_Type = GtkButton or
-                            WT.Widget_Type = GtkCheckButton or
-                              WT.Widget_Type = GtkToggleButton)
-                     then
+               when Attr_UseSystemPasswordChar =>
+                  if  WT.Widget_Type = GtkEntry then
+                     if Contains (Line (Idx1 .. Len), "True") then
+                        WT.PasswordChar := new String'("");
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".PasswordChar");
+                     end if;
+                  end if;
+
+               when Attr_ReadOnly =>
+                  case WT.Widget_Type is
+                     when GtkEntry | GtkComboBox =>
                         if Contains (Line (Idx1 .. Len), "False") then
-                           WT.Active := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".Active False");
-                        elsif Contains (Line (Idx1 .. Len), "True") then
-                           WT.Active := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".Active True");
-                        end if;
-
-                     elsif Attrib = "CheckState" and then
-                       (WT.Widget_Type = GtkRadioButton or
-                          WT.Widget_Type = GtkButton or
-                            WT.Widget_Type = GtkCheckButton or
-                              WT.Widget_Type = GtkToggleButton)
-                     then
-                        if Contains (Line (Idx1 .. Len), "Checked") then
-                           WT.Active := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".Active True");
-                        else
-                           WT.Active := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".Active False");
-                        end if;
-
-                     elsif Attrib = "AnyColor" and then
-                       WT.Widget_Type = GtkColorButton
-                     then
-                        if Contains (Line (Idx1 .. Len), "False") then
-                           WT.AnyColor := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".AnyColor False");
-                        elsif Contains (Line (Idx1 .. Len), "False") then
-                           WT.AnyColor := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".AnyColor True");
-                        end if;
-
-                     elsif Attrib = "Items.AddRange" and then
-                       WT.Widget_Type = GtkToolBar
-                     then
-                        Process_Toolbar_Items (WT);
-
-                     elsif Attrib = "FullOpen" and then
-                       WT.Widget_Type = GtkColorButton
-                     then
-                        if Contains (Line (Idx1 .. Len), "False") then
-                           WT.FullOpen := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".FullOpen False");
-                        elsif Contains (Line (Idx1 .. Len), "False") then
-                           WT.FullOpen := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".FullOpen True");
-                        end if;
-
-                     elsif Attrib = "UseSystemPasswordChar" and then
-                       WT.Widget_Type = GtkEntry
-                     then
-                        if Contains (Line (Idx1 .. Len), "True") then
-                           WT.PasswordChar := new String'("");
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".PasswordChar");
-                        end if;
-
-                     elsif Attrib = "ReadOnly" and then
-                       (WT.Widget_Type = GtkEntry or
-                          WT.Widget_Type = GtkComboBox)
-                     then
-                        if Contains (Line (Idx1 .. Len), "False") then
-                           WT.Editable := False;
+                           WT.Editable := True;
                            Debug (NLin, "Set Widget Property "
                                   & WT.Name.all & ".Editable False");
-                        elsif Contains (Line (Idx1 .. Len), "False") then
-                           WT.Editable := True;
+                        elsif Contains (Line (Idx1 .. Len), "True") then
+                           WT.Editable := False;
                            Debug (NLin, "Set Widget Property "
                                   & WT.Name.all & ".Editable True");
                         end if;
 
-                     elsif Attrib = "Maximum" and then
-                       WT.Widget_Type = GtkSpinButton
-                     then
-                        Idx2 := Idx1 + Test10'Length;
-                        Idx3 := Index (Line (Idx2 .. Len), ",");
-                        WT.MaxValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Maximum "
-                               & Img (WT.MaxValue));
+                     when GtkDataGridView | GtkTreeGridView
+                        | ExpandableColumn | DataGridViewTextBoxColumn
+                        | DataGridViewCheckBoxColumn  =>
+                        if Contains (Line (Idx1 .. Len), "False") then
+                           WT.ReadOnly := False;
+                           Debug (NLin, "Set Widget Property "
+                                  & WT.Name.all & ".ReadOnly False");
+                        elsif Contains (Line (Idx1 .. Len), "True") then
+                           WT.ReadOnly := True;
+                           Debug (NLin, "Set Widget Property "
+                                  & WT.Name.all & ".ReadOnly True");
+                        end if;
+                     when others => null;
+                  end case;
 
-                     elsif Attrib = "Minimum" and then
-                       WT.Widget_Type = GtkSpinButton
-                     then
-                        Idx2 := Idx1 + Test10'Length;
-                        Idx3 := Index (Line (Idx2 .. Len), ",");
-                        WT.MinValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
+               when Attr_Sorted =>
+                  if WT.Widget_Type = GtkComboBox then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.Sorted := False;
                         Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Minimum "
-                               & Img (WT.MinValue));
-
-                     elsif Attrib = "Value" and then
-                       WT.Widget_Type = GtkSpinButton
-                     then
-                        Idx2 := Idx1 + Test10'Length;
-                        Idx3 := Index (Line (Idx2 .. Len), ",");
-                        WT.StartValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
+                               & WT.Name.all & ".Sorted False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.Sorted := True;
                         Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".StartValue "
-                               & Img (WT.StartValue));
+                               & WT.Name.all & ".Sorted True");
+                     end if;
+                  end if;
 
-                     elsif Attrib = "Format" and then
-                       WT.Widget_Type = GtkCalendar
-                     then
-                        WT.Format_Date := new String'(Line (Idx1 .. Len));
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Format_Date"
-                               & WT.Format_Date.all);
+               when Attr_Maximum =>
+                  if WT.Widget_Type = GtkSpinButton then
+                     Idx2 := Idx1 + Test10'Length;
+                     Idx3 := Index (Line (Idx2 .. Len), ",");
+                     WT.MaxValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Maximum "
+                            & Img (WT.MaxValue));
+                  end if;
 
-                     elsif Attrib = "Value" and then
-                       WT.Widget_Type = GtkCalendar
-                     then
-                        WT.Start_Date := Get_Date (Idx1);
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Start_Date"
-                               & Image (WT.Start_Date, ISO_Date));
+               when Attr_Minimum =>
+                  if WT.Widget_Type = GtkSpinButton then
+                     Idx2 := Idx1 + Test10'Length;
+                     Idx3 := Index (Line (Idx2 .. Len), ",");
+                     WT.MinValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Minimum "
+                            & Img (WT.MinValue));
+                  end if;
 
-                     elsif Attrib = "MinDate" and then
-                       WT.Widget_Type = GtkCalendar
-                     then
-                        WT.MinDate := Get_Date (Idx1);
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Start_Date"
-                               & Image (WT.MinDate, ISO_Date));
+               when Attr_Value =>
+                  if WT.Widget_Type = GtkSpinButton then
+                     Idx2 := Idx1 + Test10'Length;
+                     Idx3 := Index (Line (Idx2 .. Len), ",");
+                     WT.StartValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".StartValue "
+                            & Img (WT.StartValue));
+                  elsif WT.Widget_Type = GtkCalendar then
+                     WT.Start_Date := Get_Date (Idx1);
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Start_Date"
+                            & Image (WT.Start_Date, ISO_Date));
+                  end if;
 
-                     elsif Attrib = "MaxDate" and then
-                       WT.Widget_Type = GtkCalendar
-                     then
-                        WT.MaxDate := Get_Date (Idx1);
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Start_Date"
-                               & Image (WT.MaxDate, ISO_Date));
+               when Attr_Format =>
+                  if WT.Widget_Type = GtkCalendar then
+                     WT.Format_Date := new String'(Line (Idx1 .. Len));
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Format_Date"
+                            & WT.Format_Date.all);
+                  end if;
 
-                     elsif Attrib = "LimitDatePicket" and then
-                       WT.Widget_Type = GtkCalendar
-                     then
-                        WT.MaxDate := Get_Date (Idx1);
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".Start_Date"
-                               & Image (WT.MaxDate, ISO_Date));
+               when Attr_MinDate =>
+                  if WT.Widget_Type = GtkCalendar then
+                     WT.MinDate := Get_Date (Idx1);
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Start_Date"
+                            & Image (WT.MinDate, ISO_Date));
+                  end if;
 
-                     elsif Attrib = "Image" and then
-                       (WT.Widget_Type = GtkButton or
-                          WT.Widget_Type = GtkRadioButton or
-                            WT.Widget_Type = GtkCheckButton or
-                              WT.Widget_Type = GtkToggleButton)
-                     then
+               when Attr_MaxDate =>
+                  if WT.Widget_Type = GtkCalendar then
+                     WT.MaxDate := Get_Date (Idx1);
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Start_Date"
+                            & Image (WT.MaxDate, ISO_Date));
+                  end if;
+
+               when Attr_LimitDatePicket =>
+                  if WT.Widget_Type = GtkCalendar then
+                     WT.MaxDate := Get_Date (Idx1);
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Start_Date"
+                            & Image (WT.MaxDate, ISO_Date));
+                  end if;
+
+               when Attr_Image =>
+                  case WT.Widget_Type is
+                     when GtkButton | GtkRadioButton
+                        | GtkCheckButton | GtkToggleButton =>
                         WT.ImagePath :=
                           new String'(Icon_Path & "/"
                                       & Icon_Name (Line (Idx1 .. Len)));
                         Debug (NLin, "Set Widget Property "
                                & WT.Name.all & ".ImagePath "
                                & WT.ImagePath.all);
-
-                     elsif Attrib = "ImageAlign" and then
-                       (WT.Widget_Type = GtkButton or
-                          WT.Widget_Type = GtkRadioButton or
-                            WT.Widget_Type = GtkCheckButton or
-                              WT.Widget_Type = GtkToggleButton)
-                     then
-                        WT.ImageAlign := Convert (Line (Idx1 .. Len));
-                        Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & ".ImageAlign "
-                               & Line (Idx1 .. Len));
-
-                     elsif Attrib = "Image" and then
-                       WT.Widget_Type = GtkImage
-                     then
+                     when GtkImage =>
                         WT.Image :=
                           new String'(Icon_Path & "/"
                                       & Icon_Name (Line (Idx1 .. Len)));
                         Debug (NLin, "Set Widget Property "
                                & WT.Name.all & ".Image "
                                & WT.Image.all);
-
-                     elsif Attrib = "ShowUpDown" and then
-                       WT.Widget_Type = GtkCalendar
-                     then
-                        if Contains (Line (Idx1 .. Len), "False") then
-                           WT.ShowUpDown := False;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".ShowUpDown True");
-                        elsif Contains (Line (Idx1 .. Len), "False") then
-                           WT.ShowUpDown := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".ShowUpDown True");
-                        end if;
-
-                     elsif Attrib = "SelectionMode" and then
-                       WT.Widget_Type = GtkListBox
-                     then
-                        WT.MultiSelect := True;
-                           Debug (NLin, "Set Widget Property "
-                                  & WT.Name.all & ".MultiSelect True");
-
-                     elsif Attrib = "ForeColor" then
-                        WT.FgColor :=
-                          new String'(To_Color (Line (Idx1 .. Len)));
+                     when GtkMenuImageItem =>
+                        WT.ImageMenu :=
+                          new String'(Icon_Path & "/"
+                                      & Icon_Name (Line (Idx1 .. Len)));
                         Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & "." & "FgColor "
-                               & WT.FgColor.all);
-                     elsif Attrib = "BackColor" then
-                        WT.BgColor :=
-                          new String'(To_Color (Line (Idx1 .. Len)));
+                               & WT.Name.all & ".ImageMenu "
+                               & WT.ImageMenu.all);
+
+                     when others => null;
+                  end case;
+
+               when Attr_ImageAlign =>
+                  if (WT.Widget_Type = GtkButton or
+                        WT.Widget_Type = GtkRadioButton or
+                          WT.Widget_Type = GtkCheckButton or
+                            WT.Widget_Type = GtkToggleButton)
+                  then
+                     WT.ImageAlign := Convert (Line (Idx1 .. Len));
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ImageAlign "
+                            & Line (Idx1 .. Len));
+                  end if;
+
+               when Attr_ShowUpDown =>
+                  if WT.Widget_Type = GtkCalendar then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.ShowUpDown := False;
                         Debug (NLin, "Set Widget Property "
-                               & WT.Name.all & "." & "BgColor "
-                               & WT.BgColor.all);
-                     elsif Attrib = "Cursor" or
-                       Attrib = "Tag" or
-                       Attrib = "FormattingEnabled" or
-                       Attrib = "DropDownStyle" or
-                       Attrib = "UseVisualStyleBackColor" or
-                       Attrib = "DialogResult" or
-                       Attrib = "AllowDrop" or
-                       Attrib = "FlatStyle" or
-                       Attrib = "ShowNetwork" or
-                       Attrib = "UseExDialog" or
-                       Attrib = "AutoCheck" or
-                       Attrib = "UseWaitCursor" or
-                       Attrib = "ShowNewFolderButton" or
-                       Attrib = "RootFolder" or
-                       Attrib = "DefaultExt" or
-                       Attrib = "CheckFileExists" or
-                       Attrib = "IsBalloon" or
-                       Attrib = "UseEXDialog" or
-                       Attrib = "Items.AddRange" or
-                       Attrib = "Image"
-                     then
-                        Debug (NLin, Resx_File_Name
-                               & ".Designer.vb (2)"
-                               & ": Line" & NLin'Image
-                               & ": Designer: Ignored Widget Property: "
-                               & WT.Name.all & " " & Attrib);
-                     else
-                        TIO.Put_Line (Resx_File_Name
-                                      & ".Designer.vb (2)"
-                                      & ": Line" & NLin'Image
-                                      & ": Designer: unknown attribute: "
-                                      & WT.Name.all & "." & Attrib
-                                      & " = " & Line (Idx1 .. Len));
+                               & WT.Name.all & ".ShowUpDown False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.ShowUpDown := True;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".ShowUpDown True");
                      end if;
+                  end if;
+
+               when Attr_SelectionMode =>
+                  if WT.Widget_Type = GtkListBox then
+                     WT.MultiSelect := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".MultiSelect True");
+                  end if;
+
+               when Attr_ForeColor =>
+                  WT.FgColor :=
+                    new String'(To_Color (Line (Idx1 .. Len)));
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all & "." & "FgColor "
+                         & WT.FgColor.all);
+
+               when Attr_BackColor =>
+                  WT.BgColor :=
+                    new String'(To_Color (Line (Idx1 .. Len)));
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all & "." & "BgColor "
+                         & WT.BgColor.all);
+
+               when Attr_Level =>
+                  IIO.Get (Line (Idx1 .. Len), Num, Last);
+                  WT.Level := Num;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".Level "
+                         & Img (Num));
+
+               when Attr_ScrollBars =>
+                  Idx2 := Index (Line (Idx1 .. Len), ".",
+                                 Ada.Strings.Backward);
+                  if Contains (Line (Idx2 + 1 .. Len), "None") then
+                     WT.ScrollBars := None;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ScrollBars "
+                            & "None");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
+                     WT.ScrollBars := Both;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ScrollBars "
+                            & "Vertical");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
+                     WT.ScrollBars := Both;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ScrollBars "
+                            & "Horizontal");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
+                     WT.ScrollBars := Both;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ScrollBars "
+                            & "Both");
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_RowHeadersBorderStyle =>
+                  Idx2 := Index (Line (Idx1 .. Len), ".",
+                                 Ada.Strings.Backward);
+                  if Contains (Line (Idx2 + 1 .. Len), "None") then
+                     WT.RowHeadersBorderStyle := None;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowHeadersBorderStyle "
+                            & "None");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Sunken") then
+                     WT.RowHeadersBorderStyle := Sunken;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowHeadersBorderStyle "
+                            & "Sunken");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Raised") then
+                     WT.RowHeadersBorderStyle := Raised;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowHeadersBorderStyle "
+                            & "Raised");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Single") then
+                     WT.RowHeadersBorderStyle := Single;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowHeadersBorderStyle "
+                            & "Single");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Custom") then
+                     WT.RowHeadersBorderStyle := Custom;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowHeadersBorderStyle "
+                            & "Custom");
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_Frozen =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.Frozen := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".Frozen False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.Frozen := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".Frozen True");
+                  end if;
+
+               when Attr_WorkerReportsProgress =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.WorkerReportsProgress := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".WorkerReportsProgress False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.WorkerReportsProgress := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".WorkerReportsProgress True");
+                  end if;
+
+               when Attr_WorkerSupportsCancellation =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.WorkerSupportsCancellation := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".WorkerSupportsCancellation False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.WorkerSupportsCancellation := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".WorkerSupportsCancellation True");
+                  end if;
+
+               when Attr_EnableMetric =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.EnableMetric := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".EnableMetric False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.EnableMetric := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".EnableMetric True");
+                  end if;
+
+               when Attr_MinMargins =>
+                  Idx3 := Index (Line (Idx1 .. Len), "(");
+                  WT.MinMargins :=
+                    Get_Margin_Array (Line (Idx3 + 1 .. Len - 1));
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".MinMargins "
+                         & Img (WT.MinMargins (1)) & ", "
+                         & Img (WT.MinMargins (2)) & ", "
+                         & Img (WT.MinMargins (3)) & ", "
+                         & Img (WT.MinMargins (4)));
+
+               when Attr_SelectedIndex =>
+                  IIO.Get (Line (Idx1 .. Len), Num, Last);
+                  WT.SelectedIndex := Num;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".SelectedIndex "
+                         & Img (Num));
+
+               when Attr_Padding =>
+                  Idx2 := Index (Line (Idx1 .. Len), "(");
+                  IIO.Get (Line (Idx2 + 1 .. Len), Num, Last);
+                  WT.Padding := Num;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".Padding "
+                         & Img (Num));
+
+               when Attr_PaddingX =>
+                  IIO.Get (Line (Idx1 .. Len), Num, Last);
+                  WT.PaddingX := Num;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".PaddingX "
+                         & Img (Num));
+
+               when Attr_PaddingY =>
+                  IIO.Get (Line (Idx1 .. Len), Num, Last);
+                  WT.PaddingY := Num;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".PaddingY "
+                         & Img (Num));
+
+               when Attr_UseVisualStyleBackColor =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.UseVisualStyleBackColor := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".UseVisualStyleBackColor False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.UseVisualStyleBackColor := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".UseVisualStyleBackColor True");
+                  end if;
+
+               when Attr_EditModeProgramatically =>
+                  WT.EditModeProgramatically := True;
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".EditModeProgramatically True");
+
+               when Attr_Resizable => null;
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.Resizable := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Resizable False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.Resizable := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".Resizable True");
+                  end if;
+
+               when Attr_SortMode =>
+                  Idx2 := Index (Line (Idx1 .. Len), ".",
+                                 Ada.Strings.Backward);
+                  if Contains (Line (Idx2 + 1 .. Len), "NotSortable") then
+                     WT.SortMode := NotSortable;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".SortMode "
+                            & "NotSortable");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Automatic") then
+                     WT.SortMode := Automatic;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".SortMode "
+                            & "Automatic");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Programmatic") then
+                     WT.SortMode := Programmatic;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".SortMode "
+                            & "Programmatic");
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_AutoSizeMode =>
+                  Idx2 := Index (Line (Idx1 .. Len), ".",
+                                 Ada.Strings.Backward);
+                  if Contains (Line (Idx2 + 1 .. Len), "GrowAndShrink") then
+                     WT.AutoSizeMode := GrowAndShrink;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AutoSizeMode "
+                            & "GrowAndShrink");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "GrowOnly") then
+                     WT.AutoSizeMode := GrowOnly;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AutoSizeMode "
+                            & "GrowOnly");
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_AutoSizeColumnMode =>
+                  WT.AutoSizeColumnMode :=
+                    To_AutoSizeColumnMode (Line (1 .. Len));
+                  declare
+                     Temp : String (1 .. 26);
+                  begin
+                     ASCMIO.Put (Temp, WT.AutoSizeColumnMode);
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AutoSizeColumnMode "
+                            & Temp);
                   end;
-               end if;
-            end if;
+
+               when Attr_AllowUserToAddRows =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.AllowUserToAddRows := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToAddRows False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.AllowUserToAddRows := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToAddRows True");
+                  end if;
+
+               when Attr_AllowUserToDeleteRows =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.AllowUserToDeleteRows := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToDeleteRows False");
+                  elsif Contains (Line (Idx1 .. Len), "False") then
+                     WT.AllowUserToAddRows := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToDeleteRows True");
+                  end if;
+
+               when Attr_EnableHeadersVisualStyles =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.EnableHeadersVisualStyles := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".EnableHeadersVisualStyles False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.EnableHeadersVisualStyles := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".EnableHeadersVisualStyles True");
+                  end if;
+
+               when Attr_MultiSelect =>
+                  if (WT.Widget_Type = GtkTreeGridView or
+                        WT.Widget_Type = GtkDataGridView)
+                  then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.RowMultiSelect := False;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".RowMultiSelect False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.RowMultiSelect := True;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".RowMultiSelect True");
+                     end if;
+                  elsif WT.Widget_Type = GtkListBox then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.MultiSelect := False;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".MultiSelect False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.MultiSelect := True;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all & ".MultiSelect True");
+                     end if;
+                  end if;
+
+               when Attr_ColumnHeadersVisible =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.ColumnHeadersVisible := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ColumnHeadersVisible False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.ColumnHeadersVisible := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ColumnHeadersVisible True");
+                  end if;
+
+               when Attr_RowHeadersVisible =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.RowHeadersVisible := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowHeadersVisible False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.RowHeadersVisible := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowHeadersVisible True");
+                  end if;
+
+               when Attr_AllowUserToResizeRows =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.AllowUserToResizeRows := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToResizeRows False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.AllowUserToAddRows := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToResizeRows True");
+                  end if;
+
+               when Attr_AllowUserToOrderColumns =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.AllowUserToOrderColumns := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToOrderColumns False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.AllowUserToOrderColumns := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".AllowUserToOrderColumns True");
+                  end if;
+
+               when Attr_DefaultCellStyle =>
+                  Idx2 := Index (Line (Idx1 .. Len), Test20);
+                  if Idx2 in Idx1 .. Len then
+                     IIO.Get (Line (Idx1 + Test20'Length .. Len),
+                              Num, Last);
+                     WT.DefaultCellStyle := Num;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".DefaultCellStyle "
+                            & Test20 & Img (Num));
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_ColumnHeadersDefaultCellStyle =>
+                  Idx2 := Index (Line (Idx1 .. Len), Test20);
+                  if Idx2 in Idx1 .. Len then
+                     declare
+                        Num  : Integer;
+                        Last : Integer;
+                     begin
+                        IIO.Get (Line (Idx1 + Test20'Length .. Len),
+                                 Num, Last);
+                        WT.ColumnHeadersDefaultCellStyle := Num;
+                        Debug (NLin, "Set Widget Property "
+                               & WT.Name.all
+                               & ".ColumnHeadersDefaultCellStyle "
+                               & Test20 & Img (Num));
+                     end;
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_CloseButtonOnTabsInactiveVisible =>
+                  if Contains (Line (Idx1 .. Len), "False") then
+                     WT.CloseButtonOnTabsInactiveVisible := False;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".CloseButtonOnTabsInactiveVisible False");
+                  elsif Contains (Line (Idx1 .. Len), "True") then
+                     WT.CloseButtonOnTabsInactiveVisible := True;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".CloseButtonOnTabsInactiveVisible True");
+                  end if;
+
+               when Attr_RowHeadersWidthSizeMode =>
+                  Idx2 := Index (Line (Idx1 .. Len), ".",
+                                 Ada.Strings.Backward);
+                  if Contains (Line (Idx2 + 1 .. Len), "EnableResizing") then
+                     WT.RowHeadersWidthSizeMode := EnableResizing;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowDeadersWidthSizeMode "
+                            & "EnableResizing");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "DisableResizing")
+                  then
+                     WT.RowHeadersWidthSizeMode := DisableResizing;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowDeadersWidthSizeMode "
+                            & "DisableResizing");
+                  elsif Contains (Line (Idx2 + 1 .. Len),
+                                  "AutoSizeToAllHeaders")
+                  then
+                     WT.RowHeadersWidthSizeMode := AutoSizeToAllHeaders;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowDeadersWidthSizeMode "
+                            & "AutoSizeToAllHeaders");
+                  elsif Contains (Line (Idx2 + 1 .. Len),
+                                  "AutoSizeToDisplayedHeaders")
+                  then
+                     WT.RowHeadersWidthSizeMode := AutoSizeToDisplayedHeaders;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowDeadersWidthSizeMode "
+                            & "AutoSizeToDisplayedHeaders");
+                  elsif Contains (Line (Idx2 + 1 .. Len),
+                                  "AutoSizeToFirstHeader")
+                  then
+                     WT.RowHeadersWidthSizeMode := AutoSizeToFirstHeader;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".RowDeadersWidthSizeMode "
+                            & "AutoSizeToFirstHeader");
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_ImageList | Attr_DefaultNodeImage =>
+                  Debug (NLin, "Set Widget Property "
+                         & WT.Name.all
+                         & ".ImageList null");
+
+               when Attr_RowHeadersDefaultCellStyle =>
+                  Idx2 := Index (Line (Idx1 .. Len), Test20);
+                  if Idx2 in Idx1 .. Len then
+                     IIO.Get (Line (Idx1 + Test20'Length .. Len),
+                              Num, Last);
+                     WT.RowHeadersDefaultCellStyle := Num;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all
+                            & ".RowHeadersDefaultCellStyle "
+                            & Test20 & Img (Num));
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_ColumnHeadersHeightSizeMode =>
+                  if Contains (Line (Idx1 .. Len), "AutoSize") then
+                     WT.ColumnHeadersHeightSizeMode := AutomaticSize;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ColumnHeadersHeightSizeMode"
+                            & " AutoSize");
+                  elsif Contains (Line (Idx1 .. Len), "EnableResizing") then
+                     WT.ColumnHeadersHeightSizeMode := EnableResizing;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ColumnHeadersHeightSizeMode"
+                            & " EnableResizing");
+                  elsif Contains (Line (Idx1 .. Len), "DisableResizing") then
+                     WT.ColumnHeadersHeightSizeMode := DisableResizing;
+                     Debug (NLin, "Set Widget Property "
+                            & WT.Name.all & ".ColumnHeadersHeightSizeMode"
+                            & " DisableResizing");
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_AddNewItem | Attr_CountItem
+                  | Attr_DeleteItem | Attr_MoveFirstItem
+                  | Attr_MoveLastItem | Attr_MoveNextItem
+                  | Attr_MovePreviousItem | Attr_PositionItem
+                  =>
+                  null;
+
+               when Attr_Ignored =>
+                  Debug (NLin, Resx_File_Name
+                         & ".Designer.vb (2)"
+                         & ": ignored property: "
+                         & Line (Idx0 .. Len));
+
+               when No_Attribute =>
+                  TIO.Put_Line (Resx_File_Name
+                                & ".Designer.vb (2)"
+                                & ": Line" & NLin'Image
+                                & ": Designer: unknown property: "
+                                & Line (Idx0 .. Len));
+
+               when others  =>
+                  TIO.Put_Line (Resx_File_Name
+                                & ".Designer.vb (2)"
+                                & ": Line" & NLin'Image
+                                & ": Designer: property not processed: "
+                                & Line (Idx0 .. Len));
+
+            end case;
+            << Continue_Loop >>
          end loop;
          return 0;
       end Process_Widget;
@@ -1792,7 +3416,7 @@ package body W2gtk_Pkg is
 
       NLin := 0;
       Debug (NLin, "");
-      Debug (NLin, "Parsing  (2) Designer: Attributes");
+      Debug (NLin, "Parsing (2) Designer: Attributes");
       Ret := 0;
       while not TIO.End_Of_File (DFile) loop
          Get_Line;
@@ -1808,6 +3432,8 @@ package body W2gtk_Pkg is
             end loop;
          end if;
       end loop;
+
+      Debug (0, "End of Designer 2");
       TIO.Close (DFile);
       return Ret;
    exception
@@ -1822,13 +3448,28 @@ package body W2gtk_Pkg is
 
    function Parse1_Designer_File (Resx_Path      : String;
                                   Resx_File_Name : String) return Integer is
-      Idx0  : Integer;
-      Idx1  : Integer;
-      Idx2  : Integer;
-      Idx3  : Integer;
-      Found : Boolean;
-      TWin  : Window_Pointer;
-      WT    : Widget_Pointer;
+      Idx0      : Integer;
+      Idx1      : Integer;
+      Idx2      : Integer;
+      Idx3      : Integer;
+      Found     : Boolean;
+      Num       : Integer;
+      Last      : Integer;
+      Mark_Line : Integer;
+      TWin      : Window_Pointer;
+      WT        : Widget_Pointer;
+
+      package IIO renames Ada.Integer_Text_IO;
+      procedure Get_Line;
+      procedure Get_Line is
+      begin
+         TIO.Get_Line (DFile, Line, Len);
+         if Line (Len) = ASCII.CR then
+            Len := Len - 1;
+         end if;
+         NLin := NLin + 1;
+      end Get_Line;
+
    begin
       TIO.Open (File => DFile,
                 Mode => TIO.In_File,
@@ -1837,65 +3478,109 @@ package body W2gtk_Pkg is
       NLin := 0;
 
       --  skip first line
-      TIO.Get_Line (DFile, Line, Len);
-      NLin := NLin + 1;
+      Get_Line;
 
-      Debug (NLin, "Parsing (1) Designer: Window");
+      Debug (NLin, "Parsing (1) Designer: " & Test8);
+      Found := False;
       while not TIO.End_Of_File (DFile) loop
-         TIO.Get_Line (DFile, Line, Len);
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
-         end if;
-         NLin := NLin + 1;
-         Idx0 := Index (Line (1 .. Len), "Partial Class ");
+         Get_Line;
+         Idx0 := Index (Line (1 .. Len), Test8);
          if Idx0 in 1 .. Len then
             TWin := new Window_Properties (GtkWindow);
-            if Idx0 + 14 >= Len then
-               TIO.Close (DFile);
-               TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
-                             & ": Could not find Window Name in Designer");
-               return -1;
-            end if;
-            TWin.Name := new String'(Line (Idx0 + 14 .. Len));
-            Insert_Window (TWin);
+            Found := True;
+            TWin.Name := new String'(Trim (Line (Idx0 + 14 .. Len),
+                                     Ada.Strings.Both));
+            Insert_Window_By_Tail (TWin);
             Debug (NLin, "Created GtkWindow " & TWin.Name.all);
             Debug (NLin, "Set Window Property Name " & TWin.Name.all);
             exit;
          end if;
       end loop;
+      if not Found then
+         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
+                       & """" & Test8 & """" & ": not found");
+         TIO.Close (DFile);
+         return -1;
+      end if;
 
+      Debug (NLin, "Parsing (1) Designer: " & Test13);
       Found := False;
       while not TIO.End_Of_File (DFile) loop
-         TIO.Get_Line (DFile, Line, Len);
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
-         end if;
-         NLin := NLin + 1;
-         Idx0 := Index (Line (1 .. Len), Text18);
+         Get_Line;
+         Idx0 := Index (Line (1 .. Len), Test13);
          if Idx0 in 1 .. Len then
             Found := True;
             exit;
          end if;
       end loop;
       if not Found then
-         TIO.Close (DFile);
          TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
-                       & ": Me.components not found");
+                       & """" & Test13 & """" & ": not found");
+         TIO.Close (DFile);
          return -1;
       end if;
 
-      Found := False;
-      while not TIO.End_Of_File (DFile) loop
-         TIO.Get_Line (DFile, Line, Len);
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
+      Debug (NLin, "Parsing (1) Designer: " & Test7);
+      Get_Line;
+      Idx0 := Index (Line (1 .. Len), Test7);
+      if Idx0 in 1 .. Len then
+         Debug (NLin, "Parsing (1) Designer: " & Test18);
+         Get_Line;
+         Idx0 := Index (Line (1 .. Len), Test18);
+         if Idx0 in 1 .. Len then
+            Get_Line;
          end if;
-         NLin := NLin + 1;
+      end if;
+
+      Debug (NLin, "Parsing (1) Designer: " & Test19);
+      Found := False;
+      Mark_Line := NLin;
+      loop
+         Idx0 := Index (Line (1 .. Len), Test19);
+         if Idx0 not in 1 .. Len - 1 then
+            exit;
+         end if;
+         Idx0 := Idx0 + Test19'Length;
+         IIO.Get (Line (Idx0 .. Len), Num, Last);
+         Max_DGVS := Integer'Max (Max_DGVS, Num);
+         exit when TIO.End_Of_File (DFile);
+         Get_Line;
+      end loop;
+
+      if Max_DGVS > 0 then
+         DGVS := new DGVS_Array (1 .. Max_DGVS);
+         TIO.Close (DFile);
+         TIO.Open (File => DFile,
+                   Mode => TIO.In_File,
+                   Name => Resx_Path & "/" & Resx_File_Name & ".Designer.vb");
+         for I in 1 .. Mark_Line loop
+            TIO.Get_Line (DFile, Line, Len);
+         end loop;
+         NLin  := Mark_Line;
+         loop
+            Idx0 := Index (Line (1 .. Len), Test19);
+            if Idx0 not in 1 .. Len - 1 then
+               exit;
+            end if;
+            Idx0 := Idx0 + Test19'Length;
+            IIO.Get (Line (Idx0 .. Len), Num, Last);
+            DGVS (Num).Num := Num;
+            Debug (NLin, "Created DataGridViewCellStyle"
+                   & DGVS (Num).Num'Image);
+            exit when TIO.End_Of_File (DFile);
+            Get_Line;
+         end loop;
+      end if;
+
+      Found := False;
+      loop
          Idx0 := Index (Line (1 .. Len), "Me.");
          if Idx0 in 1 .. Len then
             Found := True;
             exit;
          end if;
+         exit when TIO.End_Of_File (DFile);
+         Get_Line;
       end loop;
       if not Found then
          TIO.Close (DFile);
@@ -1904,31 +3589,31 @@ package body W2gtk_Pkg is
          return -1;
       end if;
 
-      Debug (NLin, "");
       Debug (NLin, "Parsing Designer (1): widgets");
       loop
          Idx0 := Index (Line (1 .. Len), "Me.");
          if Idx0 not in 1 .. Len then
+            TIO.Put_Line (Line (1 .. Len));
             exit;
          end if;
-         Idx0 := Idx0 + 3;
-         Idx1 := Index (Line (Idx0 .. Len), " = New " & Test13);
+         Idx0 := Idx0 + 3; --  skip "Me."
+         Idx1 := Index (Line (Idx0 .. Len), " = New ");
          if Idx1 in Idx0 .. Len then
-            Idx2 := Idx1 + Test7'Length;
+            Idx1 := Idx1 - 1;
          else
-            Idx1 := Index (Line (Idx0 .. Len), " = New " & Test8);
-            if Idx1 in Idx0 .. Len then
-               Idx2 := Idx1 + Test8'Length;
-            else
-               Idx1 := Index (Line (Idx0 .. Len), " = New " & Test7);
-               if Idx1 in Idx0 .. Len then
-                  Idx2 := Idx1 + Test7'Length;
-               else
-                  exit;
-               end if;
-            end if;
+            exit;
          end if;
-         Idx3 := Len - 2; --  don't count final ()
+         Idx2 := Index (Line (Idx1 + 8 .. Len), "(");
+         if Idx2 not in Idx1 + 8 .. Len then
+            exit;
+         end if;
+         Len := Idx2 - 1;
+         Idx2 := Index (Line (Idx1 + 8 .. Len), ".", Ada.Strings.Backward);
+         if Idx2 not in Idx1 + 8 .. Len then
+            exit;
+         end if;
+         Idx2 := Idx2 + 1; --  skip "."
+         Idx3 := Len;  --  don't count final ()
          WT := Find_Widget (TWin.Widget_List, Line (Idx2 .. Idx3));
          if WT /= null then
             TIO.Close (DFile);
@@ -1937,9 +3622,9 @@ package body W2gtk_Pkg is
                           & ": Repeated Widget " & Line (Idx2 .. Idx3));
             return -1;
          end if;
-         WT := new Widget_Properties (Widget_Type =>
-                                        Convert (Line (Idx2 .. Idx3)));
-         if WT.Widget_Type = None then
+         WT := new Widget_Properties
+           (Widget_Type => Symbol_Tables.Get_Type (Line (Idx2 .. Idx3)));
+         if WT.Widget_Type = No_Widget then
             TIO.Close (DFile);
             TIO.Put_Line (Resx_File_Name & ".Designer.vb (1): "
                           & " Line" & NLin'Image
@@ -1948,11 +3633,21 @@ package body W2gtk_Pkg is
             return -1;
          end if;
 
-         WT.Name := new String'(Line (Idx0 .. Idx1 - 1));
-         Insert_Widget (TWin, WT);
+         WT.Name := new String'(Line (Idx0 .. Idx1));
+         if WT.Widget_Type = BindingNavigator then
+            WT.Windows_Type :=
+              new String'("System.Windows.Forms.BindingNavigator");
+         elsif Starts_With (WT.Name.all, "BindingNavigator")
+           and then
+             WT.Widget_Type = GtkButton
+         then
+            WT.Windows_Type :=
+              new String'("System.Windows.Forms.ToolStripButton");
+         end if;
+         Insert_Widget_By_Tail (TWin, WT);
          Debug (NLin, "Created "
                 & WT.Widget_Type'Image & " "
-                & WT.Name.all & " from "
+                & WT.Name.all & " from"
                 & Line (Idx1 + 7 .. Idx3));
 
          exit when TIO.End_Of_File (DFile);
@@ -1963,7 +3658,54 @@ package body W2gtk_Pkg is
          NLin := NLin + 1;
       end loop;
 
+      while not TIO.End_Of_File (DFile) loop
+         TIO.Get_Line (DFile, Line, Len);
+         if Line (Len) = ASCII.CR then
+            Len := Len - 1;
+         end if;
+         NLin := NLin + 1;
+
+         if Contains (Line (1 .. Len), "FormBorderStyle.FixedToolWindow") then
+            TWin.Resizable := False;
+            TWin.Modal     := True;
+            exit;
+         elsif Contains (Line (1 .. Len), "AcceptButton") then
+            Idx0 :=  Index (Line (1 .. Len), " = Me.");
+            if Idx0 not in 1 .. Len then
+               raise TIO.Data_Error;
+            end if;
+            Idx0 := Idx0 + 6;
+            WT := Find_Widget (TWin.Widget_List, Line (Idx0 .. Len));
+            if WT = null then
+               raise TIO.Data_Error;
+            end if;
+            if WT.Widget_Type /= GtkButton then
+               raise TIO.Data_Error;
+            end if;
+            TWin.Accept_Button := WT;
+            WT.Text := new String'("Accept");
+         elsif Contains (Line (1 .. Len), "CancelButton") then
+            Idx0 :=  Index (Line (1 .. Len), " = Me.");
+            if Idx0 not in 1 .. Len then
+               raise TIO.Data_Error;
+            end if;
+            Idx0 := Idx0 + 6;
+            WT := Find_Widget (TWin.Widget_List, Line (Idx0 .. Len));
+            if WT = null then
+               raise TIO.Data_Error;
+            end if;
+            if WT.Widget_Type /= GtkButton then
+               raise TIO.Data_Error;
+            end if;
+            TWin.Accept_Button := WT;
+            WT.Text := new String'("Cancel");
+         end if;
+
+      end loop;
+
+      Debug (0, "End of Parsing (1) Designer");
       TIO.Close (DFile);
+
       return 0;
    exception
       when Constraint_Error =>
@@ -2025,7 +3767,7 @@ package body W2gtk_Pkg is
                   if Idx1 not in 1 .. Len2 then
                      Idx1 := Index (Line3 (1 .. Len3), "Sub ");
                      if Idx1 not in 1 .. Len3 then
-                        TIO.Put_Line (Resx_File_Name
+                        TIO.Put_Line (Resx_File_Name & ".vb"
                                       & ": Line: " & Img (NLin)
                                       & ": could not find handler");
                         return "";
@@ -2049,10 +3791,13 @@ package body W2gtk_Pkg is
          Idx0 := Idx1 + 4;
          Idx1 := Index (Line (Idx0 .. Len), "(");
          if Idx1 not in Idx0 .. Len then
-            TIO.Put_Line (Resx_File_Name
-                          & ": Line: " & Img (NLin)
-                          & ": could not find handler");
-            return "";
+            Idx1 := Index (Line (Idx0 .. Len), " _");
+            if Idx1 not in Idx0 .. Len then
+               TIO.Put_Line (Resx_File_Name
+                             & ": Line: " & Img (NLin)
+                             & ": could not find handler");
+               return "";
+            end if;
          end if;
          return Line (Idx0 .. Idx1 - 1);
       end Get_Handler;
@@ -2066,7 +3811,7 @@ package body W2gtk_Pkg is
          if Idx1 not in
            Complete_Signal'First + 1 .. Complete_Signal'Last - 1
          then
-            TIO.Put_Line (Resx_File_Name
+            TIO.Put_Line (Resx_File_Name & ".vb"
                           & ": Line: " & Img (NLin)
                           & ": cannot parse signal. Line: "
                           & Complete_Signal);
@@ -2082,18 +3827,24 @@ package body W2gtk_Pkg is
             if WName = "MyBase" or WName = "Me" then
                WS := new Signal_Block;
                if SName (SName'Last) = ',' then
-                  WS.Name    := new String'(SName (SName'First ..
-                                              SName'Last - 1));
+                  WS.Name := new String'(SName (SName'First ..
+                                                SName'Last - 1));
                   Ret := 1;
                else
-                  WS.Name    := new String'(SName);
+                  WS.Name := new String'(SName);
                end if;
-               WS.Handler := new String'(Get_Handler);
-               if WS.Handler.all = "" then
-                  Free (WS.Handler);
-                  return -1;
-               end if;
-               WS.Line    := NLin;
+               declare
+                  Handler : constant String := Capitalize (Get_Handler);
+               begin
+                  if Handler = "" then
+                     return -1;
+                  elsif Starts_With (Handler, "On_") then
+                     WS.Handler := new String'(Handler);
+                  else
+                     WS.Handler := new String'("On_" & Handler);
+                  end if;
+               end;
+               WS.Line := NLin;
                Insert_Signal (Win_List, WS);
                if Ret = 1 then
                   Debug (NLin, "Created Signal "
@@ -2113,18 +3864,34 @@ package body W2gtk_Pkg is
                end if;
                WS := new Signal_Block;
                if SName (SName'Last) = ',' then
-                  WS.Name    := new String'(SName (SName'First ..
-                                              SName'Last - 1));
+                  WS.Name := new String'(SName (SName'First ..
+                                                SName'Last - 1));
                   Ret := 1;
                else
-                  WS.Name    := new String'(SName);
+                  WS.Name := new String'(SName);
                end if;
-               WS.Handler := new String'(Get_Handler);
-               if WS.Handler.all = "" then
-                  Free (WS.Handler);
-                  return -1;
-               end if;
-               WS.Line    := NLin;
+               declare
+                  Handler : constant String := Capitalize (Get_Handler);
+               begin
+                  if Handler = "" then
+                     return -1;
+                  elsif Starts_With (Handler, "Tgv_") then
+                     WS.Handler :=
+                       new String'("On_" & WName & "_"
+                                   & Handler
+                                     (Handler'First + 4 .. Handler'Last));
+                  elsif Starts_With (Handler, "Dgv_") then
+                     WS.Handler :=
+                       new String'("On_" & WName & "_"
+                                   & Handler
+                                     (Handler'First + 4 .. Handler'Last));
+                  elsif Starts_With (Handler, "On_") then
+                     WS.Handler := new String'(Handler);
+                  else
+                     WS.Handler := new String'("On_" & Handler);
+                  end if;
+               end;
+               WS.Line := NLin;
                Insert_Signal (WT, WS);
                if Ret = 1 then
                   Debug (NLin, "Created Signal "
@@ -2245,6 +4012,7 @@ package body W2gtk_Pkg is
          end if;
       end loop;
 
+      Debug (0, "End of Parsing vb file");
       TIO.Close (VFile);
       return 0;
    end Parse_VB_File;
@@ -2253,9 +4021,9 @@ package body W2gtk_Pkg is
                            Do_Dump        : Boolean;
                            Resx_Path      : String;
                            Resx_File_Name : String;
+                           Glade_Path     : String;
                            Icon_Path      : String) return Integer is
       Result : Integer;
-      --  TWin   : Window_Pointer;
    begin
       W2gtk_Decls.Use_Debug := Use_Debug;
 
@@ -2287,7 +4055,7 @@ package body W2gtk_Pkg is
       end if;
 
       if Do_Dump then
-         Dump;
+         Dump (Glade_Path, Resx_File_Name);
       end if;
 
       return Result;
@@ -2297,6 +4065,8 @@ package body W2gtk_Pkg is
                                  Glade_File_Name : String) return Integer is
       TWin  : Window_Pointer;
    begin
+      Debug (0, "Generating Glade");
+
       if Win_List = null then
          TIO.Put_Line ("No window information");
          return -1;
@@ -2320,6 +4090,8 @@ package body W2gtk_Pkg is
                Emit_GtkListStore (TWin, 2);
             when GtkImage =>
                Emit_GtkImage (TWin, 2);
+            when GtkTreeStore =>
+               Emit_GtkTreeStore (TWin, 2);
          end case;
          TWin := TWin.Next;
       end loop;

@@ -20,9 +20,9 @@ package W2gtk_Pkg is
                            Do_Dump        : Boolean;
                            Resx_Path      : String;
                            Resx_File_Name : String;
+                           Glade_Path     : String;
                            Icon_Path      : String) return Integer;
 
    function Generate_Glade_File (Glade_Path      : String;
                                  Glade_File_Name : String) return Integer;
-
 end W2gtk_Pkg;

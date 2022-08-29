@@ -15,6 +15,8 @@
 -- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --
 ------------------------------------------------------------------------------
 with W2gtk_Pkg;             use W2gtk_Pkg;
+with W2Gtk2Ada;             use W2Gtk2Ada;
+with Symbol_Tables;
 with Ada.Text_IO;
 with Ada.Command_Line;      use Ada.Command_Line;
 with GNAT.Command_Line;     use GNAT.Command_Line;
@@ -23,6 +25,7 @@ with GNAT.OS_Lib;           use GNAT.OS_Lib;
 procedure W2gtk is
    package TIO renames Ada.Text_IO;
 
+   Ada_Path        : String_Access;
    Icon_Path       : String_Access;
    Resx_Path       : String_Access;
    Resx_File_Name  : String_Access;
@@ -37,25 +40,29 @@ procedure W2gtk is
    procedure Print_Help is
    begin
       TIO.Put_Line ("w2gtk -rp wpath -rf wfile -gp gpath -gf gfile -h --help"
-                    & " -glade -dump -debug");
+                    & " -glade -dump -debug -ap apath");
       TIO.Put_Line ("-h        produces this short help");
       TIO.Put_Line ("--help    produces this short help");
       TIO.Put_Line ("-rp wpath indicates the windows form path");
       TIO.Put_Line ("-rf wfile indicates the windows file name with"
                     & " no extension");
       TIO.Put_Line ("-ip ipath path to icons");
+      TIO.Put_Line ("-ap apath path to generated Ada code");
       TIO.Put_Line ("-gp gpath indicates the glade path");
       TIO.Put_Line ("-gf gfile indicates the generates glade file name with"
                     & " no extension");
       TIO.Put_Line ("-glade    generate the glade file");
-      TIO.Put_Line ("-dump     generate a dump file");
-      TIO.Put_Line ("-debug    generate lots of debug messages");
+      TIO.Put_Line ("-dump     generate a dump file (requires glade options)");
+      TIO.Put_Line ("-log      generate lots of messages in a log file");
       GNAT.OS_Lib.OS_Exit (0);
    end Print_Help;
 begin
+
+   Symbol_Tables.Initialize;
+
    loop
-      case Getopt ("h -help rp= rf= gp= gf= ip= "
-                   & "debug dump glade") is
+      case Getopt ("h -help rp= rf= gp= gf= ip= ap= "
+                   & "log dump glade") is
          when 'h' | '-' =>
             Print_Help;
          when 'r' =>
@@ -83,7 +90,9 @@ begin
          when 'd' =>
             if Full_Switch = "dump" then
                Dump := True;
-            elsif Full_Switch = "debug" then
+            end if;
+         when 'l' =>
+            if Full_Switch = "log" then
                Debug := True;
             end if;
          when 'i' =>
@@ -92,6 +101,14 @@ begin
                   Icon_Path := new String'(Parameter);
                else
                   Icon_Path := new String'("");
+               end if;
+            end if;
+         when 'a' =>
+            if Full_Switch = "ap" then
+               if Parameter /= "" then
+                  Ada_Path := new String'(Parameter);
+               else
+                  Ada_Path := new String'("");
                end if;
             end if;
          when others =>
@@ -107,6 +124,10 @@ begin
       TIO.Put_Line ("Wrong options: missing -rf");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
+   if Dump and then not Glade then
+      TIO.Put_Line ("Wrong options: missing glade options");
+      GNAT.OS_Lib.OS_Exit (-1);
+   end if;
    if Glade then
       if Glade_Path = null then
          TIO.Put_Line ("Wrong options: missing -gp");
@@ -118,9 +139,11 @@ begin
       end if;
    end if;
 
-   Result := Parse_VS_File (Debug, Dump,
+   Result := Parse_VS_File (Debug,
+                            Dump,
                             Resx_Path.all,
                             Resx_File_Name.all,
+                            Glade_Path.all,
                             Icon_Path.all);
 
    if Result /= 0 then
@@ -133,6 +156,14 @@ begin
                                      Glade_File_Name.all);
    end if;
 
+   if Ada_Path /= null and then Ada_Path.all /= "" then
+      Result := Generate_Ada_Packages (Ada_Path   => Ada_Path.all,
+                                       Glade_Path => Glade_Path.all,
+                                       Filename   => Glade_File_Name.all,
+                                       Debug      => Debug);
+   end if;
+
+   Free (Ada_Path);
    Free (Resx_Path);
    Free (Icon_Path);
    Free (Resx_File_Name);
