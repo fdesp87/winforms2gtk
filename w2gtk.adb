@@ -40,7 +40,7 @@ procedure W2gtk is
    procedure Print_Help is
    begin
       TIO.Put_Line ("w2gtk -rp wpath -rf wfile -gp gpath -gf gfile -h --help"
-                    & " -glade -dump -debug -ap apath");
+                    & " -glade -dump -log -ap apath");
       TIO.Put_Line ("-h        produces this short help");
       TIO.Put_Line ("--help    produces this short help");
       TIO.Put_Line ("-rp wpath indicates the windows form path");

@@ -2269,7 +2269,7 @@ package body W2gtk_Emit is
          Emit_ToolTip (TWdg, Id + 4);
          Emit_Label (TWdg, Id + 4, TWdg.Underline, Selectable => True);
          if TWdg.GParent.Widget_Type = BindingNavigator then
-            Emit_Property (Id + 4, "xalign", 0.1);
+            Emit_Property (Id + 4, "xalign", 0.01);
          end if;
          if TWdg.MaxLength > 0 then
             Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);

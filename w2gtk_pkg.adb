@@ -28,8 +28,8 @@ with Symbol_Tables;           use Symbol_Tables;
 
 package body W2gtk_Pkg is
    package TIO renames Ada.Text_IO;
-   package WinIO is new Ada.Text_IO.Enumeration_IO (Window_Enum);
-   package WdgIO is new Ada.Text_IO.Enumeration_IO (Widget_Enum);
+   --  package WinIO is new Ada.Text_IO.Enumeration_IO (Window_Enum);
+   --  package WdgIO is new Ada.Text_IO.Enumeration_IO (Widget_Enum);
    package DSIO is new Ada.Text_IO.Enumeration_IO (Display_Style_Enum);
    package FDIO is new Ada.Text_IO.Enumeration_IO (FlowDirection_Enum);
    package PIO is new Ada.Text_IO.Enumeration_IO (Window_Position_Enum);
@@ -735,7 +735,8 @@ package body W2gtk_Pkg is
 
       begin
          TIO.New_Line (LFile);
-         WinIO.Put (LFile, TWin.Window_Type);
+         --  WinIO.Put (LFile, TWin.Window_Type);
+         TIO.Put (LFile, To_Gtk (TWin));
          TIO.New_Line (LFile);
 
          Put_Property ("Name");
@@ -799,6 +800,12 @@ package body W2gtk_Pkg is
 
                Put_Property ("FGColor");
                Put_String_Access (TWin.FgColor);
+
+               Put_Property ("Accept Button");
+               Put_Widget_Pointer_Name (TWin.Accept_Button);
+
+               Put_Property ("Cancel Button");
+               Put_Widget_Pointer_Name (TWin.Cancel_Button);
 
                Dump_Signal_List;
                Dump_Children;
@@ -959,9 +966,11 @@ package body W2gtk_Pkg is
 
       begin
          TIO.New_Line (LFile);
+
          --  common fields
          TIO.Put (LFile, Sp (Id));
-         WdgIO.Put (LFile, TWdgP.Widget_Type);
+         --  WdgIO.Put (LFile, TWdgP.Widget_Type);
+         TIO.Put (LFile, To_Gtk (TWdgP));
          TIO.New_Line (LFile);
 
          Put_Property ("Number of Children");
@@ -979,10 +988,12 @@ package body W2gtk_Pkg is
          elsif TWdgP.GParent /= null
            and then TWdgP.GParent.Windows_Type /= null
          then
-            WdgIO.Put (LFile, TWdgP.GParent.Widget_Type);
+            --  WdgIO.Put (LFile, TWdgP.GParent.Widget_Type);
+            TIO.Put (LFile, To_Gtk (TWdgP.GParent));
             TIO.New_Line (LFile);
          elsif TWdgP.WParent /= null then
-            WinIO.Put (LFile, TWdgP.WParent.Window_Type);
+            --  WinIO.Put (LFile, TWdgP.WParent.Window_Type);
+            TIO.Put (LFile, To_Gtk (TWdgP.WParent));
             TIO.New_Line (LFile);
          end if;
 
@@ -3697,7 +3708,7 @@ package body W2gtk_Pkg is
             if WT.Widget_Type /= GtkButton then
                raise TIO.Data_Error;
             end if;
-            TWin.Accept_Button := WT;
+            TWin.Cancel_Button := WT;
             WT.Text := new String'("Cancel");
          end if;
 
