@@ -313,6 +313,9 @@ package body W2gtk_Decls is
       To.Size := From.Size;
       To.TabIndex := From.TabIndex;
       To.TabStop := From.TabStop;
+      To.Has_Focus := From.Has_Focus;
+      To.Next_Focus := From.Next_Focus;
+      To.Prev_Focus := From.Prev_Focus;
       To.Zorder := From.Zorder;
 
       To.Enabled := From.Enabled;
@@ -820,6 +823,101 @@ package body W2gtk_Decls is
       end if;
    end Insert_Signal;
 
+   -----------------
+   -- Insert_Focus --
+   ------------------
+   --  Inserted with TabIndex increasing
+   --  Last widget in the list points to the first one (i.e., circular list)
+   procedure Insert_Focus (Into : Window_Pointer; Focus : Widget_Pointer) is
+      Temp : Widget_Pointer;
+
+      procedure TabIndex_Repeated (W1 : Widget_Pointer; W2 : Widget_Pointer);
+      procedure TabIndex_Repeated (W1 : Widget_Pointer; W2 : Widget_Pointer) is
+      begin
+         TIO.Put_Line (W1.Name.all & ".TabIndex" & W1.TabIndex'Image);
+         TIO.Put_Line (W2.Name.all & ".TabIndex" & W2.TabIndex'Image);
+      end TabIndex_Repeated;
+   begin
+      if Into.TabFocusList = null then
+         --  empty list
+         Into.TabFocusList := Focus;
+         Focus.Next_Focus  := Focus;
+         Focus.Prev_Focus  := Focus;
+         return;
+      end if;
+      if Into.TabFocusList.Next_Focus = Into.TabFocusList then
+         --  list with just one element
+         if Into.TabFocusList.TabIndex < Focus.TabIndex then
+            Into.TabFocusList.Next_Focus := Focus;
+            Into.TabFocusList.Prev_Focus := Focus;
+            Focus.Next_Focus := Into.TabFocusList;
+            Focus.Prev_Focus := Into.TabFocusList;
+         elsif Into.TabFocusList.TabIndex > Focus.TabIndex then
+            Focus.Next_Focus := Into.TabFocusList;
+            Focus.Prev_Focus := Into.TabFocusList;
+            Into.TabFocusList.Next_Focus := Focus;
+            Into.TabFocusList.Prev_Focus := Focus;
+            Into.TabFocusList := Focus;
+         else
+            TabIndex_Repeated (Into.TabFocusList, Focus);
+            raise TIO.Data_Error;
+         end if;
+         return;
+      end if;
+      --  here the list has two or more elements
+      --  check that tabindex is not repeated
+      Temp := Into.TabFocusList;
+      loop
+         if Temp.TabIndex = Focus.TabIndex then
+            TabIndex_Repeated (Temp, Focus);
+            raise TIO.Data_Error;
+         end if;
+         Temp := Temp.Next_Focus;
+         exit when Temp = Into.TabFocusList;
+      end loop;
+
+      --  check if must be inserted in the front
+      Temp := Into.TabFocusList;
+      if Temp.TabIndex > Focus.TabIndex then
+         Focus.Next_Focus := Temp;
+         Temp.Prev_Focus.Next_Focus := Focus;
+         Focus.Prev_Focus := Temp.Prev_Focus;
+         Temp.Prev_Focus := Focus;
+         Into.TabFocusList := Focus;
+         return;
+      end if;
+
+      --  check if must be inserted in the end
+      Temp := Into.TabFocusList.Prev_Focus;
+      if Temp.TabIndex < Focus.TabIndex
+--        and then Into.TabFocusList.TabIndex < Focus.TabIndex
+      then
+         Focus.Next_Focus := Into.TabFocusList;
+         Focus.Prev_Focus := Temp;
+         Temp.Next_Focus := Focus;
+         Into.TabFocusList.Prev_Focus := Focus;
+         return;
+      end if;
+
+      --  insert by tabindex in the middle
+      Temp := Into.TabFocusList;
+      loop
+         if Temp.TabIndex < Focus.TabIndex
+           and then Temp.Next_Focus.TabIndex > Focus.TabIndex
+         then
+            Focus.Next_Focus := Temp.Next_Focus;
+            Focus.Prev_Focus := Temp;
+            Temp.Next_Focus.Prev_Focus := Focus;
+            Temp.Next_Focus := Focus;
+            return;
+         end if;
+         Temp := Temp.Next_Focus;
+         exit when Temp = Into.TabFocusList;
+      end loop;
+
+      raise Program_Error;
+   end Insert_Focus;
+
    -------------------
    -- Insert_Window --
    -------------------
@@ -1263,10 +1361,10 @@ package body W2gtk_Decls is
    begin
       case T.Window_Type is
          when GtkWindow =>
-            if T.Resizable and then not T.Modal then
-               return "Gtk_Window";
-            else
+            if T.Is_Dialog then
                return "Gtk_Dialog";
+            else
+               return "Gtk_Window";
             end if;
          when GtkFileChooserDialog => return "Gtk_File_Chooser_Dialog";
          when GtkFileFilter => return "Gtk_File_Filter";
@@ -1327,4 +1425,21 @@ package body W2gtk_Decls is
       end case;
    end To_Gtk;
 
+   function To_Gtk (D : DialogResult_Enum) return String is
+   begin
+      case D is
+         when None     => return "-1";  --  None
+         when OK       => return "-5";  --  OK
+         when Cancel   => return "-6";  --  Cancel
+         when Aborted  => return "-7";  --  Close
+         when Retry    => return "-97"; --  invented
+         when Ignore   => return "-98"; --  invented
+         when Yes      => return "-8";  --  Yes
+         when No       => return "-9";  --  No
+         when TryAgain => return "-99"; --  invented
+         when Continue => return "-10"; --  Apply
+      end case;
+      --  others in gtk: Reject=-2, Accept=-3, Delete (from titlebar) = -3
+      --                 Help = -11
+   end To_Gtk;
 end W2gtk_Decls;

@@ -54,7 +54,7 @@ package body W2Gtk2Ada is
       while Temp_Win /= null loop
          if Temp_Win.Window_Type = GtkWindow then
             TWin := Temp_Win;
-            if Temp_Win.Resizable and then not Temp_Win.Modal then
+            if not TWin.Is_Dialog then
                Main_Window := True;
                exit;
             end if;
@@ -156,7 +156,7 @@ package body W2Gtk2Ada is
    begin
       while TS /= null loop
          TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
-         TIO.Put_Line (Sp (16) & "(B : access Gtkada_Builder_Record'Class);");
+         TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class);");
          TIO.New_Line;
          TS := TS.Next;
       end loop;
@@ -167,9 +167,18 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWdg.Signal_List;
    begin
       while TS /= null loop
-         TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
-         TIO.Put_Line (Sp (16) & "(B : access Gtkada_Builder_Record'Class);");
-         TIO.New_Line;
+         if TS.Name.all = "leave" then
+            TIO.Put_Line (Sp (3) & "function " & Capitalize (TS.Handler.all));
+            TIO.Put_Line (Sp (5)
+                          & "(B : access Gtkada_Builder_Record'Class) "
+                          & "return Boolean;");
+            TIO.New_Line;
+         else
+            TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
+            TIO.Put_Line (Sp (5)
+                          & "(B : access Gtkada_Builder_Record'Class);");
+            TIO.New_Line;
+         end if;
          TS := TS.Next;
       end loop;
    end Emit_Signal_Specs;
@@ -184,7 +193,7 @@ package body W2Gtk2Ada is
    begin
       while TS /= null loop
          TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
-         TIO.Put_Line (Sp (16) & "(B : access Gtkada_Builder_Record'Class)"
+         TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
                        & " is");
          TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
          TIO.Put_Line (Sp (3) & "begin");
@@ -208,15 +217,31 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWdg.Signal_List;
    begin
       while TS /= null loop
-         TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
-         TIO.Put_Line (Sp (16) & "(B : access Gtkada_Builder_Record'Class)"
-                       & " is");
-         TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
-         TIO.Put_Line (Sp (3) & "begin");
-         TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-         TIO.Put_Line (Sp (6) & "null;");
-         TIO.Put_Line (Sp (3) & "end " & Capitalize (TS.Handler.all) & ";");
-         TIO.New_Line;
+         if TS.Name.all = "leave" then
+            TIO.Put_Line (Sp (3) & "function " & Capitalize (TS.Handler.all));
+            TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
+                          & " return Boolean is");
+            TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+            TIO.Put_Line (Sp (6) & "Gtk.Widget.Grab_Focus");
+            TIO.Put_Line (Sp (8) & "(Gtk_Widget (Me."
+                          & Capitalize (TWdg.Next_Focus.Name.all)
+                          & "));");
+            TIO.Put_Line (Sp (6) & "return True;  --  signal processed");
+            TIO.Put_Line (Sp (3) & "end " & Capitalize (TS.Handler.all) & ";");
+            TIO.New_Line;
+         else
+            TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
+            TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
+                          & " is");
+            TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+            TIO.Put_Line (Sp (6) & "null;");
+            TIO.Put_Line (Sp (3) & "end " & Capitalize (TS.Handler.all) & ";");
+            TIO.New_Line;
+         end if;
          TS := TS.Next;
       end loop;
    end Emit_Signal_Bodies;
@@ -231,29 +256,37 @@ package body W2Gtk2Ada is
    begin
       TIO.Put_Line ("with Gtkada.Builder; use Gtkada.Builder;");
       TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_pkg.Signals is");
+      TIO.Put_Line ("package " & Filename & "_Pkg.Signals is");
       Temp_Win := Win_List;
       while Temp_Win /= null loop
          Emit_Signal_Specs (Temp_Win);
          Temp_Win := Temp_Win.Next;
       end loop;
       For_Each_Widget (Win_List, Emit_Signal_Specs'Access);
-      TIO.Put_Line ("end " & Filename & "_pkg.Signals;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Signals;");
 
       if Form_Closing then
          TIO.Put_Line ("with Gtk.Main;");
       else
          TIO.Put_Line ("--  with Gtk.Main;");
       end if;
+      if TWin.Window_Type = GtkWindow
+        and then TWin.Is_Dialog
+        and then TWin.TabFocusList /= null
+      then
+         TIO.Put_Line ("with " & Filename & "_Pkg.Object_Collection;");
+         TIO.Put_Line ("use " & Filename & "_Pkg.Object_Collection;");
+         TIO.Put_Line ("with Gtk.Widget; use Gtk.Widget;");
+      end if;
       TIO.New_Line;
-      TIO.Put_Line ("package body " & Filename & "_pkg.Signals is");
+      TIO.Put_Line ("package body " & Filename & "_Pkg.Signals is");
       Temp_Win := Win_List;
       while Temp_Win /= null loop
          Emit_Signal_Bodies (Temp_Win);
          Temp_Win := Temp_Win.Next;
       end loop;
       For_Each_Widget (Win_List, Emit_Signal_Bodies'Access);
-      TIO.Put_Line ("end " & Filename & "_pkg.Signals;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Signals;");
    end Emit_Signals;
 
    ---------------------------------
@@ -304,15 +337,15 @@ package body W2Gtk2Ada is
    begin
       TIO.Put_Line ("with Gtkada.Builder; use Gtkada.Builder;");
       TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_pkg.Register_Signals is");
+      TIO.Put_Line ("package " & Filename & "_Pkg.Register_Signals is");
       TIO.Put_Line (Sp (3) & "procedure Register"
                     & " (Builder : Gtkada.Builder.Gtkada_Builder);");
-      TIO.Put_Line ("end " & Filename & "_pkg.Register_Signals;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Register_Signals;");
+
+      TIO.Put_Line ("with " & Filename & "_Pkg.Signals; "
+                    & "use " & Filename & "_Pkg.Signals;");
       TIO.New_Line;
-      TIO.Put_Line ("with " & Filename & "_pkg.Signals; "
-                    & "use " & Filename & "_pkg.Signals;");
-      TIO.New_Line;
-      TIO.Put_Line ("package body " & Filename & "_pkg.Register_Signals is");
+      TIO.Put_Line ("package body " & Filename & "_Pkg.Register_Signals is");
       TIO.Put_Line (Sp (3) & "procedure Register"
                     & " (Builder : Gtkada.Builder.Gtkada_Builder) is");
       TIO.Put_Line (Sp (3) & "begin");
@@ -323,7 +356,7 @@ package body W2Gtk2Ada is
       end loop;
       For_Each_Widget (Win_List, Emit_Register_All_Signals'Access);
       TIO.Put_Line (Sp (3) & "end Register;");
-      TIO.Put_Line ("end " & Filename & "_pkg.Register_Signals;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Register_Signals;");
    end Emit_Register_Signals;
 
    ------------------------
@@ -338,21 +371,21 @@ package body W2Gtk2Ada is
                                Glade_Path : String) is
    begin
       if Main_Window then
-         TIO.Put_Line ("package " & Filename & "_pkg.Main_Windows is");
+         TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
          TIO.Put_Line (Sp (3) & "procedure Initialize;");
-         TIO.Put_Line ("end " & Filename & "_pkg.Main_Windows;");
+         TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
       else
          TIO.Put_Line ("with Gtk.Window; use Gtk.Window;");
-         TIO.Put_Line ("package " & Filename & "_pkg.Main_Windows is");
+         TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
          TIO.Put_Line (Sp (3) & "procedure Initialize "
                        & "(Parent : access Gtk_Window_Record'Class);");
-         TIO.Put_Line ("end " & Filename & "_pkg.Main_Windows;");
+         TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
       end if;
 
-      TIO.Put_Line ("with " & Filename & "_pkg.Object_Collection; "
-                    & "use " & Filename & "_pkg.Object_Collection;");
+      TIO.Put_Line ("with " & Filename & "_Pkg.Object_Collection; "
+                    & "use " & Filename & "_Pkg.Object_Collection;");
       if Signals then
-         TIO.Put_Line ("with " & Filename & "_pkg.Register_Signals;");
+         TIO.Put_Line ("with " & Filename & "_Pkg.Register_Signals;");
       end if;
       TIO.Put_Line ("with Ada.Text_IO; use Ada.Text_IO;");
       TIO.Put_Line ("with Gtk.Main;");
@@ -368,7 +401,7 @@ package body W2Gtk2Ada is
       TIO.Put_Line ("with Glib.Object; use Glib.Object;");
       TIO.Put_Line ("with Glib.Error; use Glib.Error;");
       TIO.New_Line;
-      TIO.Put_Line ("package body " & Filename & "_pkg.Main_Windows is");
+      TIO.Put_Line ("package body " & Filename & "_Pkg.Main_Windows is");
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "Glade_Filename : constant String :=");
       TIO.Put_Line (Sp (6)
@@ -434,8 +467,8 @@ package body W2Gtk2Ada is
          TIO.New_Line;
       end if;
       TIO.Put_Line (Sp (6) & "--  Initialize Widgets_Collection");
-      TIO.Put_Line (Sp (6) & "Widgets := "
-                    & Filename & "_pkg.Object_Collection."
+      TIO.Put_Line (Sp (6) & "Me := "
+                    & Filename & "_Pkg.Object_Collection."
                     & "New_Widget_Collection;");
       if Signals then
          TIO.New_Line;
@@ -459,7 +492,7 @@ package body W2Gtk2Ada is
                     & Quoted (TWin.Name.all)
                     & ")).Show_All;");
       TIO.Put_Line (Sp (3) & "end Initialize;");
-      TIO.Put_Line ("end " & Filename & "_pkg.Main_Windows;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
    end Emit_Main_Window;
 
    ------------------------------
@@ -567,7 +600,7 @@ package body W2Gtk2Ada is
       TIO.Put_Line ("with Glib;");
       TIO.Put_Line ("with Glib.Object; use Glib.Object;");
       TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_pkg.Object_Collection is");
+      TIO.Put_Line ("package " & Filename & "_Pkg.Object_Collection is");
       TIO.Put_Line (Sp (3) & "type Widget_Collection_Record is new "
                     & "Glib.Object.GObject_Record with record");
       while Temp_Win /= null loop
@@ -587,16 +620,16 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (3) & "function New_Widget_Collection return "
                     & "Widget_Collection;");
       TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "Widgets : Widget_Collection;");
-      TIO.Put_Line ("end " & Filename & "_pkg.Object_Collection;");
+      TIO.Put_Line (Sp (3) & "Me : Widget_Collection;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
 
-      TIO.Put_Line ("package body " & Filename & "_pkg.Object_Collection is");
+      TIO.Put_Line ("package body " & Filename & "_Pkg.Object_Collection is");
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "procedure New_Widget_Collection ("
                     & "OC : out Widget_Collection) is");
       TIO.Put_Line (Sp (3) & "begin");
       TIO.Put_Line (Sp (6) & "OC := new Widget_Collection_Record;");
-      TIO.Put_Line (Sp (6) & Filename & "_pkg.Object_Collection."
+      TIO.Put_Line (Sp (6) & Filename & "_Pkg.Object_Collection."
                     & "Initialize (OC);");
       TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
       TIO.New_Line;
@@ -625,11 +658,11 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (6) & "OC : constant Widget_Collection := "
                    & "new Widget_Collection_Record;");
       TIO.Put_Line (Sp (3) & "begin");
-      TIO.Put_Line (Sp (6) & Filename & "_pkg.Object_Collection."
+      TIO.Put_Line (Sp (6) & Filename & "_Pkg.Object_Collection."
                     & "Initialize (OC);");
       TIO.Put_Line (Sp (6) & "return OC;");
       TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
-      TIO.Put_Line ("end " & Filename & "_pkg.Object_Collection;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
    end Emit_Object_Collection;
 
    -------------------------
@@ -641,9 +674,9 @@ package body W2Gtk2Ada is
    begin
       TIO.Put_Line ("with Gtkada.Builder; use Gtkada.Builder;");
       TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_pkg is");
+      TIO.Put_Line ("package " & Filename & "_Pkg is");
       TIO.Put_Line (Sp (3) & "Builder : Gtkada_Builder;");
-      TIO.Put_Line ("end " & Filename & "_pkg;");
+      TIO.Put_Line ("end " & Filename & "_Pkg;");
    end Emit_Main_Package;
 
    -------------------------
@@ -654,11 +687,11 @@ package body W2Gtk2Ada is
    procedure Emit_Main_Program (Filename : String) is
    begin
       TIO.Put_Line ("with Gtk.Main;");
-      TIO.Put_Line ("with " & Filename & "_pkg.Main_Windows;");
+      TIO.Put_Line ("with " & Filename & "_Pkg.Main_Windows;");
       TIO.Put_Line ("procedure " & Filename & " is");
       TIO.Put_Line ("begin");
       TIO.Put_Line (Sp (3) & "Gtk.Main.Init;");
-      TIO.Put_Line (Sp (3) & Filename & "_pkg.Main_Windows.Initialize;");
+      TIO.Put_Line (Sp (3) & Filename & "_Pkg.Main_Windows.Initialize;");
       TIO.Put_Line (Sp (3) & "Gtk.Main.Main;");
       TIO.Put_Line ("end " & Filename & ";");
    end Emit_Main_Program;
@@ -757,7 +790,7 @@ package body W2Gtk2Ada is
 
       TIO.Put_Line (CSSFile, "/* Colors */");
       TIO.Put_Line (CSSFile, "");
-      TIO.Put_Line (CSSFile, "@define-color bg_all        #F0F0F0;"
+      TIO.Put_Line (CSSFile, "@define-color bg_all        #CECECE;"
                     & " /* bg */");
       TIO.Put_Line (CSSFile, "@define-color bg_tab        #F8F8F8;"
                     & " /* notebook tab */");
@@ -774,6 +807,10 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "@define-color bg_sel_row    #FFEF98;"
                     & " /* treeview selected row */");
       TIO.New_Line (CSSFile);
+      TIO.Put_Line (CSSFile, "/* GEntry */");
+      TIO.Put_Line (CSSFile, "/*entry {");
+      TIO.Put_Line (CSSFile, "    min-height: 0px;");
+      TIO.Put_Line (CSSFile, "}*/");
       TIO.Put_Line (CSSFile, "/* Scrollbar */");
       TIO.Put_Line (CSSFile, ".scrollbar {");
       TIO.Put_Line (CSSFile, "background-clip: padding-box;");
@@ -786,9 +823,9 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "    color: white;");
       TIO.Put_Line (CSSFile, "}");
       TIO.Put_Line (CSSFile, "/* Menubar and Toolbar */");
-      TIO.Put_Line (CSSFile, "GtkMenuBar, GtkToolbar {");
+      TIO.Put_Line (CSSFile, "menubar, toolbar {");
       TIO.Put_Line (CSSFile, "    border-style: solid;");
-      TIO.Put_Line (CSSFile, "    border-color: black;");
+      TIO.Put_Line (CSSFile, "    border-color: @bg_all;");
       TIO.Put_Line (CSSFile, "    border-bottom-width: 0.2px;");
       TIO.Put_Line (CSSFile, "    background-image: -gtk-gradient(linear,");
       TIO.Put_Line (CSSFile, "               left top, left bottom,");
@@ -843,12 +880,6 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "    border-bottom-width: 0.4px;");
       TIO.Put_Line (CSSFile, "    padding: 0px 0px 0px 0px;");
       TIO.Put_Line (CSSFile, "}");
-      TIO.Put_Line (CSSFile, "GtkTreeView#ledger column-header .button {");
-      TIO.Put_Line (CSSFile, "    border-bottom-width: 2px;");
-      TIO.Put_Line (CSSFile, "    background-image: -gtk-gradient(linear,");
-      TIO.Put_Line (CSSFile, "    left top, left bottom,");
-      TIO.Put_Line (CSSFile, "    from (@bg_tv_hd_ldg), to (@bg_tv_hd_ldg));");
-      TIO.Put_Line (CSSFile, "}");
       TIO.Put_Line (CSSFile, "GtkTreeView column-header .button:hover {");
       TIO.Put_Line (CSSFile, "     background-image: -gtk-gradient(linear,");
       TIO.Put_Line (CSSFile, "      left top, left bottom,");
@@ -867,9 +898,7 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "GtkTreeView row:selected {");
       TIO.Put_Line (CSSFile, "    background-color: @bg_sel_row;");
       TIO.Put_Line (CSSFile, "}");
-      TIO.Put_Line (CSSFile, "GtkTreeView#Budget row:selected {");
-      TIO.Put_Line (CSSFile, "    background-color: blue;");
-      TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
 
       TIO.Close (CSSFile);
       return 0;

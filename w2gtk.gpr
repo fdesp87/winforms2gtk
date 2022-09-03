@@ -25,7 +25,7 @@ project w2gtk is
    for Exec_Dir use ".";
 
    package Compiler is
-      for Switches ("Ada") use ("-g", "-O0", "-gnata", "-gnatVa", 
+      for Switches ("Ada") use ("-g", "-O0", "-gnata", "-gnatVa", "-gnat2022",
                                 "-gnatQ", "-gnaty", "-gnateE", "-gnatwaCJe", "-fstack-check",
                                 "-gnatwaCJeM", "-gnaty3abcefhiklM79nprst");
 

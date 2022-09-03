@@ -26,7 +26,6 @@ package W2gtk_Decls is
    type DialogResult_Enum is (None, OK, Cancel, Aborted, Retry, Ignore,
                               Yes, No, TryAgain, Continue);
 
-
    type Margin_Array is array (Integer range 1 .. 4) of Integer;
    Null_Margin : constant Margin_Array := (others => -1);
 
@@ -197,29 +196,34 @@ package W2gtk_Decls is
       Signal_List    : Signal_Pointer;
       case Window_Type is
          when GtkWindow =>
-            Resizable       : Boolean       := True;
-            Modal           : Boolean       := False;
-            Font_Name       : String_Access := null;
-            Font_Size       : String_Access := null;
-            Font_Weight     : String_Access := null;
-            Icon            : String_Access := null;
-            ToolTip         : String_Access := null;
-            Start_Position  : Window_Position_Enum := None;
-            Client_Size     : Size_Pair;
-            Margins         : Margin_Array  := Null_Margin;
-            AutoScaleDim    : Size_Pair;
-            TrayHeight      : Integer := 0;
-            BgColor         : String_Access := null;
-            FgColor         : String_Access := null;
-            Widget_List     : Widget_Pointer := null;
-            Accept_Button   : Widget_Pointer := null;
-            Cancel_Button   : Widget_Pointer := null;
+            Resizable         : Boolean       := True;
+            Modal             : Boolean       := False;
+            Is_Dialog         : Boolean       := False;
+            Font_Name         : String_Access := null;
+            Font_Size         : String_Access := null;
+            Font_Weight       : String_Access := null;
+            Icon              : String_Access := null;
+            ToolTip           : String_Access := null;
+            Start_Position    : Window_Position_Enum := None;
+            Client_Size       : Size_Pair;
+            Margins           : Margin_Array  := Null_Margin;
+            AutoScaleDim      : Size_Pair;
+            TrayHeight        : Integer := 0;
+            MaxTabIndex       : Integer := 0;
+            MinTabIndex       : Integer := -1;
+            Has_Focus_Widget  : Widget_Pointer := null;
+            BgColor           : String_Access := null;
+            FgColor           : String_Access := null;
+            Widget_List       : Widget_Pointer := null;
+            Accept_Button     : Widget_Pointer := null;
+            Cancel_Button     : Widget_Pointer := null;
+            TabFocusList      : Widget_Pointer := null;
          when GtkFileChooserDialog =>
-            FilterName     : String_Access := null;
-            Transient_For  : Window_Pointer;
-            Attached_To    : Widget_Pointer;
+            FilterName        : String_Access := null;
+            Transient_For     : Window_Pointer;
+            Attached_To       : Widget_Pointer;
          when GtkFileFilter =>
-            FilterString   : String_Access := null;
+            FilterString      : String_Access := null;
          when GtkEntryBuffer | GtkListStore | GtkImage | GtkTreeStore =>
             Associated_Widget :  Widget_Pointer;
       end case;
@@ -356,7 +360,10 @@ package W2gtk_Decls is
       Location      : Location_Pair;
       Size          : Size_Pair;
       TabIndex      : Integer        := -1;
-      TabStop       : Boolean        := True;
+      TabStop       : Triboolean     := Indeterminate;
+      Next_Focus    : Widget_Pointer := null;
+      Prev_Focus    : Widget_Pointer := null;
+      Has_Focus     : Boolean        := False;
       Zorder        : Integer        := -1;
 
       Enabled       : Boolean        := True;  --  sensitive
@@ -374,7 +381,7 @@ package W2gtk_Decls is
       MaxLength     : Integer        := -1;
       AutoToolTip   : Boolean        := False;
       ToolTip       : String_Access  := null;
-      UseVisualStyleBackColor : Boolean := False;
+      UseVisualStyleBackColor : Boolean := True;
       BgColor       : String_Access  := null;
       FgColor       : String_Access  := null;
       UlColor       : String_Access  := null;
@@ -569,6 +576,7 @@ package W2gtk_Decls is
 
                   case Widget_Type is
                      when GtkButton =>
+                        Dialog_Result : DialogResult_Enum := None;
                         Associated_ColorButton : Widget_Pointer;
 
                      when GtkCheckButton =>
@@ -626,6 +634,7 @@ package W2gtk_Decls is
                             TS   : Signal_Pointer);
    procedure Insert_Signal (TWdg : Widget_Pointer;
                             TS   : Signal_Pointer);
+   procedure Insert_Focus (Into : Window_Pointer; Focus : Widget_Pointer);
 
    procedure Insert_Window_By_Tail (TWin : Window_Pointer);
    procedure Insert_Window_By_Front (TWin : Window_Pointer);
@@ -658,6 +667,7 @@ package W2gtk_Decls is
    function Normalize_Name (TWdg : Widget_Pointer) return String;
    function To_Gtk (T : Window_Pointer) return String;
    function To_Gtk (T : Widget_Pointer) return String;
+   function To_Gtk (D : DialogResult_Enum) return String;
 
    RFile : TIO.File_Type; --  resource     (in)
    DFile : TIO.File_Type; --  designer     (in)

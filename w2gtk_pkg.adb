@@ -46,6 +46,7 @@ package body W2gtk_Pkg is
    package ASMIO is new Ada.Text_IO.Enumeration_IO (AutoSizeMode_Enum);
    package ASCMIO is new Ada.Text_IO.Enumeration_IO (AutoSizeColumnMode_Enum);
    package SBIO is new Ada.Text_IO.Enumeration_IO (ScrollBars_Enum);
+   package DRIO is new Ada.Text_IO.Enumeration_IO (DialogResult_Enum);
 
    Test2  : constant String := "<data name=""$this.";
    Test5  : constant String := "<data name=""";
@@ -91,6 +92,8 @@ package body W2gtk_Pkg is
       Temp  : Widget_Pointer;
       NWin0 : Window_Pointer;
       NWin1 : Window_Pointer;
+      TS    : Signal_Pointer;
+      Found : Boolean;
 
       procedure Visit_GtkTree_Widget_For_GtkBox
         (Parent : in out Widget_Pointer);
@@ -259,6 +262,19 @@ package body W2gtk_Pkg is
          Process_Inheritable (TWin);
          TWin := TWin.Next;
       end loop;
+
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: GtkWindows or GtkDialog");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Resizable and then not TWin.Modal then
+            TWin.Is_Dialog := False;
+         else
+            TWin.Is_Dialog := True;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
 
       --  generate auxiliary elements
       Debug (0, "");
@@ -523,7 +539,183 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      --  until now, each gtkwindow had a linear widget list
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: setting maxtabindex");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.TabIndex > TWin.MaxTabIndex then
+                  TWin.MaxTabIndex := TWdg.TabIndex;
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
+            Debug (0, "Set Window Property " & TWin.Name.all
+                   & ".MaxTabIndex " & Image (TWin.MaxTabIndex, 0));
+            TWin.MinTabIndex := TWin.MaxTabIndex;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: process tabindex and tabstop");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.TabStop = Indeterminate then
+                  case TWdg.Widget_Type is
+                     when GtkLabel =>
+                        TWdg.TabStop := False;
+                        Debug (0, "Set Widget Property "
+                               & TWdg.Name.all
+                               & ".TabStop False");
+                     when
+                          GtkEntry | GtkComboBox
+                        | GtkButton | GtkRadioButton
+                        | GtkCheckButton | GtkToggleButton
+                        =>
+                        if TWdg.Widget_Type in GtkEntry | GtkComboBox then
+                           TWdg.TabStop := To_TriBoolean (TWdg.Editable);
+                        else
+                           TWdg.TabStop := True;
+                        end if;
+                        if To_Boolean (TWdg.TabStop) then
+                           Debug (0, "Set Widget Property "
+                                  & TWdg.Name.all
+                                  & ".TabStop True");
+                        end if;
+                        if TWdg.TabIndex < 0 then
+                           TWin.MaxTabIndex := @ + 1;
+                           TWdg.TabIndex := TWin.MaxTabIndex;
+                           Debug (0, "Set Widget Property "
+                                  & TWdg.Name.all
+                                  & ".TabIndex "
+                                  & Image (TWdg.TabIndex, 0));
+                        end if;
+                     when others => null;
+                  end case;
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: inserting focus handler "
+             & "(only for dialogs)");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            if TWin.Is_Dialog then
+               TWdg := TWin.Widget_List;
+               while TWdg /= null loop
+                  if GNATCOLL.Tribooleans."=" (TWdg.TabStop, True) then
+                     case TWdg.Widget_Type is
+                        when GtkLabel | GtkEntry | GtkComboBox
+                           | GtkButton | GtkRadioButton
+                           | GtkCheckButton | GtkToggleButton
+                           =>
+                           --  search for a signal named "leave"
+                           TS := TWdg.Signal_List;
+                           Found := False;
+                           while TS /= null loop
+                              if TS.Name.all = "leave" then
+                                 Found := True;
+                                 exit;
+                              end if;
+                              TS := TS.Next;
+                           end loop;
+                           if not Found then
+                              TS := new Signal_Block;
+                              TS.Name := new String'("leave");
+                              TS.Handler := new String'("on_"
+                                                        & TWdg.Name.all
+                                                        & "_focus");
+                              Insert_Signal (TWdg, TS);
+                              Debug (0, "Created Signal "
+                                     & TWdg.Name.all
+                                     & ".leave");
+                           end if;
+                        when others => null;
+                     end case;
+                  end if;
+                  TWdg := TWdg.Next;
+               end loop;
+            end if;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: selecting the has-focus widget");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if GNATCOLL.Tribooleans."=" (TWdg.TabStop, True) then
+                  case TWdg.Widget_Type is
+                     when GtkLabel | GtkEntry | GtkComboBox
+                        | GtkButton | GtkRadioButton
+                        | GtkCheckButton | GtkToggleButton
+                        =>
+                        if TWdg.TabIndex >= 0
+                          and then TWdg.TabIndex < TWin.MinTabIndex
+                        then
+                           TWin.Has_Focus_Widget := TWdg;
+                           TWin.MinTabIndex := TWdg.TabIndex;
+                        end if;
+                     when others => null;
+                  end case;
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
+            if TWin.Has_Focus_Widget /= null then
+               TWin.Has_Focus_Widget.Has_Focus := True;
+               Debug (0, "Set Widget Property "
+                      & TWin.Has_Focus_Widget.Name.all
+                      & ".Has_Focus True");
+            end if;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: setting the focus chain");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if To_Boolean (TWdg.TabStop) then
+                  Debug (0, Sp (3) & "Inserting "
+                         & TWdg.Name.all
+                         & " with TabIndex " & TWdg.TabIndex'Image);
+                  Insert_Focus (Into => TWin, Focus => TWdg);
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
+            TWdg := TWin.TabFocusList;
+            if TWdg /= null then
+               Debug (0, "Focus chain for " & TWin.Name.all);
+               loop
+                  Debug (0, Sp (3) & TWdg.Name.all
+                         & ".TabIndex " & TWdg.TabIndex'Image);
+                  TWdg := TWdg.Next_Focus;
+                  exit when TWdg = TWin.TabFocusList;
+               end loop;
+            end if;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      ---------------------------------------------------------
+      --  until now, each gtkwindow had a linear widget list --
+      ---------------------------------------------------------
 
       --  reorder the widgets placing each widget in the correct parent list
       Debug (0, "");
@@ -623,6 +815,19 @@ package body W2gtk_Pkg is
          TIO.New_Line (LFile);
       end Put_Boolean;
 
+      procedure Put_Triboolean (B : Triboolean);
+      procedure Put_Triboolean (B : Triboolean) is
+      begin
+         if GNATCOLL.Tribooleans."=" (B, True) then
+            TIO.Put (LFile, "True");
+         elsif GNATCOLL.Tribooleans."=" (B, False) then
+            TIO.Put (LFile, "False");
+         else
+            TIO.Put (LFile, "Indeterminate");
+         end if;
+         TIO.New_Line (LFile);
+      end Put_Triboolean;
+
       procedure Dump_DGVS is
       begin
          if DGVS = null then
@@ -669,7 +874,7 @@ package body W2gtk_Pkg is
             TIO.New_Line (LFile);
 
             Put_Property ("WrapMode");
-            Put_Boolean (To_Boolean (DGVS (I).WrapMode));
+            Put_Triboolean (DGVS (I).WrapMode);
 
             Put_Property ("NullValue");
             Put_String_Access (DGVS (I).NullValue);
@@ -795,6 +1000,9 @@ package body W2gtk_Pkg is
                Put_Property ("TryHeight");
                Put_Integer (TWin.TrayHeight);
 
+               Put_Property ("Max Tab Index");
+               Put_Integer (TWin.MaxTabIndex);
+
                Put_Property ("BGColor");
                Put_String_Access (TWin.BgColor);
 
@@ -823,10 +1031,9 @@ package body W2gtk_Pkg is
                Dump_Signal_List;
 
             when GtkFileFilter =>
-               Put_Property ("");
-               TIO.Put (LFile, Sp (Id) & "Filter String");
+               Put_Property ("Filter String");
                if TWin.FilterString /= null then
-                  TIO.Put (TWin.FilterString.all);
+                  TIO.Put (LFile, TWin.FilterString.all);
                end if;
                TIO.New_Line (LFile);
 
@@ -1014,7 +1221,10 @@ package body W2gtk_Pkg is
          Put_Integer (TWdgP.TabIndex);
 
          Put_Property ("TabStop");
-         Put_Boolean (TWdgP.TabStop);
+         Put_Triboolean (TWdgP.TabStop);
+
+         Put_Property ("Has Focus");
+         Put_Boolean (TWdgP.Has_Focus);
 
          Put_Property ("Zorder");
          Put_Integer (TWdgP.Zorder);
@@ -1465,15 +1675,20 @@ package body W2gtk_Pkg is
                      Put_Window_Pointer_Name (TWdgP.Win_Image);
 
                      case TWdgP.Widget_Type is
-                     when GtkButton =>
-                        Put_Property ("Associates ColorButton");
-                        Put_Widget_Pointer_Name (TWdgP.Associated_ColorButton);
+                        when GtkButton =>
+                           Put_Property ("Dialog Result");
+                           DRIO.Put (LFile, TWdgP.Dialog_Result);
+                           TIO.New_Line (LFile);
 
-                     when GtkCheckButton =>
-                        Put_Property ("CheckAlign");
-                        Put_String_Access (TWdgP.CheckAlign);
+                           Put_Property ("Associates ColorButton");
+                           Put_Widget_Pointer_Name
+                             (TWdgP.Associated_ColorButton);
 
-                     when others => null;
+                        when GtkCheckButton =>
+                           Put_Property ("CheckAlign");
+                           Put_String_Access (TWdgP.CheckAlign);
+
+                        when others => null;
                      end case;
                   when others => null;
                end case;
@@ -3694,6 +3909,7 @@ package body W2gtk_Pkg is
                raise TIO.Data_Error;
             end if;
             TWin.Accept_Button := WT;
+            WT.Dialog_Result := OK;
             WT.Text := new String'("Accept");
          elsif Contains (Line (1 .. Len), "CancelButton") then
             Idx0 :=  Index (Line (1 .. Len), " = Me.");
@@ -3709,6 +3925,7 @@ package body W2gtk_Pkg is
                raise TIO.Data_Error;
             end if;
             TWin.Cancel_Button := WT;
+            WT.Dialog_Result := Cancel;
             WT.Text := new String'("Cancel");
          end if;
 

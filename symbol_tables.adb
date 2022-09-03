@@ -72,6 +72,7 @@ package body Symbol_Tables is
       Wst.Insert ("CellMouseLeave", "clicked");
       Wst.Insert ("CellMouseClick", "clicked");
       Wst.Insert ("toggled", "toggled");
+      Wst.Insert ("leave", "focus");
       Wst.Insert ("DoWork", "DoWork");
       Wst.Insert ("ProgressChanged", "ProgressChanged");
       Wst.Insert ("RunWorkerCompleted", "RunWorkerCompleted");

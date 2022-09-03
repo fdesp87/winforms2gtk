@@ -65,18 +65,22 @@ package body W2gtk_Emit is
    procedure Emit_GtkImage (TWdg : Widget_Pointer; Id : Integer);
    procedure Emit_GtkFrame (TWdg : Widget_Pointer; Id : Integer);
    procedure Emit_GtkListBox (TWdg : Widget_Pointer; Id : Integer);
-   procedure Emit_GtkEntry (TWdg : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkEntry (TWdg : Widget_Pointer;
+                            Id   : Integer;
+                            Activate_Default : Boolean);
    procedure Emit_GtkSpinButton (TWdg : Widget_Pointer; Id : Integer);
    procedure Emit_GtkComboBox (TWdg    : Widget_Pointer;
                                Id      : Integer;
-                               Packing : Boolean := True);
+                               Packing : Boolean;
+                               Activate_Default : Boolean);
    -----------
-   procedure Emit_GtkButton (TWdg      : Widget_Pointer;
-                             Id        : Integer;
-                             Object    : String;
-                             Underline : Boolean;
-                             XY        : Boolean;
-                             Homog     : Boolean);
+   procedure Emit_GtkButton (TWdg        : Widget_Pointer;
+                             Id          : Integer;
+                             Object      : String;
+                             Position    : Integer;
+                             Has_Default : Boolean;
+                             XY          : Boolean;
+                             Homog       : Boolean);
    procedure Emit_GtkColorButton (TWdg : Widget_Pointer; Id : Integer);
    procedure Emit_GtkToggleButton (TWdg      : Widget_Pointer;
                                    Id        : Integer;
@@ -96,7 +100,9 @@ package body W2gtk_Emit is
                                 Id   : Integer;
                                 Pos  : Integer);
    procedure Emit_GtkFileChooserButton (TWdg : Widget_Pointer; Id : Integer);
-   procedure Emit_GtkDialog_Body (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_GtkDialog_Body (TWin : Window_Pointer;
+                                  Id   : Integer;
+                                  Activate_Default : Boolean);
    procedure Emit_Main_GtkWindow_Body (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkDialog (TWin : Window_Pointer; Id : Integer);
    procedure Emit_Main_GtkWindow (TWin : Window_Pointer; Id : Integer);
@@ -124,6 +130,7 @@ package body W2gtk_Emit is
       procedure Emit_Packing (Id         : Integer;
                               Position   : Integer;
                               Expand     : Boolean;
+                              Fill       : Boolean;
                               Padding    : Integer;
                               Pack_Start : Boolean);
       procedure Emit_Packing_Child (TWdg    : Widget_Pointer;
@@ -144,9 +151,9 @@ package body W2gtk_Emit is
       procedure Emit_Name (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_Name (TWin : Window_Pointer; Id : Integer);
       procedure Emit_Object (TWdg   : Widget_Pointer;
-                             Id     : Integer;
-                             Wdg    : String;
-                             WId    : String;
+                             Id     : Integer; --  identation
+                             Wdg    : String;  --  gtk widget
+                             WId    : String;  --  Widget_Id
                              Finish : Boolean := False);
       procedure Emit_Button_Image (TWdg        : Widget_Pointer;
                                    Id          : Integer;
@@ -155,10 +162,10 @@ package body W2gtk_Emit is
       procedure Emit_ToolTip (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_Visible_And_Focus (TWdg  : Widget_Pointer;
                                         Id    : Integer;
-                                        Focus : Boolean := False);
+                                        Focus : Boolean);
       procedure Emit_Visible_And_Focus (TWin  : Window_Pointer;
                                         Id    : Integer;
-                                        Focus : Boolean := False);
+                                        Focus : Boolean);
       procedure Emit_WH_Request (TWdg : Widget_Pointer; Id : Integer);
    end Emit_Tools;
 
@@ -167,9 +174,9 @@ package body W2gtk_Emit is
    ------------------
    package body Emit_Tools is
       procedure Emit_Property (Id     : Integer;
-                            PName  : String;
-                            PValue : String;
-                            Translatable : Boolean := False) is
+                               PName  : String;
+                               PValue : String;
+                               Translatable : Boolean := False) is
       begin
          if Translatable then
             Emit_Line (Sp (Id) & "<property name="
@@ -185,8 +192,8 @@ package body W2gtk_Emit is
          end if;
       end Emit_Property;
 
-      procedure Emit_Property (Id : Integer;
-                               PName : String;
+      procedure Emit_Property (Id     : Integer;
+                               PName  : String;
                                PValue : Boolean) is
       begin
          if PValue then
@@ -196,14 +203,16 @@ package body W2gtk_Emit is
          end if;
       end Emit_Property;
 
-      procedure Emit_Property (Id : Integer;
-                               PName : String;
+      procedure Emit_Property (Id     : Integer;
+                               PName  : String;
                                PValue : Integer) is
       begin
          Emit_Property (Id, PName, Img (PValue));
       end Emit_Property;
 
-      procedure Emit_Property (Id : Integer; PName : String; PValue : Float) is
+      procedure Emit_Property (Id     : Integer;
+                               PName  : String;
+                               PValue : Float) is
       begin
          Emit_Property (Id, PName, Img (PValue));
       end Emit_Property;
@@ -262,32 +271,32 @@ package body W2gtk_Emit is
 
       procedure Emit_Margin (TWdg : Widget_Pointer; Id : Integer) is
       begin
-         if TWdg.Margins (1) /= -1 then
-            Emit_Property (Id, "margin-top", TWdg.Margins (3));
-         end if;
          if TWdg.Margins (2) /= -1 then
             Emit_Property (Id, "margin-start", TWdg.Margins (1));
-         end if;
-         if TWdg.Margins (3) /= -1 then
-            Emit_Property (Id, "margin-bottom", TWdg.Margins (4));
          end if;
          if TWdg.Margins (4) /= -1 then
             Emit_Property (Id, "margin-end", TWdg.Margins (2));
          end if;
+         if TWdg.Margins (1) /= -1 then
+            Emit_Property (Id, "margin-top", TWdg.Margins (3));
+         end if;
+         if TWdg.Margins (3) /= -1 then
+            Emit_Property (Id, "margin-bottom", TWdg.Margins (4));
+         end if;
       end Emit_Margin;
       procedure Emit_Margin (TWin : Window_Pointer; Id : Integer) is
       begin
-         if TWin.Margins (1) /= -1 then
-            Emit_Property (Id, "margin-top", TWin.Margins (3));
-         end if;
          if TWin.Margins (2) /= -1 then
             Emit_Property (Id, "margin-start", TWin.Margins (1));
          end if;
-         if TWin.Margins (3) /= -1 then
-            Emit_Property (Id, "margin-bottom", TWin.Margins (4));
-         end if;
          if TWin.Margins (4) /= -1 then
             Emit_Property (Id, "margin-end", TWin.Margins (2));
+         end if;
+         if TWin.Margins (1) /= -1 then
+            Emit_Property (Id, "margin-top", TWin.Margins (3));
+         end if;
+         if TWin.Margins (3) /= -1 then
+            Emit_Property (Id, "margin-bottom", TWin.Margins (4));
          end if;
       end Emit_Margin;
 
@@ -303,20 +312,20 @@ package body W2gtk_Emit is
          end if;
       end Emit_Child;
       procedure Emit_Object (TWdg : Widget_Pointer;
-                             Id     : Integer;
-                             Wdg    : String;
-                             WId    : String;
+                             Id     : Integer; --  identation
+                             Wdg    : String;  --  gtk widget
+                             WId    : String;  --  Widget_Id
                              Finish : Boolean := False) is
          pragma Unreferenced (TWdg);
       begin
          if WId /= "" then
-            Emit_Line (Sp (Id + 2) & "<object class="""
+            Emit_Line (Sp (Id) & "<object class="""
                        & Wdg
                        & """ id="""
                        & WId
                        & (if Finish then """/>" else """>"));
          else
-            Emit_Line (Sp (Id + 2) & "<object class=""" & Wdg & """>");
+            Emit_Line (Sp (Id) & "<object class=""" & Wdg & """>");
          end if;
       end Emit_Object;
 
@@ -342,7 +351,7 @@ package body W2gtk_Emit is
 
       procedure Emit_Visible_And_Focus (TWdg  : Widget_Pointer;
                                         Id    : Integer;
-                                        Focus : Boolean := False) is
+                                        Focus : Boolean) is
       begin
          Emit_Property (Id, "visible", TWdg.Visible);
          if not TWdg.Enabled then
@@ -353,7 +362,7 @@ package body W2gtk_Emit is
 
       procedure Emit_Visible_And_Focus (TWin  : Window_Pointer;
                                         Id    : Integer;
-                                        Focus : Boolean := False) is
+                                        Focus : Boolean) is
          pragma Unreferenced (TWin);
       begin
          Emit_Property (Id + 2, "visible", True);
@@ -406,12 +415,13 @@ package body W2gtk_Emit is
       procedure Emit_Packing (Id         : Integer;
                               Position   : Integer;
                               Expand     : Boolean;
+                              Fill       : Boolean;
                               Padding    : Integer;
                               Pack_Start : Boolean) is
       begin
          Emit_Line (Sp (Id) & "<packing>");
          Emit_Property (Id + 2, "expand", Expand);
-         Emit_Property (Id + 2, "fill", True);
+         Emit_Property (Id + 2, "fill", Fill);
          Emit_Property (Id + 2, "position", Position);
          if Padding > 0 then
             Emit_Property (Id + 2, "padding", Padding);
@@ -658,11 +668,13 @@ package body W2gtk_Emit is
                        & """/>");
          end if;
 
-         if TWdg.BgColor /= null and then TWdg.BgColor.all /= "" then
-            Emit_Line (Sp (Id + 2)
-                       & "<attribute name=""background"" value="""
-                       & TWdg.BgColor.all
-                       & """/>");
+         if not TWdg.UseVisualStyleBackColor then
+            if TWdg.BgColor /= null and then TWdg.BgColor.all /= "" then
+               Emit_Line (Sp (Id + 2)
+                          & "<attribute name=""background"" value="""
+                          & TWdg.BgColor.all
+                          & """/>");
+            end if;
          end if;
 
          if TWdg.UlColor /= null and then TWdg.UlColor.all /= "" then
@@ -688,6 +700,7 @@ package body W2gtk_Emit is
       Emit_Line ("<!-- Generated with glade 3.38.2 -->");
       Emit_Line ("<interface>");
       Emit_Line (Sp (Id + 2) & "<requires lib=""gtk+"" version=""3.24""/>");
+      Emit_Line (Sp (Id + 2) & "<!-- interface-local-resource-path / -->");
    end Emit_GtkHeader;
 
    procedure Emit_GtkTrailer (TWin : Window_Pointer; Id : Integer) is
@@ -706,7 +719,7 @@ package body W2gtk_Emit is
       pragma Unreferenced (Num);
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkTreeViewColumn", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkTreeViewColumn", TWdg.Name.all);
       Emit_Property (Id + 4, "resizable", TWdg.Resizable);
       Emit_Property (Id + 4, "sizing", "fixed");
       if TWdg.Fixed_Width > 0 then
@@ -718,29 +731,26 @@ package body W2gtk_Emit is
       if TWdg.Max_Width > 0 then
          Emit_Property (Id + 4, "max-width", TWdg.Max_Width);
       end if;
-      --  if TWdg.ToolTip /= null and then TWdg.ToolTip.all /= "" then
-      --     Emit_Property (Id + 4, "tooltip-text", TWdg.ToolTip.all, True);
-      --  end if;
       Emit_Property (Id + 4, "title", TWdg.Text.all, True);
       Emit_Property (Id + 4, "reorderable", not TWdg.Frozen);
       Emit_Property (Id + 4, "sort-indicator", TWdg.SortMode /= NotSortable);
       Emit_GtkSignal (TWdg, Id + 4);
 
       Emit_Child (TWdg, Id + 4, False);
-      Emit_Object (TWdg, Id + 4,
+      Emit_Object (TWdg, Id + 6,
                    Wdg    => "GtkCellRendererToggle",
                    WId    => TWdg.Name.all & "_toggle_id",
                    Finish => True);
-      Emit_Line (Sp (Id + 6) & "<attributes>");
+      Emit_Line (Sp (Id + 8) & "<attributes>");
       if TWdg.Activatable_Column > 0 then
-         Emit_Line (Sp (Id + 8) & "<attribute name=""activatable"">"
+         Emit_Line (Sp (Id + 10) & "<attribute name=""activatable"">"
                     & Img (TWdg.Activatable_Column)
                     & "</attribute>");
       end if;
-      Emit_Line (Sp (Id + 8) & "<attribute name=""active"">"
+      Emit_Line (Sp (Id + 10) & "<attribute name=""active"">"
                  & Img (TWdg.Active_Column)
                  & "</attribute>");
-      Emit_Line (Sp (Id + 6) & "</attributes>");
+      Emit_Line (Sp (Id + 8) & "</attributes>");
       Emit_Line (Sp (Id + 4) & "</child>");
 
       Emit_Line (Sp (Id + 2) & "</object>");
@@ -756,7 +766,7 @@ package body W2gtk_Emit is
                                             Num  : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkTreeViewColumn", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkTreeViewColumn", TWdg.Name.all);
       Emit_Property (Id + 4, "resizable", TWdg.Resizable);
       Emit_Property (Id + 4, "sizing", "fixed");
       if TWdg.Fixed_Width > 0 then
@@ -768,9 +778,6 @@ package body W2gtk_Emit is
       if TWdg.Max_Width > 0 then
          Emit_Property (Id + 4, "max-width", TWdg.Max_Width);
       end if;
-      --  if TWdg.ToolTip /= null and then TWdg.ToolTip.all /= "" then
-      --     Emit_Property (Id + 4, "tooltip-text", TWdg.ToolTip.all, True);
-      --  end if;
       Emit_Property (Id + 4, "title", TWdg.Text.all, True);
       Emit_Property (Id + 4, "reorderable", not TWdg.Frozen);
       Emit_Property (Id + 4, "sort-indicator", TWdg.SortMode /= NotSortable);
@@ -778,18 +785,18 @@ package body W2gtk_Emit is
 
       Emit_Child (TWdg, Id + 4, False);
       if TWdg.DefaultCellStyle /= -1 then
-         Emit_Object (TWdg, Id + 4, "GtkCellRendererText",
+         Emit_Object (TWdg, Id + 6, "GtkCellRendererText",
                       "DataGridViewCellStyle" & Img (TWdg.DefaultCellStyle),
                       Finish => True);
       else
-         Emit_Object (TWdg, Id + 4, "GtkCellRendererText",
+         Emit_Object (TWdg, Id + 6, "GtkCellRendererText",
                       "DataGridViewCellStyle_" & TWdg.Name.all,
                       Finish => True);
       end if;
-      Emit_Line (Sp (Id + 6) & "<attributes>");
-      Emit_Line (Sp (Id + 8) & "<attribute name=""text"">"
+      Emit_Line (Sp (Id + 8) & "<attributes>");
+      Emit_Line (Sp (Id + 10) & "<attribute name=""text"">"
                  & Img (Num) & "</attribute>");
-      Emit_Line (Sp (Id + 6) & "</attributes>");
+      Emit_Line (Sp (Id + 8) & "</attributes>");
       Emit_Line (Sp (Id + 4) & "</child>");
 
       Emit_Line (Sp (Id + 2) & "</object>");
@@ -810,7 +817,7 @@ package body W2gtk_Emit is
    begin
       if TWdg.ScrollBars /= None then
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkScrolledWindow",
+         Emit_Object (TWdg, Id + 2, "GtkScrolledWindow",
                       "GtkScrolledWindow_" & TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
          Emit_Property (Id + 4, "name", "GtkScrolledWindow_" & TWdg.Name.all);
@@ -841,7 +848,7 @@ package body W2gtk_Emit is
       Num   : Integer := 0;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkTreeView", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkTreeView", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_Visible_And_Focus (TWdg, Id + 4, True);
       Emit_Property (Id + 4, "model", TWdg.Model.Name.all);
@@ -866,11 +873,8 @@ package body W2gtk_Emit is
       Emit_Property (Id + 4, "activate-on-single-click", True);
       Emit_GtkSignal (TWdg, Id + 4);
       Emit_Line (Sp (Id + 4) & "<child internal-child=""selection"">");
-      Emit_Line (Sp (Id + 6)
-                 & "<object class=""GtkTreeSelection"" "
-                 & "id="""
-                 & TWdg.Name.all
-                 & "_Selection"">");
+      Emit_Object (TWdg, Id + 6, "GtkTreeSelection",
+                   TWdg.Name.all & "_Selection");
       if TWdg.RowMultiSelect then
          Emit_Property (Id + 8, "mode", "multiple");
       else
@@ -907,7 +911,7 @@ package body W2gtk_Emit is
       TS : Signal_Pointer := TWdg.Signal_List;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkNotebook", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkNotebook", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       if Pos = -1 then
          Emit_WH_Request (TWdg, Id + 4);
@@ -951,7 +955,7 @@ package body W2gtk_Emit is
                                         XY      => False,
                                         Homog   => False);
       else
-         Emit_Packing (Id + 2, Pos, (Pos /= -1), TWdg.Padding, True);
+         Emit_Packing (Id + 2, Pos, (Pos /= -1), True, TWdg.Padding, True);
       end if;
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkNoteBook;
@@ -976,15 +980,14 @@ package body W2gtk_Emit is
 
       --  gtkbox header
       Emit_Line (Sp (Id) & "<child type=""tab"">");
---      Emit_Object (TWdg, Id, "GtkBox", "tab_box_" & TWdg.Name.all);
-      Emit_Object (TWdg, Id, "GtkBox", TWdg.Name.all);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_Property (Id + 4, "spacing", 2);
 
       --  gtklabel complete
       Emit_Child (TWdg, Id + 4, False);
-      Emit_Object (TWdg, Id + 4, "GtkLabel", "tab_label_" & TWdg.Name.all);
-      Emit_Visible_And_Focus (TWdg, Id + 8);
+      Emit_Object (TWdg, Id + 6, "GtkLabel", "tab_label_" & TWdg.Name.all);
+      Emit_Visible_And_Focus (TWdg, Id + 8, False);
       Emit_Label (TWdg, Id + 8, UnderLine => False, Selectable => False);
       Emit_Line (Sp (Id + 6) & "</object>");
       Emit_Line (Sp (Id + 6) & "<packing>");
@@ -996,7 +999,7 @@ package body W2gtk_Emit is
 
       --  gtkbutton header
       Emit_Child (TWdg, Id + 4, False);
-      Emit_Object (TWdg, Id + 4, "GtkButton",
+      Emit_Object (TWdg, Id + 6, "GtkButton",
                    "tab_delete_button_" & TWdg.Name.all);
       Emit_Visible_And_Focus (TWdg, Id + 8, True);
       Emit_Property (Id + 8, "focus-on-click", False);
@@ -1015,16 +1018,15 @@ package body W2gtk_Emit is
             end if;
             TS := TS.Next;
          end loop;
-
       end if;
 
       --  gtklabel complete
       Emit_Child (TWdg, Id + 8, False);
-      Emit_Object (TWdg, Id + 8, "GtkImage", "tab_img_" & TWdg.Name.all);
-      Emit_Visible_And_Focus (TWdg, Id + 12);
+      Emit_Object (TWdg, Id + 10, "GtkImage", "tab_img_" & TWdg.Name.all);
+      Emit_Visible_And_Focus (TWdg, Id + 12, False);
       Emit_Property (Id + 12, "stock", "gtk-close");
-      Emit_Line (Sp (Id + 8) & "</object>");
-      Emit_Line (Sp (Id + 6) & "</child>");
+      Emit_Line (Sp (Id + 10) & "</object>");
+      Emit_Line (Sp (Id + 8) & "</child>");
 
       --  gtkbutton tail
       Emit_Line (Sp (Id + 6) & "</object>");
@@ -1054,7 +1056,7 @@ package body W2gtk_Emit is
       Sensitive : constant Boolean := TWdg.Enabled;
    begin
       Emit_Line (Sp (Id + 4) & "<child type=""submenu"">");
-      Emit_Object (TWdg, Id + 4, "GtkMenu", TWdg.Name.all & "_submenu");
+      Emit_Object (TWdg, Id + 6, "GtkMenu", TWdg.Name.all & "_submenu");
       TWdg.Enabled := True;
       Emit_Visible_And_Focus (TWdg, Id + 8, False);
       TWdg.Enabled := Sensitive;
@@ -1080,9 +1082,9 @@ package body W2gtk_Emit is
    procedure Emit_GtkMenuNormalItem (TWdg : Widget_Pointer; Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkMenuItem", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkMenuItem", TWdg.Name.all);
       Emit_Label (TWdg, Id + 4, UnderLine => False, Selectable => False);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_GtkSignal (TWdg, Id + 4);
 
       if TWdg.Child_List /= null then
@@ -1096,9 +1098,9 @@ package body W2gtk_Emit is
    procedure Emit_GtkMenuImageItem (TWdg : Widget_Pointer; Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkImageMenuItem", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkImageMenuItem", TWdg.Name.all);
       Emit_Label (TWdg, Id + 4, UnderLine => False, Selectable => False);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       if TWdg.ImageMenuWin /= null
         and then TWdg.ImageMenuWin.Name /= null
       then
@@ -1119,8 +1121,8 @@ package body W2gtk_Emit is
                                   Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkSeparatorMenuItem", "");
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Object (TWdg, Id + 2, "GtkSeparatorMenuItem", "");
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_GtkSignal (TWdg, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Line (Sp (Id) & "</child>");
@@ -1129,9 +1131,9 @@ package body W2gtk_Emit is
    procedure Emit_GtkMenuItem (TWdg : Widget_Pointer; Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkMenuItem", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkMenuItem", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_Label (TWdg, Id + 4, UnderLine => True, Selectable => False);
       Emit_GtkSignal (TWdg, Id + 4);
 
@@ -1149,12 +1151,12 @@ package body W2gtk_Emit is
       Child : Widget_Pointer;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkMenuBar", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkMenuBar", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       if Pos = -1 then
          Emit_WH_Request (TWdg, Id + 4);
       end if;
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_GtkSignal (TWdg, Id + 4);
 
       Child := TWdg.Child_List;
@@ -1178,7 +1180,7 @@ package body W2gtk_Emit is
                              XY      => True,
                              Homog   => False);
       else
-         Emit_Packing (Id + 2, Pos, False, TWdg.Padding, True);
+         Emit_Packing (Id + 2, Pos, False, True, TWdg.Padding, True);
       end if;
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkMenuBar;
@@ -1193,20 +1195,21 @@ package body W2gtk_Emit is
    begin
       if TWdg.BorderStyle /= None then
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkAspectFrame", TWdg.Name.all
-                      & "_aspectframe");
+         Emit_Object (TWdg, Id + 2, "GtkAspectFrame",
+                      TWdg.Name.all & "_aspectframe");
          Emit_Name (TWdg, Id + 4);
          Emit_WH_Request (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Line (Sp (Id + 4) & "<property name=""label-xalign"">0"
                     & "</property>");
          Emit_Line (Sp (Id + 4) & "<property name=""shadow-type"">in"
                     & "</property>");
 
          Emit_Child (TWdg, Id + 4, False);
-         Emit_Object (TWdg, Id + 4, "GtkLabel", TWdg.Name.all);
+         Emit_Object (TWdg, Id + 6, "GtkLabel", TWdg.Name.all);
          Emit_Name (TWdg, Id + 8);
-         Emit_Visible_And_Focus (TWdg, Id + 8);
+         Emit_Visible_And_Focus (TWdg, Id + 8, False);
+         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
          Emit_Label (TWdg, Id + 8, UnderLine => False, Selectable => True);
          Emit_Align (TWdg, Id + 8, Numeric => False);
          if TWdg.MaxLength > 0 then
@@ -1232,10 +1235,11 @@ package body W2gtk_Emit is
          Emit_Line (Sp (Id) & "</child>");
       else
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkLabel", TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkLabel", TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
          Emit_WH_Request (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
          Emit_Align (TWdg, Id + 4, Numeric => True);
          Emit_Margin (TWdg, Id + 4);
          Emit_ToolTip (TWdg, Id + 4);
@@ -1263,10 +1267,10 @@ package body W2gtk_Emit is
                             Id   : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkImage", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkImage", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_Line (Sp (Id + 4) & "<property name=""pixbuf"">"
                  & TWdg.Image.all
                  & "</property>");
@@ -1290,12 +1294,15 @@ package body W2gtk_Emit is
    -- Emit_GtkButton --
    --------------------
 
-   procedure Emit_GtkButton (TWdg      : Widget_Pointer;
-                             Id        : Integer;
-                             Object    : String;
-                             Underline : Boolean;
-                             XY        : Boolean;
-                             Homog     : Boolean) is
+   procedure Emit_GtkButton (TWdg        : Widget_Pointer;
+                             Id          : Integer;
+                             Object      : String;
+                             Position    : Integer;
+                             Has_Default : Boolean;
+                             XY          : Boolean;
+                             Homog       : Boolean) is
+      Underline : constant Boolean := TWdg.Underline;
+
       procedure Emit_Button_Label;
       procedure Emit_Button_Label is
       begin
@@ -1320,7 +1327,7 @@ package body W2gtk_Emit is
          return;
       end if;
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, Object, TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, Object, TWdg.Name.all);
       if TWdg.GParent /= null
         and then TWdg.GParent.Widget_Type /= BindingNavigator
       then
@@ -1330,20 +1337,28 @@ package body W2gtk_Emit is
       end if;
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
       Emit_Property (Id + 4, "receives-default", True);
+      if Has_Default then
+         Emit_Property (Id + 4, "can-default", True);
+         Emit_Property (Id + 4, "has-default", True);
+      end if;
       Emit_Button_Image (TWdg, Id + 4,
                          Icon_Widget => (Object = "GtkToolButton"));
       Emit_Align (TWdg, Id + 4, Numeric => False);
       Emit_Margin (TWdg, Id + 4);
       Emit_ToolTip (TWdg, Id + 4);
       Emit_GtkSignal (TWdg, Id + 4);
-      --  Emit_Attributes (TWdg, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
-                                     Packing => True,
-                                     XY => XY,
-                                     Homog => Homog);
+      if Position < 0 then
+         Emit_Packing_Child (TWdg, Id,
+                             Packing => True,
+                             XY => XY,
+                             Homog => Homog);
+      else
+         Emit_Packing (Id + 2, Position, False, True, 0, True);
+      end if;
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
@@ -1355,13 +1370,16 @@ package body W2gtk_Emit is
    -- Emit_GtkEntry --
    -------------------
 
-   procedure Emit_GtkEntry (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_GtkEntry (TWdg : Widget_Pointer;
+                            Id   : Integer;
+                            Activate_Default : Boolean) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkEntry", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkEntry", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4, Focus => TWdg.Editable);
+      Emit_Visible_And_Focus (TWdg, Id + 4, TWdg.Editable);
+      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
       Emit_Password (TWdg, Id + 4);
       Emit_Align (TWdg, Id + 4, Numeric => False);
       if not TWdg.Editable then
@@ -1377,9 +1395,12 @@ package body W2gtk_Emit is
 
       Emit_Margin (TWdg, Id + 4);
       Emit_ToolTip (TWdg, Id + 4);
+      if Activate_Default then
+         Emit_Property (Id + 4, "activates-default", True);
+      end if;
       if TWdg.MaxLength > 0 then
-         Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
          Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);
+         Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
       end if;
       Emit_Has_Frame (TWdg, Id + 4);
       Emit_GtkSignal (TWdg, Id + 4);
@@ -1402,10 +1423,10 @@ package body W2gtk_Emit is
    procedure Emit_GtkSpinButton (TWdg : Widget_Pointer; Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkSpinButton", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkSpinButton", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, True);
       if TWdg.Text /= null and then TWdg.Text.all /= "" then
          Emit_Line (Sp (Id + 4) & "<property name=""text"" " &
                       "translatable=""yes"">" &
@@ -1417,7 +1438,6 @@ package body W2gtk_Emit is
       Emit_Property (Id + 4, "numeric", True);
       Emit_Property (Id + 4, "wrap", True);
       Emit_GtkSignal (TWdg, Id + 4);
-      Emit_Attributes (TWdg, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing_Child (TWdg, Id,
                                      Packing => True,
@@ -1436,17 +1456,17 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkComboBox (TWdg    : Widget_Pointer;
                                Id      : Integer;
-                               Packing : Boolean := True) is
+                               Packing : Boolean;
+                               Activate_Default : Boolean) is
       procedure Emit_Internal_GtkEntry (Id : Integer);
       procedure Emit_Internal_GtkEntry (Id : Integer) is
       begin
          Emit_Line (Sp (Id) & "<child internal-child=""entry"">");
-         Emit_Line (Sp (Id + 2) & "<object class=""GtkEntry"" id="""
-                    & TWdg.Name.all & "_textentry" & """>");
-         Emit_Property (Id + 2, "can-focus", False);
+         Emit_Object (TWdg, Id + 2, "GtkEntry", TWdg.Name.all & "_textentry");
+         Emit_Property (Id + 4, "can-focus", TWdg.Editable);
          if TWdg.ToolTip /= null and then TWdg.ToolTip.all /= "" then
             Emit_Line (Sp (Id + 4) & "<property name=""tooltip-text"" "
-                       & "translatable=""Yes"">" &
+                       & "translatable=""yes"">" &
                          TWdg.ToolTip.all & "</property>");
          end if;
          if TWdg.Buffer /= null and then TWdg.Text_Buffer /= null then
@@ -1457,14 +1477,17 @@ package body W2gtk_Emit is
             Emit_Property (Id + 4, "editable", False);
          end if;
          Emit_Align (TWdg, Id + 4, Numeric => False);
+         if Activate_Default then
+            Emit_Property (Id + 4, "activates-default", True);
+         end if;
          if TWdg.MaxLength > 0 then
-            Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
             Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);
+            Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
          end if;
          if TWdg.ToolTip /= null and then TWdg.ToolTip.all /= "" then
             Emit_Line (Sp (Id + 4) & "<property name=""primary-icon-"
                        & "tooltip-text"" "
-                       & "translatable=""Yes"">" &
+                       & "translatable=""yes"">" &
                          TWdg.ToolTip.all & "</property>");
          end if;
          Emit_Line (Sp (Id + 2) & "</object>");
@@ -1472,21 +1495,22 @@ package body W2gtk_Emit is
       end Emit_Internal_GtkEntry;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkComboBoxText", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkComboBoxText", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
       Emit_Margin (TWdg, Id + 4);
       Emit_ToolTip (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
       Emit_Property (Id + 4, "has-entry", True);
-      Emit_Property (Id + 4, "entry-text-column", 1);
+      Emit_GtkSignal (TWdg, Id + 4);
+      --  Emit_Property (Id + 4, "entry-text-column", 1);
       Emit_Internal_GtkEntry (Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing_Child (TWdg, Id,
-                                     Packing => Packing,
-                                     XY => True,
-                                     Homog => False);
+                          Packing => Packing,
+                          XY => True,
+                          Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
@@ -1506,11 +1530,12 @@ package body W2gtk_Emit is
                                    Homog     : Boolean) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, Object, TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, Object, TWdg.Name.all);
       Emit_Label (TWdg, Id + 4, UnderLine => Underline, Selectable => False);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
       Emit_Property (Id + 4, "receives-default", True);
       Emit_Button_Image (TWdg, Id + 4,
                          Icon_Widget => (Object = "GtkToggleToolButton"));
@@ -1547,11 +1572,12 @@ package body W2gtk_Emit is
                                   Homog     : Boolean) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, Object, TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, Object, TWdg.Name.all);
       Emit_Label (TWdg, Id + 4, UnderLine => Underline, Selectable => False);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
       Emit_Property (Id + 4, "receives-default", True);
       Emit_Button_Image (TWdg, Id + 4,
                          Icon_Widget => (Object = "GtkToolButton"));
@@ -1583,11 +1609,12 @@ package body W2gtk_Emit is
    procedure Emit_GtkCheckButton (TWdg : Widget_Pointer; Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkCheckButton", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkCheckButton", TWdg.Name.all);
       Emit_Label (TWdg, Id + 4, UnderLine => False, Selectable => False);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
       Emit_Property (Id + 4, "receives-default", True);
       Emit_Button_Image (TWdg, Id + 4, Icon_Widget => False);
       Emit_Align (TWdg, Id + 4, Numeric => False);
@@ -1595,7 +1622,6 @@ package body W2gtk_Emit is
       Emit_ToolTip (TWdg, Id + 4);
       Emit_CheckAlign (TWdg, Id + 4);
       Emit_Property (Id + 4, "draw-indicator", True);
-      Emit_Attributes (TWdg, Id + 4);
       Emit_GtkSignal (TWdg, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing_Child (TWdg, Id,
@@ -1618,12 +1644,12 @@ package body W2gtk_Emit is
                                 Pos : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkStatusbar", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkStatusbar", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       if Pos = -1 then
          Emit_WH_Request (TWdg, Id + 4);
       end if;
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_Align (TWdg, Id + 4, Numeric => False);
       Emit_Margin (TWdg, Id + 4);
       Emit_ToolTip (TWdg, Id + 4);
@@ -1640,7 +1666,7 @@ package body W2gtk_Emit is
                                         XY => True,
                                         Homog => False);
       else
-         Emit_Packing (Id + 2, Pos, False, TWdg.Padding, True);
+         Emit_Packing (Id + 2, Pos, False, True, TWdg.Padding, True);
       end if;
       Emit_Line (Sp (Id) & "</child>");
    exception
@@ -1656,10 +1682,10 @@ package body W2gtk_Emit is
    procedure Emit_GtkFileChooserButton (TWdg : Widget_Pointer; Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkFileChooserButton", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkFileChooserButton", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_ToolTip (TWdg, Id + 4);
       if TWdg.OpenFileFilter /= null and then TWdg.OpenFileFilter.all /= ""
       then
@@ -1723,9 +1749,9 @@ package body W2gtk_Emit is
       procedure Emit_Image (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkImage", "Img_" & TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkImage", "Img_" & TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Line (Sp (Id + 4) & "<property name=""icon-name"">"
                     & "object-flip-vertical-symbolic</property>");
          Emit_Line (Sp (Id + 2) & "</object>");
@@ -1739,9 +1765,10 @@ package body W2gtk_Emit is
       procedure Emit_Button (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkButton", "Button_" & TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkButton", "Button_" & TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, True);
+         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
          Emit_ToolTip (TWdg, Id + 4);
          Emit_Line (Sp (Id + 4) & "<signal name=""clicked"" handler="""
                     & "on_button_clicked_" & TWdg.Name.all
@@ -1764,7 +1791,7 @@ package body W2gtk_Emit is
          else
             Emit_WH (Id + 4, TWdg.Size.Horiz, TWdg.Size.Vert);
          end if;
-         Emit_Visible_And_Focus (TWdg, Id + 4, Focus => True);
+         Emit_Visible_And_Focus (TWdg, Id + 4, True);
          Emit_ToolTip (TWdg, Id + 4);
          Emit_Line (Sp (Id + 4) & "<property name=""buffer"">"
                     & TWdg.Buffer.Name.all
@@ -1791,9 +1818,9 @@ package body W2gtk_Emit is
       procedure Emit_Box (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkBox", "Box_" & TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkBox", "Box_" & TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Entry (TWdg, Id + 4);
          if TWdg.ShowUpDown then
             Emit_Button (TWdg, Id + 4);
@@ -1809,11 +1836,11 @@ package body W2gtk_Emit is
       procedure Emit_AspectFrame (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkAspectFrame",
+         Emit_Object (TWdg, Id + 2, "GtkAspectFrame",
                       "AspectFrame_" & TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
          Emit_WH_Request (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Line (Sp (Id + 4) & "<property name=""label-xalign"">0"
                     & "</property>");
          Emit_Line (Sp (Id + 4) & "<property name=""shadow-type"">in"
@@ -1844,7 +1871,7 @@ package body W2gtk_Emit is
       procedure Emit_Internal_GtkSelection (Id : Integer) is
       begin
          Emit_Line (Sp (Id) & "<child internal-child=""selection"">");
-         Emit_Object (TWdg, Id, "GtkTreeSelection",
+         Emit_Object (TWdg, Id + 2, "GtkTreeSelection",
                       "Selection_" & TWdg.Name.all);
          if TWdg.MultiSelect then
             Emit_Line (Sp (Id + 4) & "<property name=""mode"">multiple"
@@ -1859,10 +1886,10 @@ package body W2gtk_Emit is
       end Emit_Internal_GtkSelection;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkTreeView", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkTreeView", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_ToolTip (TWdg, Id + 4);
       Emit_Margin (TWdg, Id + 4);
       Emit_GtkSignal (TWdg, Id + 4);
@@ -1884,10 +1911,11 @@ package body W2gtk_Emit is
       procedure Emit_Alignment (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkAlignment", "Alignment_" & TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkAlignment",
+                      "Alignment_" & TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
          Emit_WH_Request (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Line (Sp (Id + 4)
                     & "<property name=""left-padding"">12</property>");
       end Emit_Alignment;
@@ -1896,16 +1924,16 @@ package body W2gtk_Emit is
       procedure Emit_Fixed (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkFixed", "Fixed_" & TWdg.Name.all);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Object (TWdg, Id + 2, "GtkFixed", "Fixed_" & TWdg.Name.all);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
       end Emit_Fixed;
 
       procedure Emit_Frame_Label (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_Frame_Label (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, True);
-         Emit_Object (TWdg, Id, "GtkLabel", "label_" & TWdg.Name.all);
-         Emit_Visible_And_Focus (TWdg, Id + 4);
+         Emit_Object (TWdg, Id + 2, "GtkLabel", "label_" & TWdg.Name.all);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Label (TWdg, Id + 4, UnderLine => False, Selectable => True);
          Emit_Attributes (TWdg, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
@@ -1919,10 +1947,10 @@ package body W2gtk_Emit is
       Child : Widget_Pointer;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkFrame", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkFrame", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Focus (TWdg, Id + 4);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_Line (Sp (Id + 4) &
                       "<property name=""border-width"">0</property>");
       Emit_Line (Sp (Id + 4) &
@@ -1978,13 +2006,17 @@ package body W2gtk_Emit is
             when GtkImage =>
                Emit_GtkImage (Child, Id + 12);
             when GtkEntry =>
-               Emit_GtkEntry (Child, Id + 12);
+               Emit_GtkEntry (Child, Id + 12, False);
             when GtkComboBox =>
-               Emit_GtkComboBox (Child, Id + 12);
+               Emit_GtkComboBox (Child, Id + 12,
+                                 Packing => True,
+                                 Activate_Default => False);
             when GtkButton =>
                Emit_GtkButton (Child, Id + 12, "GtkButton",
-                               Underline => Child.Underline,
-                               XY => True, Homog => False);
+                               Position    => -1,
+                               Has_Default => False,
+                               XY          => True,
+                               Homog       => False);
             when GtkRadioButton =>
                Emit_GtkRadioButton (Child, Id + 12, "GtkRadioButton",
                                     Underline => Child.Underline,
@@ -2060,7 +2092,7 @@ package body W2gtk_Emit is
    procedure Emit_GtkColorButton (TWdg : Widget_Pointer; Id : Integer) is
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkColorButton", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkColorButton", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       Emit_WH_Request (TWdg, Id + 4);
       Emit_Visible_And_Focus (TWdg, Id + 4, True);
@@ -2099,12 +2131,12 @@ package body W2gtk_Emit is
       Child : Widget_Pointer;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkBox", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       if Pos = -1 then
          Emit_WH_Request (TWdg, Id + 4);
       end if;
-      Emit_Visible_And_Focus (TWdg, Id + 4, Focus => False);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       if TWdg.FlowDirection = LeftToRight
         or else
           TWdg.FlowDirection = RightToLeft
@@ -2157,9 +2189,11 @@ package body W2gtk_Emit is
                null;
             when GtkTabChild => null;
             when GtkEntry =>
-               Emit_GtkEntry (Child, Id + 4);
+               Emit_GtkEntry (Child, Id + 4, False);
             when GtkComboBox =>
-               Emit_GtkComboBox (Child, Id + 4);
+               Emit_GtkComboBox (Child, Id + 4,
+                                 Packing => True,
+                                 Activate_Default => False);
             when GtkCalendar =>
                Emit_GtkCalendar (Child, Id + 4);
             when GtkSpinButton =>
@@ -2184,9 +2218,10 @@ package body W2gtk_Emit is
                Emit_GtkImage (Child, Id + 4);
             when GtkButton =>
                Emit_GtkButton (Child, Id + 4, "GtkButton",
-                               Underline => Child.Underline,
-                               XY        => True,
-                               Homog     => False);
+                               Position    => -1,
+                               Has_Default => False,
+                               XY          => True,
+                               Homog       => False);
             when GtkRadioButton =>
                Emit_GtkRadioButton (Child, Id + 4, "GtkRadioButton",
                                     Underline => Child.Underline,
@@ -2220,9 +2255,9 @@ package body W2gtk_Emit is
            or else
              TWdg.FlowDirection = RightToLeft
          then
-            Emit_Packing (Id + 2, Pos, False, TWdg.Padding, False);
+            Emit_Packing (Id + 2, Pos, False, True, TWdg.Padding, False);
          else
-            Emit_Packing (Id + 2, Pos, False, TWdg.Padding, True);
+            Emit_Packing (Id + 2, Pos, False, True, TWdg.Padding, True);
          end if;
       end if;
       Emit_Line (Sp (Id) & "</child>");
@@ -2239,9 +2274,9 @@ package body W2gtk_Emit is
       procedure Emit_SeparatorToolItem (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkSeparatorToolItem", TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkSeparatorToolItem", TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4, True);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_ToolTip (TWdg, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
          Emit_Packing_Child (TWdg, Id,
@@ -2261,7 +2296,7 @@ package body W2gtk_Emit is
       procedure Emit_LabelItem (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkLabel", TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkLabel", TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
          Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Align (TWdg, Id + 4, Numeric => True);
@@ -2289,9 +2324,10 @@ package body W2gtk_Emit is
       procedure Emit_ComboboxItem (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkComboBoxText", TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkComboBoxText", TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         Emit_Visible_And_Focus (TWdg, Id + 4, True);
+         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
          Emit_Margin (TWdg, Id + 4);
          Emit_ToolTip (TWdg, Id + 4);
          Emit_GtkSignal (TWdg, Id + 4);
@@ -2311,9 +2347,10 @@ package body W2gtk_Emit is
             return;
          end if;
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkButton", TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkButton", TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
          Emit_Visible_And_Focus (TWdg, Id + 4, True);
+         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
          Emit_Property (Id + 4, "receives-default", True);
          Emit_Align (TWdg, Id + 4, Numeric => False);
          Emit_Margin (TWdg, Id + 4);
@@ -2321,9 +2358,9 @@ package body W2gtk_Emit is
          Emit_GtkSignal (TWdg, Id + 4);
 
          Emit_Child (TWdg, Id + 4, False);
-         Emit_Object (TWdg, Id + 4, "GtkImage", "");
+         Emit_Object (TWdg, Id + 6, "GtkImage", "");
          TWdg.Enabled := True;
-         Emit_Visible_And_Focus (TWdg, Id + 8);
+         Emit_Visible_And_Focus (TWdg, Id + 8, False);
          TWdg.Enabled := Sensitive;
          if TWdg.ImagePath /= null then
             Emit_Property (Id + 8, "pixbuf", TWdg.ImagePath.all);
@@ -2346,9 +2383,10 @@ package body W2gtk_Emit is
       procedure Emit_EntryItem (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkEntry", TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkEntry", TWdg.Name.all);
          Emit_Name (TWdg, Id + 4);
-         Emit_Visible_And_Focus (TWdg, Id + 4, Focus => TWdg.Editable);
+         Emit_Visible_And_Focus (TWdg, Id + 4, TWdg.Editable);
+         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
          Emit_Align (TWdg, Id + 4, Numeric => False);
          Emit_Margin (TWdg, Id + 4);
          Emit_ToolTip (TWdg, Id + 4);
@@ -2381,9 +2419,10 @@ package body W2gtk_Emit is
          Sensitive : constant Boolean := TWdg.Enabled;
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id, "GtkToolItem", "toolitem_" & TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkToolItem",
+                      "toolitem_" & TWdg.Name.all);
          TWdg.Enabled := True;
-         Emit_Visible_And_Focus (TWdg, Id + 4, Focus => False);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
          TWdg.Enabled := Sensitive;
 
          case TWdg.Widget_Type is
@@ -2422,12 +2461,12 @@ package body W2gtk_Emit is
       Temp : Widget_Pointer;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id, "GtkToolbar", TWdg.Name.all);
+      Emit_Object (TWdg, Id + 2, "GtkToolbar", TWdg.Name.all);
       Emit_Name (TWdg, Id + 4);
       if Pos = -1 then
          Emit_WH_Request (TWdg, Id + 4);
       end if;
-      Emit_Visible_And_Focus (TWdg, Id + 4, Focus => False);
+      Emit_Visible_And_Focus (TWdg, Id + 4, False);
       Emit_Align (TWdg, Id + 4, Numeric => False);
       Emit_Margin (TWdg, Id + 4);
       Emit_ToolTip (TWdg, Id + 4);
@@ -2481,7 +2520,7 @@ package body W2gtk_Emit is
                                         XY      => True,
                                         Homog   => False);
       else
-         Emit_Packing (Id + 2, Pos, False, TWdg.Padding, True);
+         Emit_Packing (Id + 2, Pos, False, True, TWdg.Padding, True);
       end if;
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkToolBar;
@@ -2498,7 +2537,7 @@ package body W2gtk_Emit is
       Col  : Widget_Pointer;
       TWdg : constant Widget_Pointer := TWin.Associated_Widget;
    begin
-      Emit_Object (null, Id - 2, "GtkTreeStore", TWin.Name.all);
+      Emit_Object (null, Id, "GtkTreeStore", TWin.Name.all);
       Emit_Line (Sp (Id + 2) & "<columns>");
       Col := TWdg.Child_List;
       while Col /= null loop
@@ -2551,7 +2590,7 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkListStore (TWin : Window_Pointer; Id : Integer) is
    begin
-      Emit_Object (null, Id - 2, "GtkListStore", TWin.Name.all);
+      Emit_Object (null, Id, "GtkListStore", TWin.Name.all);
       Emit_Line (Sp (Id + 2) & "<columns>");
       Emit_Line (Sp (Id + 2) & "<column type=""gchar""/>");
       Emit_Line (Sp (Id + 2) & "</columns>");
@@ -2565,9 +2604,9 @@ package body W2gtk_Emit is
    procedure Emit_GtkImage (TWin : Window_Pointer;
                             Id   : Integer) is
    begin
-      Emit_Object (null, Id - 2, "GtkImage", TWin.Name.all);
+      Emit_Object (null, Id, "GtkImage", TWin.Name.all);
       Emit_Name (TWin, Id + 2);
-      Emit_Visible_And_Focus (TWin, Id);
+      Emit_Visible_And_Focus (TWin, Id, False);
       case TWin.Associated_Widget.Widget_Type is
          when GtkMenuNormalItem | GtkMenuImageItem
             | GtkMenuRadioItem | GtkMenuCheckItem
@@ -2600,7 +2639,7 @@ package body W2gtk_Emit is
       use GNAT.Calendar.Time_IO;
       TWdg : constant Widget_Pointer := TWin.Associated_Widget;
    begin
-      Emit_Object (null, Id - 2, "GtkEntryBuffer", TWin.Name.all);
+      Emit_Object (null, Id, "GtkEntryBuffer", TWin.Name.all);
       case TWdg.Widget_Type is
          when GtkCalendar =>
             Emit_Property (Id + 2, "text",
@@ -2624,10 +2663,10 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkFileChooserDialog (TWin : Window_Pointer; Id : Integer) is
    begin
-      Emit_Object (null, Id - 2, "GtkFileChooserDialog", TWin.Name.all);
+      Emit_Object (null, Id, "GtkFileChooserDialog", TWin.Name.all);
       Emit_Line (Sp (Id + 2) & "<property name=""can-focus"">False"
                  & "</property>");
-      Emit_Line (Sp (Id + 2) & "<property name=""title"" translatable=""Yes"">"
+      Emit_Line (Sp (Id + 2) & "<property name=""title"" translatable=""yes"">"
                  & TWin.Name.all
                  & "_title</property>");
       Emit_Line (Sp (Id + 2) & "<property name=""type-hint"">dialog"
@@ -2639,30 +2678,30 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id + 2) & "<property name=""filter"">"
                  & TWin.FilterName.all & "</property>");
       Emit_Line (Sp (Id + 2) & "<child internal-child=""vbox"">");
-      Emit_Line (Sp (Id + 6) & "<object class=""GtkBox"">");
-      Emit_Line (Sp (Id + 8) & "<property name=""can-focus"">False"
+      Emit_Object (null, Id + 4, "GtkBox", "");
+      Emit_Line (Sp (Id + 6) & "<property name=""can-focus"">False"
                  & "</property>");
-      Emit_Line (Sp (Id + 8) & "<property name=""orientation"">vertical"
+      Emit_Line (Sp (Id + 6) & "<property name=""orientation"">vertical"
                  & "</property>");
-      Emit_Line (Sp (Id + 8) & "<property name=""spacing"">2</property>");
-      Emit_Line (Sp (Id + 8) & "<child internal-child=""action_area"">");
-      Emit_Line (Sp (Id + 10) & "<object class=""GtkButtonBox"">");
-      Emit_Line (Sp (Id + 12) & "<property name=""can-focus"">False"
+      Emit_Line (Sp (Id + 6) & "<property name=""spacing"">2</property>");
+      Emit_Line (Sp (Id + 6) & "<child internal-child=""action_area"">");
+      Emit_Object (null, Id + 8, "GtkButtonBox", "");
+      Emit_Line (Sp (Id + 10) & "<property name=""can-focus"">False"
                  & "</property>");
-      Emit_Line (Sp (Id + 12) & "<property name=""layout-style"">end"
+      Emit_Line (Sp (Id + 10) & "<property name=""layout-style"">end"
                  & "</property>");
-      Emit_Line (Sp (Id + 12) & "<child>");
-      Emit_Line (Sp (Id + 14) & "<placeholder/>");
-      Emit_Line (Sp (Id + 12) & "</child>");
-      Emit_Line (Sp (Id + 12) & "<child>");
-      Emit_Line (Sp (Id + 14) & "<placeholder/>");
-      Emit_Line (Sp (Id + 12) & "</child>");
+      Emit_Line (Sp (Id + 10) & "<child>");
+      Emit_Line (Sp (Id + 12) & "<placeholder/>");
+      Emit_Line (Sp (Id + 10) & "</child>");
+      Emit_Line (Sp (Id + 10) & "<child>");
+      Emit_Line (Sp (Id + 12) & "<placeholder/>");
+      Emit_Line (Sp (Id + 10) & "</child>");
       Emit_Line (Sp (Id + 8) & "</object>");
       Emit_Line (Sp (Id + 8) & "<packing>");
       Emit_Line (Sp (Id + 10) & "<property name=""expand"">False</property>");
       Emit_Line (Sp (Id + 10) & "<property name=""fill"">False</property>");
       Emit_Line (Sp (Id + 10) & "<property name=""position"">0</property>");
-      Emit_Line (Sp (Id + 8) & " </packing>");
+      Emit_Line (Sp (Id + 8) & "</packing>");
       Emit_Line (Sp (Id + 6) & "</child>");
       Emit_Line (Sp (Id + 6) & "<child>");
       Emit_Line (Sp (Id + 8) & "<placeholder/>");
@@ -2687,7 +2726,7 @@ package body W2gtk_Emit is
       end Emit_Pattern;
 
    begin
-      Emit_Object (null, Id - 2, "GtkFileFilter", TWin.Name.all);
+      Emit_Object (null, Id, "GtkFileFilter", TWin.Name.all);
       Emit_Line (Sp (Id + 2) & "<patterns>");
       if TWin.FilterString /= null and then TWin.FilterString.all /= "" then
          declare
@@ -2722,17 +2761,17 @@ package body W2gtk_Emit is
    -- Emit_GtkDialog --
    --------------------
 
-   procedure Emit_GtkDialog_Body (TWin : Window_Pointer; Id : Integer) is
+   procedure Emit_GtkDialog_Body (TWin : Window_Pointer;
+                                  Id   : Integer;
+                                  Activate_Default : Boolean) is
       TWdg : Widget_Pointer;
    begin
       Emit_Line (Sp (Id) & "<child>");
       if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Line (Sp (Id + 2) & "<object class=""GtkFixed"" "
-                    & "id=""GtkFixed_"
-                    & TWin.Name.all & """>");
+         Emit_Object (null, Id + 2, "GtkFixed", "GtkFixed_" & TWin.Name.all);
          Emit_Name (TWin, Id + 4);
       else
-         Emit_Line (Sp (Id + 4) & "<object class=""GtkFixed"">");
+         Emit_Object (null, Id + 2, "GtkFixed", "");
       end if;
       Emit_Property (Id + 4, "visible", True);
       Emit_Property (Id + 4, "can-focus", False);
@@ -2777,9 +2816,11 @@ package body W2gtk_Emit is
             when GtkTabChild => null;
 
             when GtkEntry =>
-               Emit_GtkEntry (TWdg, Id + 4);
+               Emit_GtkEntry (TWdg, Id + 4, Activate_Default);
             when GtkComboBox =>
-               Emit_GtkComboBox (TWdg, Id + 4);
+               Emit_GtkComboBox (TWdg, Id + 4,
+                                 Packing => True,
+                                 Activate_Default => Activate_Default);
             when GtkCalendar =>
                Emit_GtkCalendar (TWdg, Id + 4);
             when GtkSpinButton =>
@@ -2807,10 +2848,15 @@ package body W2gtk_Emit is
             when GtkImage =>
                Emit_GtkImage (TWdg, Id + 4);
             when GtkButton =>
-               Emit_GtkButton (TWdg, Id + 4, "GtkButton",
-                               Underline => TWdg.Underline,
-                               XY        => True,
-                               Homog     => False);
+               if (TWin.Accept_Button /= TWdg
+                   and TWin.Cancel_Button /= TWdg)
+               then
+                  Emit_GtkButton (TWdg, Id + 4, "GtkButton",
+                                  Position    => -1,
+                                  Has_Default => False,
+                                  XY          => True,
+                                  Homog       => False);
+               end if;
             when GtkRadioButton =>
                Emit_GtkRadioButton (TWdg, Id + 4, "GtkRadioButton",
                                     Underline => TWdg.Underline,
@@ -2831,7 +2877,7 @@ package body W2gtk_Emit is
          TWdg := TWdg.Next;
       end loop;
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing (Id + 2, 0, True, 0, True);
+      Emit_Packing (Id + 2, 0, True, True, 0, True);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
@@ -2845,12 +2891,15 @@ package body W2gtk_Emit is
    end Emit_GtkDialog_Body;
 
    procedure Emit_GtkDialog (TWin : Window_Pointer; Id : Integer) is
+      Spacing : Integer := 0;
    begin
       if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Line (Sp (Id) & "<object class=""GtkDialog"""
-                    & " id=""" & TWin.Name.all & """>");
+         Emit_Object (null, Id, "GtkDialog", TWin.Name.all);
       else
-         Emit_Line (Sp (Id) & "<object class=""GtkDialog"">");
+         Emit_Object (null, Id, "GtkDialog", "");
+      end if;
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Name (TWin, Id + 2);
       end if;
       Emit_Property (Id + 2, "can-focus", False);
       if TWin.Title /= null and then TWin.Title.all /= "" then
@@ -2862,9 +2911,6 @@ package body W2gtk_Emit is
                     & " translatable=""yes"">"
                     & TWin.Name.all & "</property>");
       end if;
-      if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Name (TWin, Id + 2);
-      end if;
       Emit_Property (Id + 2, "resizable", TWin.Resizable); --  false
       Emit_Property (Id + 2, "modal", TWin.Modal);         --  true
       if TWin.Client_Size.Horiz /= -1 then
@@ -2873,21 +2919,73 @@ package body W2gtk_Emit is
       if TWin.Client_Size.Vert /= -1 then
          Emit_Property (Id + 2, "default-height", TWin.Client_Size.Vert);
       end if;
-      if not (TWin.Resizable and then not TWin.Modal) then
+      if TWin.Is_Dialog then
          Emit_Property (Id + 2, "window-position", "center-on-parent");
          Emit_Property (Id + 2, "type-hint", "dialog");
          Emit_Property (Id + 2, "gravity", "center");
       end if;
       Emit_GtkSignal (TWin, Id + 2);
 
+      if TWin.Accept_Button /= null then
+         Spacing := Spacing + 1;
+      end if;
+      if TWin.Cancel_Button /= null then
+         Spacing := Spacing + 1;
+      end if;
       Emit_Line (Sp (Id + 2) & "<child internal-child=""vbox"">");
-      Emit_Line (Sp (Id + 4) & "<object class=""GtkBox"">");
-      Emit_Property (Id + 4, "can-focus", False);
-      Emit_Property (Id + 4, "orientation", "vertical");
-      Emit_GtkDialog_Body (TWin, Id + 4);
+      Emit_Object (null, Id + 4, "GtkBox", "");
+      Emit_Property (Id + 6, "can-focus", False);
+      Emit_Property (Id + 6, "orientation", "vertical");
+      if Spacing > 0 then
+         Emit_Property (Id + 6, "spacing", Spacing);
+         Emit_Line (Sp (Id + 6) & "<child internal-child=""action_area"">");
+         Emit_Object (null, Id + 8, "GtkButtonBox", "");
+         Emit_Property (Id + 10, "can-focus", False);
+         Emit_Line (Sp (Id + 10) & "<property name=""layout-style"">"
+                    & "spread</property>");
+         if TWin.Cancel_Button /= null then
+            Emit_GtkButton (TWin.Cancel_Button, Id + 10, "GtkButton",
+                            Position    => 0,
+                            Has_Default => (TWin.Accept_Button = null),
+                            XY          => False,
+                            Homog       => False);
+         end if;
+         if TWin.Accept_Button /= null then
+            Emit_GtkButton (TWin.Accept_Button, Id + 10, "GtkButton",
+                            Position    =>
+                              (if TWin.Cancel_Button = null then 0 else 1),
+                            Has_Default => True,
+                            XY          => False,
+                            Homog       => False);
+         end if;
+         Emit_Line (Sp (Id + 8) & "</object>");
+         Emit_Packing (Id + 8, Expand => False, Fill => False,
+                       Padding => 0,
+                       Position => 0, Pack_Start => True);
+         Emit_Line (Sp (Id + 6) & "</child>");
+
+         Emit_GtkDialog_Body (TWin, Id + 6, True);
+
+      else
+         Emit_GtkDialog_Body (TWin, Id + 6, False);
+      end if;
       Emit_Line (Sp (Id + 4) & "</object>");
       Emit_Line (Sp (Id + 2) & "</child>");
 
+      if Spacing > 0 then
+         Emit_Line (Sp (Id + 2) & "<action-widgets>");
+         if TWin.Cancel_Button /= null then
+            Emit_Line (Sp (Id + 4) & "<action-widget response="""
+                       & To_Gtk (TWin.Cancel_Button.Dialog_Result)
+                       & """>bt_cancel</action-widget>");
+         end if;
+         if TWin.Accept_Button /= null then
+            Emit_Line (Sp (Id + 4) & "<action-widget response="""
+                       & To_Gtk (TWin.Accept_Button.Dialog_Result)
+                       & """>bt_OK</action-widget>");
+         end if;
+         Emit_Line (Sp (Id + 2) & "</action-widgets>");
+      end if;
       Emit_Line (Sp (Id) & "</object>");
    end Emit_GtkDialog;
 
@@ -2938,9 +3036,11 @@ package body W2gtk_Emit is
             when GtkTabChild => null;
 
             when GtkEntry =>
-               Emit_GtkEntry (TWdg, Id);
+               Emit_GtkEntry (TWdg, Id, False);
             when GtkComboBox =>
-               Emit_GtkComboBox (TWdg, Id);
+               Emit_GtkComboBox (TWdg, Id,
+                                 Packing => True,
+                                 Activate_Default => False);
             when GtkCalendar =>
                Emit_GtkCalendar (TWdg, Id);
             when GtkSpinButton =>
@@ -2969,9 +3069,10 @@ package body W2gtk_Emit is
                Emit_GtkImage (TWdg, Id);
             when GtkButton =>
                Emit_GtkButton (TWdg, Id, "GtkButton",
-                               Underline => TWdg.Underline,
-                               XY        => True,
-                               Homog     => False);
+                               Position    => -1,
+                               Has_Default => False,
+                               XY          => True,
+                               Homog       => False);
             when GtkRadioButton =>
                Emit_GtkRadioButton (TWdg, Id, "GtkRadioButton",
                                     Underline => TWdg.Underline,
@@ -2996,10 +3097,9 @@ package body W2gtk_Emit is
    procedure Emit_Main_GtkWindow (TWin : Window_Pointer; Id : Integer) is
    begin
       if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Line (Sp (Id) & "<object class=""GtkWindow"""
-                    & " id=""" & TWin.Name.all & """>");
+         Emit_Object (null, Id, "GtkWindow", TWin.Name.all);
       else
-         Emit_Line (Sp (Id) & "<object class=""GtkWindow"">");
+         Emit_Object (null, Id, "GtkWindow", "");
       end if;
       if TWin.ToolTip /= null and then TWin.ToolTip.all /= "" then
          Emit_Line (Sp (Id + 2) & "<property name=""tooltip-text2"" "
@@ -3027,7 +3127,7 @@ package body W2gtk_Emit is
       if TWin.Client_Size.Vert /= -1 then
          Emit_Property (Id + 2, "default-height", TWin.Client_Size.Vert);
       end if;
-      if not (TWin.Resizable and then not TWin.Modal) then
+      if TWin.Is_Dialog then
          Emit_Property (Id + 2, "window-position", "center-on-parent");
          Emit_Property (Id + 2, "type-hint", "dialog");
          Emit_Property (Id + 2, "gravity", "center");
@@ -3043,10 +3143,10 @@ package body W2gtk_Emit is
    --------------------
    procedure Emit_GtkWindow (TWin : Window_Pointer; Id : Integer) is
    begin
-      if TWin.Resizable and then not TWin.Modal then
-         Emit_Main_GtkWindow (TWin, Id + 2);
+      if TWin.Is_Dialog then
+         Emit_GtkDialog (TWin, Id);
       else
-         Emit_GtkDialog (TWin, Id + 2);
+         Emit_Main_GtkWindow (TWin, Id + 2);
       end if;
    end Emit_GtkWindow;
 
