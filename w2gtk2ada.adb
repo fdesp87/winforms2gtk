@@ -665,6 +665,63 @@ package body W2Gtk2Ada is
       TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
    end Emit_Object_Collection;
 
+   ---------------------------
+   --  Emit TreeStore_Enum  --
+   ---------------------------
+   procedure Emit_TreeStores_Enum (Filename : String);
+   procedure Emit_TreeStores_Enum (Filename : String) is
+      Temp_Win : Window_Pointer := Win_List;
+      Col      : Widget_Pointer;
+      TWdg     : Widget_Pointer;
+   begin
+      TIO.Put_Line ("with Glib; use Glib;");
+      TIO.Put_Line ("package " & Filename & "_Pkg.Tree_Stores_Enum is");
+      while Temp_Win /= null loop
+         if Temp_Win.Window_Type = GtkTreeStore then
+            TWdg := Temp_Win.Associated_Widget;
+            Col := TWdg.Child_List;
+            if Col /= null then
+               TIO.New_Line;
+               TIO.Put_Line (Sp (3) & "type "
+                             & Capitalize (TWdg.Name.all) & "_Enum" & " is");
+               TIO.Put (Sp (5) & "(" & Capitalize (Col.Name.all));
+               Col := Col.Next;
+            end if;
+            while Col /= null loop
+               TIO.Put_Line (",");
+               TIO.Put (Sp (6) & Capitalize (Col.Name.all));
+               Col := Col.Next;
+            end loop;
+            if TWdg.Child_List /= null then
+               Col := TWdg.Child_List;
+               while Col /= null loop
+                  if Col.Widget_Type = DataGridViewCheckBoxColumn then
+                     TIO.Put_Line (",");
+                     TIO.Put (Sp (6)
+                              & Capitalize (Col.Name.all) & "_Data");
+                     if not Col.ReadOnly then
+                        TIO.Put_Line (",");
+                        TIO.Put (Sp (6)
+                                 & Capitalize (Col.Name.all) & "_Activatable");
+                     end if;
+                  end if;
+                  Col := Col.Next;
+               end loop;
+               TIO.Put_Line (");");
+               TIO.New_Line;
+               TIO.Put_Line (Sp (3) & "function ""+"" (X : "
+                             & Capitalize (TWdg.Name.all) & "_Enum" & ")");
+               TIO.Put_Line (Sp (16) & "return Gint is");
+               TIO.Put_Line (Sp (5) & "("
+                             & Capitalize (TWdg.Name.all) & "_Enum"
+                             & "'Pos (X));");
+            end if;
+         end if;
+         Temp_Win := Temp_Win.Next;
+      end loop;
+      TIO.Put_Line ("end " & Filename & "_Pkg.Tree_Stores_Enum;");
+   end Emit_TreeStores_Enum;
+
    -------------------------
    --  Emit Main Program  --
    -------------------------
@@ -1121,6 +1178,9 @@ package body W2Gtk2Ada is
          Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-signals.ads");
          Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-signals.adb");
       end if;
+      if Have.TreeStores > 0 then
+         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-tree_store_enum.ads");
+      end if;
 
       if Main_Window then
          Make_Backup (Ada_Path & "/" & Filename & ".gpr");
@@ -1137,6 +1197,9 @@ package body W2Gtk2Ada is
          Make_Backup (Ada_Path & "/" & Filename & "_pkg-register_signals.adb");
          Make_Backup (Ada_Path & "/" & Filename & "_pkg-signals.ads");
          Make_Backup (Ada_Path & "/" & Filename & "_pkg-signals.adb");
+      end if;
+      if Have.TreeStores > 0 then
+         Make_Backup (Ada_Path & "/" & Filename & "_pkg-tree_store_enum.ads");
       end if;
       return 0;
    exception
@@ -1181,6 +1244,9 @@ package body W2Gtk2Ada is
       if Signals then
          Emit_Signals (Capitalize (Filename));
          Emit_Register_Signals (Capitalize (Filename));
+      end if;
+      if Have.TreeStores > 0 then
+         Emit_TreeStores_Enum (Capitalize (Filename));
       end if;
       TIO.Set_Output (TIO.Standard_Output);
 
@@ -1288,6 +1354,14 @@ package body W2Gtk2Ada is
                                           To_Lower (Filename)
                                           & "_pkg-signals.adb",
                                           Max_Gen, Debug);
+               end if;
+               if Status = 0 or Status = 2 then
+                  if Have.TreeStores > 0 then
+                     Status := Perform_Diff (Ada_Path,
+                                             To_Lower (Filename)
+                                             & "_pkg-tree_stores_enum.ads",
+                                             Max_Gen, Debug);
+                  end if;
                end if;
             end if;
          end if;

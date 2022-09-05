@@ -742,7 +742,7 @@ package body W2gtk_Emit is
                    WId    => TWdg.Name.all & "_toggle_id",
                    Finish => True);
       Emit_Line (Sp (Id + 8) & "<attributes>");
-      if TWdg.Activatable_Column > 0 then
+      if TWdg.Activatable_Column >= 0 then
          Emit_Line (Sp (Id + 10) & "<attribute name=""activatable"">"
                     & Img (TWdg.Activatable_Column)
                     & "</attribute>");
@@ -2546,7 +2546,7 @@ package body W2gtk_Emit is
                     & " -->");
          case Col.Widget_Type is
             when ExpandableColumn | DataGridViewTextBoxColumn =>
-               Emit_Line (Sp (Id + 2) & "<column type=""gchar""/>");
+               Emit_Line (Sp (Id + 2) & "<column type=""gchararray""/>");
             when DataGridViewCheckBoxColumn =>
                Emit_Line (Sp (Id + 2)
                           & "<column type=""GtkButtonBoxStyle""/>");
@@ -2564,7 +2564,7 @@ package body W2gtk_Emit is
                           & " -->");
                Emit_Line (Sp (Id + 2)
                           & "<column type=""gboolean""/>");
-               if not TWdg.ReadOnly then
+               if not Col.ReadOnly then
                   Emit_Line (Sp (Id + 2) & "<!-- column-name "
                              & Col.Name.all & "_activatable"
                              & " -->");

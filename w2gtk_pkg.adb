@@ -834,6 +834,9 @@ package body W2gtk_Pkg is
             return;
          end if;
          for I in DGVS.all'Range loop
+            TIO.Put_Line (LFile, "Gtk_Cell_Renderer");
+
+            Put_Property ("Name");
             TIO.Put_Line (LFile, "DataGridViewStyle" & Img (DGVS (I).Num));
 
             Put_Property ("Alignment");
