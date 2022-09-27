@@ -15,10 +15,10 @@
 -- If not, see <http://www.gnu.org/licenses/>.                             --
 ------------------------------------------------------------------------------
 with Ada.Strings;
-with Ada.Strings.Fixed; use Ada.Strings.Fixed;
-with GNAT.Strings;      use GNAT.Strings;
+with Ada.Strings.Fixed;     use Ada.Strings.Fixed;
+with GNAT.Strings;          use GNAT.Strings;
 with GNAT.Calendar.Time_IO;
-with Symbol_Tables;     use Symbol_Tables;
+with Symbol_Tables;         use Symbol_Tables;
 
 package body W2gtk_Emit is
 
@@ -34,10 +34,10 @@ package body W2gtk_Emit is
                               Id   : Integer;
                               Pos  : Integer);
    -----------
-   procedure Emit_GtkTreeViewCheckBoxColumn (TWdg : Widget_Pointer;
+   procedure Emit_GtkGridViewCheckBoxColumn (TWdg : Widget_Pointer;
                                              Id   : Integer;
                                              Num  : Integer);
-   procedure Emit_GtkTreeViewTextBoxColumn (TWdg : Widget_Pointer;
+   procedure Emit_GtkGridViewTextBoxColumn (TWdg : Widget_Pointer;
                                             Id   : Integer;
                                             Num  : Integer);
    procedure Emit_GtkDataGridView (TWdg : Widget_Pointer; Id : Integer);
@@ -47,7 +47,7 @@ package body W2gtk_Emit is
    procedure Emit_GtkNoteBook (TWdg : Widget_Pointer;
                                Id   : Integer;
                                Pos  : Integer);
-   procedure Emit_GtkTabChild (TWdg : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkNotebookTab (TWdg : Widget_Pointer; Id : Integer);
    -----------
    procedure Emit_GtkMenuBar (TWdg : Widget_Pointer;
                               Id   : Integer;
@@ -69,10 +69,10 @@ package body W2gtk_Emit is
                             Id   : Integer;
                             Activate_Default : Boolean);
    procedure Emit_GtkSpinButton (TWdg : Widget_Pointer; Id : Integer);
-   procedure Emit_GtkComboBox (TWdg    : Widget_Pointer;
-                               Id      : Integer;
-                               Packing : Boolean;
-                               Activate_Default : Boolean);
+   procedure Emit_GtkComboTextBox (TWdg    : Widget_Pointer;
+                                   Id      : Integer;
+                                   Packing : Boolean;
+                                   Activate_Default : Boolean);
    -----------
    procedure Emit_GtkButton (TWdg        : Widget_Pointer;
                              Id          : Integer;
@@ -139,7 +139,10 @@ package body W2gtk_Emit is
                                     XY      : Boolean;
                                     Homog   : Boolean);
       procedure Emit_GtkSignal (TWin : Window_Pointer; Id : Integer);
-      procedure Emit_GtkSignal (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_GtkSignal (TWdg     : Widget_Pointer;
+                                Id       : Integer;
+                                Except   : String := "";
+                                Only_For : String := "");
       procedure Emit_Attributes (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_Label (TWdg       : Widget_Pointer;
                             Id         : Integer;
@@ -241,15 +244,40 @@ package body W2gtk_Emit is
                           & " (Window " & TWin.Name.all & ")");
       end Emit_GtkSignal;
 
-      procedure Emit_GtkSignal (TWdg : Widget_Pointer; Id : Integer) is
-         TS : Signal_Pointer := TWdg.Signal_List;
+      procedure Emit_GtkSignal (TWdg     : Widget_Pointer;
+                                Id       : Integer;
+                                Except   : String := "";
+                                Only_For : String := "") is
+         TS   : Signal_Pointer := TWdg.Signal_List;
+         Emit : Boolean;
       begin
+         if Except /= "" and then Only_For /= "" then
+            TIO.Put_Line ("Emit_GtkSignal "
+                          & "Except and Only_For cannot be both /= """"");
+            raise Program_Error;
+         end if;
+         if TWdg.Name = null or else TWdg.Name.all = "" then
+            TIO.Put_Line ("Emit_GtkSignal: "
+                          & "Widget has no ID (name)");
+            raise Program_Error;
+         end if;
          while TS /= null loop
-            Emit_Line (Sp (Id) & "<signal name="""
-                       & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
-                       & """ handler="""
-                       & TS.Handler.all
-                       & """ swapped=""no""/>");
+            if Except = "" and then Only_For = "" then
+               Emit := True;
+            elsif Except /= "" then
+               Emit := Except /= TS.Name.all;
+            elsif Only_For /= "" then
+               Emit := Only_For = TS.Name.all;
+            else
+               Emit := False;
+            end if;
+            if Emit then
+               Emit_Line (Sp (Id) & "<signal name="""
+                          & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
+                          & """ handler=""" & TS.Handler.all & """"
+                          & " object=""" & TWdg.Name.all & """"
+                          & " swapped=""no""/>");
+            end if;
             TS := TS.Next;
          end loop;
       exception
@@ -262,7 +290,9 @@ package body W2gtk_Emit is
 
       procedure Emit_Has_Frame (TWdg : Widget_Pointer; Id : Integer) is
       begin
-         if TWdg.Widget_Type = GtkEntry or TWdg.Widget_Type = GtkComboBox then
+         if TWdg.Widget_Type = GtkEntry or
+           TWdg.Widget_Type = GtkComboTextBox
+         then
             if not TWdg.Has_Frame then
                Emit_Property (Id, "has-frame", False);
             end if;
@@ -311,7 +341,7 @@ package body W2gtk_Emit is
             Emit_Line (Sp (Id) & "<child>");
          end if;
       end Emit_Child;
-      procedure Emit_Object (TWdg : Widget_Pointer;
+      procedure Emit_Object (TWdg   : Widget_Pointer;
                              Id     : Integer; --  identation
                              Wdg    : String;  --  gtk widget
                              WId    : String;  --  Widget_Id
@@ -649,7 +679,7 @@ package body W2gtk_Emit is
             Emit_Line (Sp (Id + 2)
                        & "<attribute name=""font-desc"" value="""
                        & TWdg.Font_Name.all & " "
-                       & TWdg.Font_Size.all
+                       & Img (TWdg.Font_Size)
                        & """/>");
             if TWdg.Font_Weight /= null
               and then (TWdg.Font_Weight.all /= ""
@@ -675,6 +705,13 @@ package body W2gtk_Emit is
                           & TWdg.BgColor.all
                           & """/>");
             end if;
+         end if;
+
+         if TWdg.Font_Underline then
+            Emit_Line (Sp (Id + 2)
+                       & "<attribute name=""underline"" value="""
+                       & "True"
+                       & """/>");
          end if;
 
          if TWdg.UlColor /= null and then TWdg.UlColor.all /= "" then
@@ -709,22 +746,20 @@ package body W2gtk_Emit is
       Emit_Line ("</interface>");
    end Emit_GtkTrailer;
 
-   -----------------------------------
-   -- Emit_GtkTreeViewCheckBoxColumn --
-   -----------------------------------
+   ------------------------------------
+   -- Emit_GtkGridViewCheckBoxColumn --
+   --------------------.---------------
 
-   procedure Emit_GtkTreeViewCheckBoxColumn (TWdg : Widget_Pointer;
+   procedure Emit_GtkGridViewCheckBoxColumn (TWdg : Widget_Pointer;
                                              Id   : Integer;
                                              Num  : Integer) is
-      pragma Unreferenced (Num);
+      NCol : Integer;
+      Found_Signal_Toggled : Boolean;
    begin
       Emit_Child (TWdg, Id, False);
       Emit_Object (TWdg, Id + 2, "GtkTreeViewColumn", TWdg.Name.all);
       Emit_Property (Id + 4, "resizable", TWdg.Resizable);
       Emit_Property (Id + 4, "sizing", "fixed");
-      if TWdg.Fixed_Width > 0 then
-         Emit_Property (Id + 4, "fixed-width", TWdg.Fixed_Width);
-      end if;
       if TWdg.Min_Width > 0 then
          Emit_Property (Id + 4, "min-width", TWdg.Min_Width);
       end if;
@@ -732,81 +767,113 @@ package body W2gtk_Emit is
          Emit_Property (Id + 4, "max-width", TWdg.Max_Width);
       end if;
       Emit_Property (Id + 4, "title", TWdg.Text.all, True);
-      Emit_Property (Id + 4, "reorderable", not TWdg.Frozen);
-      Emit_Property (Id + 4, "sort-indicator", TWdg.SortMode /= NotSortable);
+      if TWdg.SortMode /= NotSortable then
+         Emit_Property (Id + 4, "sort-indicator", True);
+         Emit_Property (Id + 4, "sort-column-id", Num);
+      end if;
+      Emit_GtkSignal (TWdg, Id + 4, Except => "Toggled");
+
+      Emit_Child (TWdg, Id + 4, False);
+      Found_Signal_Toggled := Signal_Exists (TWdg, "Toggled");
+      Emit_Object (TWdg, Id + 6,
+                   Wdg    => "GtkCellRendererToggle",
+                   WId    => "CRTG_" & TWdg.Name.all,
+                   Finish => not Found_Signal_Toggled);
+      if Found_Signal_Toggled then
+         Emit_GtkSignal (TWdg, Id + 8, Only_For => "Toggled");
+      end if;
+      if Found_Signal_Toggled then
+         Emit_Line (Sp (Id + 6) & "</object>");
+      end if;
+      Emit_Line (Sp (Id + 6) & "<attributes>");
+      if TWdg.CheckBox_Col_Properties.Activatable_Column >= 0 then
+         Emit_Line (Sp (Id + 8) & "<attribute name=""activatable"">"
+                    & Img (TWdg.CheckBox_Col_Properties.Activatable_Column)
+                    & "</attribute>");
+      end if;
+      if TWdg.CheckBox_Col_Properties.Active_Column >= 0 then
+         Emit_Line (Sp (Id + 8) & "<attribute name=""active"">"
+                    & Img (TWdg.CheckBox_Col_Properties.Active_Column)
+                    & "</attribute>");
+      end if;
+      NCol := TWdg.GParent.Model.Num_Elements - 1;
+      if TWdg.GParent.AlternatingRowsDefaultCellStyle in DGVS'Range then
+         Emit_Line (Sp (Id + 8) & "<attribute name=""cell-background"">"
+                       & Img (NCol) & "</attribute>");
+      end if;
+      Emit_Line (Sp (Id + 6) & "</attributes>");
+      Emit_Line (Sp (Id + 4) & "</child>");
+
+      Emit_Line (Sp (Id + 2) & "</object>");
+      Emit_Line (Sp (Id) & "</child>");
+   end Emit_GtkGridViewCheckBoxColumn;
+
+   -----------------------------------
+   -- Emit_GtkGridViewTextBoxColumn --
+   -----------------------------------
+
+   procedure Emit_GtkGridViewTextBoxColumn (TWdg : Widget_Pointer;
+                                            Id   : Integer;
+                                            Num  : Integer) is
+      NCol : Integer;
+   begin
+      Emit_Child (TWdg, Id, False);
+      Emit_Object (TWdg, Id + 2, "GtkTreeViewColumn", TWdg.Name.all);
+      Emit_Property (Id + 4, "resizable", TWdg.Resizable);
+      Emit_Property (Id + 4, "sizing", "fixed");
+      if TWdg.Min_Width > 0 then
+         Emit_Property (Id + 4, "min-width", TWdg.Min_Width);
+      end if;
+      if TWdg.Max_Width > 0 then
+         Emit_Property (Id + 4, "max-width", TWdg.Max_Width);
+      end if;
+      if TWdg.AutoSizeColumnMode = Fill then
+         Emit_Property (Id + 4, "expand", True);
+      end if;
+      Emit_Property (Id + 4, "title", TWdg.Text.all, True);
+      if TWdg.DefaultCellStyle in DGVS'Range
+        and then DGVS (TWdg.DefaultCellStyle).Alignment /= null
+      then
+         case To_TextAlign (DGVS (TWdg.DefaultCellStyle).Alignment.all) is
+            when None | Top | Bottom => null;
+            when TopLeft   | MiddleLeft   | BottomLeft   | Left   =>
+               Emit_Property (Id + 4, "alignment", 0.0);
+            when TopCenter | MiddleCenter | BottomCenter | Center =>
+               Emit_Property (Id + 4, "alignment", 0.5);
+            when TopRight  | MiddleRight  | BottomRight  | Right  =>
+               Emit_Property (Id + 4, "alignment", 1.0);
+         end case;
+      end if;
+      if TWdg.SortMode /= NotSortable then
+         Emit_Property (Id + 4, "sort-indicator", True);
+         Emit_Property (Id + 4, "sort-column-id", Num);
+      end if;
       Emit_GtkSignal (TWdg, Id + 4);
 
       Emit_Child (TWdg, Id + 4, False);
       Emit_Object (TWdg, Id + 6,
-                   Wdg    => "GtkCellRendererToggle",
-                   WId    => TWdg.Name.all & "_toggle_id",
+                   Wdg    => "GtkCellRendererText",
+                   WId    => "CRT_" & TWdg.Name.all,
                    Finish => True);
-      Emit_Line (Sp (Id + 8) & "<attributes>");
-      if TWdg.Activatable_Column >= 0 then
-         Emit_Line (Sp (Id + 10) & "<attribute name=""activatable"">"
-                    & Img (TWdg.Activatable_Column)
-                    & "</attribute>");
-      end if;
-      Emit_Line (Sp (Id + 10) & "<attribute name=""active"">"
-                 & Img (TWdg.Active_Column)
-                 & "</attribute>");
-      Emit_Line (Sp (Id + 8) & "</attributes>");
-      Emit_Line (Sp (Id + 4) & "</child>");
-
-      Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Line (Sp (Id) & "</child>");
-   end Emit_GtkTreeViewCheckBoxColumn;
-
-   -----------------------------------
-   -- Emit_GtkTreeViewTextBoxColumn --
-   -----------------------------------
-
-   procedure Emit_GtkTreeViewTextBoxColumn (TWdg : Widget_Pointer;
-                                            Id   : Integer;
-                                            Num  : Integer) is
-   begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkTreeViewColumn", TWdg.Name.all);
-      Emit_Property (Id + 4, "resizable", TWdg.Resizable);
-      Emit_Property (Id + 4, "sizing", "fixed");
-      if TWdg.Fixed_Width > 0 then
-         Emit_Property (Id + 4, "fixed-width", TWdg.Fixed_Width);
-      end if;
-      if TWdg.Min_Width > 0 then
-         Emit_Property (Id + 4, "min-width", TWdg.Min_Width);
-      end if;
-      if TWdg.Max_Width > 0 then
-         Emit_Property (Id + 4, "max-width", TWdg.Max_Width);
-      end if;
-      Emit_Property (Id + 4, "title", TWdg.Text.all, True);
-      Emit_Property (Id + 4, "reorderable", not TWdg.Frozen);
-      Emit_Property (Id + 4, "sort-indicator", TWdg.SortMode /= NotSortable);
-      Emit_GtkSignal (TWdg, Id + 4);
-
-      Emit_Child (TWdg, Id + 4, False);
-      if TWdg.DefaultCellStyle /= -1 then
-         Emit_Object (TWdg, Id + 6, "GtkCellRendererText",
-                      "DataGridViewCellStyle" & Img (TWdg.DefaultCellStyle),
-                      Finish => True);
-      else
-         Emit_Object (TWdg, Id + 6, "GtkCellRendererText",
-                      "DataGridViewCellStyle_" & TWdg.Name.all,
-                      Finish => True);
-      end if;
       Emit_Line (Sp (Id + 8) & "<attributes>");
       Emit_Line (Sp (Id + 10) & "<attribute name=""text"">"
                  & Img (Num) & "</attribute>");
+
+      NCol := TWdg.GParent.Model.Num_Elements - 1;
+      if TWdg.GParent.AlternatingRowsDefaultCellStyle in DGVS'Range then
+         Emit_Line (Sp (Id + 10) & "<attribute name=""background"">"
+                    & Img (NCol) & "</attribute>");
+      end if;
       Emit_Line (Sp (Id + 8) & "</attributes>");
       Emit_Line (Sp (Id + 4) & "</child>");
 
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Line (Sp (Id) & "</child>");
-   end Emit_GtkTreeViewTextBoxColumn;
+   end Emit_GtkGridViewTextBoxColumn;
 
    --------------------------------------------
    -- Emit_GtkTreeGridView / GtkDataGridView --
    --------------------------------------------
-
 
    procedure Emit_GtkDataGridView (TWdg : Widget_Pointer; Id : Integer) is
    begin
@@ -843,6 +910,7 @@ package body W2gtk_Emit is
       end if;
    end Emit_GtkTreeGridView;
 
+   --------------------------------------------
    procedure Emit_GtkGridView (TWdg : Widget_Pointer; Id : Integer) is
       Child : Widget_Pointer;
       Num   : Integer := 0;
@@ -867,6 +935,7 @@ package body W2gtk_Emit is
       Emit_Property (Id + 4, "rules-hint", True);
       Emit_Property (Id + 4, "reorderable", TWdg.AllowUserToOrderColumns);
       Emit_Property (Id + 4, "fixed-height-mode", True);
+      Emit_Property (Id + 4, "ubuntu-almost-fixed-height-mode", True);
       Emit_Property (Id + 4, "level-indentation", 3);
       Emit_Property (Id + 4, "rubber-banding", True);
       Emit_Property (Id + 4, "enable-grid-lines", "both");
@@ -887,9 +956,9 @@ package body W2gtk_Emit is
       while Child /= null loop
          case Child.Widget_Type is
             when ExpandableColumn | DataGridViewTextBoxColumn =>
-               Emit_GtkTreeViewTextBoxColumn (Child, Id + 4, Num);
+               Emit_GtkGridViewTextBoxColumn (Child, Id + 4, Num);
             when DataGridViewCheckBoxColumn =>
-               Emit_GtkTreeViewCheckBoxColumn (Child, Id + 4, Num);
+               Emit_GtkGridViewCheckBoxColumn (Child, Id + 4, Num);
             when others => null;
          end case;
          Num := Num + 1;
@@ -908,7 +977,6 @@ package body W2gtk_Emit is
                                Id   : Integer;
                                Pos  : Integer) is
       Temp : Widget_Pointer;
-      TS : Signal_Pointer := TWdg.Signal_List;
    begin
       Emit_Child (TWdg, Id, False);
       Emit_Object (TWdg, Id + 2, "GtkNotebook", TWdg.Name.all);
@@ -927,24 +995,15 @@ package body W2gtk_Emit is
       if TWdg.CloseButtonOnTabsInactiveVisible then
          Emit_GtkSignal (TWdg, Id + 4);
       else
-         while TS /= null loop
-            if TS.Name.all /= "CloseButtonClick" then
-               Emit_Line (Sp (Id + 4) & "<signal name="""
-                          & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
-                          & """ handler="""
-                          & TS.Handler.all
-                          & """ swapped=""no""/>");
-            end if;
-            TS := TS.Next;
-         end loop;
+         Emit_GtkSignal (TWdg, Id + 4, Except => "CloseButtonClick");
       end if;
 
       Temp := TWdg.Child_List;
       while Temp /= null loop
-         if Temp.Widget_Type /= GtkTabChild then
+         if Temp.Widget_Type /= GtkTabPage then
             raise Program_Error;
          end if;
-         Emit_GtkTabChild (Temp, Id + 4);
+         Emit_GtkNotebookTab (Temp, Id + 4);
          Temp := Temp.Next;
       end loop;
 
@@ -960,13 +1019,16 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkNoteBook;
 
-   ----------------------
-   -- Emit_GtkTabChild --
-   ----------------------
+   -------------------------
+   -- Emit_GtkNotebookTab --
+   -------------------------
 
-   procedure Emit_GtkTabChild (TWdg : Widget_Pointer; Id : Integer) is
-      Temp : Widget_Pointer;
-      TS   : Signal_Pointer;
+   procedure Emit_GtkNotebookTab (TWdg : Widget_Pointer; Id : Integer) is
+      Temp   : Widget_Pointer;
+      Box    : Widget_Pointer;
+      Label  : Widget_Pointer;
+      Button : Widget_Pointer;
+      TS     : Signal_Pointer;
    begin
       Temp := TWdg.Child_List;
       while Temp /= null loop
@@ -978,17 +1040,21 @@ package body W2gtk_Emit is
          Temp := Temp.Next;
       end loop;
 
+      --  tab header
+      Emit_Line (Sp (Id) & "<child type=""tab"">"); --  no name
+
       --  gtkbox header
-      Emit_Line (Sp (Id) & "<child type=""tab"">");
-      Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all);
-      Emit_Visible_And_Focus (TWdg, Id + 4, False);
+      Box := TWdg.Child_List.Next;
+      Emit_Object (Box, Id + 2, "GtkBox", Box.Name.all);
+      Emit_Visible_And_Focus (Box, Id + 4, False);
       Emit_Property (Id + 4, "spacing", 2);
 
       --  gtklabel complete
-      Emit_Child (TWdg, Id + 4, False);
-      Emit_Object (TWdg, Id + 6, "GtkLabel", "tab_label_" & TWdg.Name.all);
-      Emit_Visible_And_Focus (TWdg, Id + 8, False);
-      Emit_Label (TWdg, Id + 8, UnderLine => False, Selectable => False);
+      Label := Box.Child_List;
+      Emit_Child (Label, Id + 4, False);
+      Emit_Object (Label, Id + 6, "GtkLabel", Label.Name.all);
+      Emit_Visible_And_Focus (Label, Id + 8, False);
+      Emit_Label (Label, Id + 8, UnderLine => False, Selectable => False);
       Emit_Line (Sp (Id + 6) & "</object>");
       Emit_Line (Sp (Id + 6) & "<packing>");
       Emit_Property (Id + 8, "expand", False);
@@ -998,10 +1064,10 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id + 4) & "</child>");
 
       --  gtkbutton header
-      Emit_Child (TWdg, Id + 4, False);
-      Emit_Object (TWdg, Id + 6, "GtkButton",
-                   "tab_delete_button_" & TWdg.Name.all);
-      Emit_Visible_And_Focus (TWdg, Id + 8, True);
+      Button := Label.Next;
+      Emit_Child (Button, Id + 4, False);
+      Emit_Object (Button, Id + 6, "GtkButton", Button.Name.all);
+      Emit_Visible_And_Focus (Button, Id + 8, True);
       Emit_Property (Id + 8, "focus-on-click", False);
       Emit_Property (Id + 8, "receives-default", True);
       Emit_Property (Id + 8, "relief", "none");
@@ -1010,17 +1076,17 @@ package body W2gtk_Emit is
          while TS /= null loop
             if TS.Name.all = "CloseButtonClick" then
                Emit_Line (Sp (Id + 8) & "<signal name="""
-                          & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
-                          & """ handler="""
-                          & TS.Handler.all
-                          & """ swapped=""no""/>");
+                          & Convert_Signal_To_Gtk (Button, TS.Name.all)
+                          & """ handler=""" & TS.Handler.all & """"
+                          & " object=""" & Button.Name.all & """"
+                          & " swapped=""no""/>");
                exit;
             end if;
             TS := TS.Next;
          end loop;
       end if;
 
-      --  gtklabel complete
+      --  gtkimage complete
       Emit_Child (TWdg, Id + 8, False);
       Emit_Object (TWdg, Id + 10, "GtkImage", "tab_img_" & TWdg.Name.all);
       Emit_Visible_And_Focus (TWdg, Id + 12, False);
@@ -1040,13 +1106,14 @@ package body W2gtk_Emit is
       --  gtkbox tail
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Line (Sp (Id + 2) & "<packing>");
-      Emit_Property (Id + 4, "position", TWdg.Child_Num);
+      Emit_Property (Id + 4, "position", Box.Child_Num);
       Emit_Property (Id + 4, "tab-fill", False);
       Emit_Line (Sp (Id + 2) & "</packing>");
+
+      --  tab tail
       Emit_Line (Sp (Id) & "</child>");
 
-   end Emit_GtkTabChild;
-
+   end Emit_GtkNotebookTab;
    ---------------------------------
    -- Emit_GtkMenu and associated --
    ---------------------------------
@@ -1450,14 +1517,14 @@ package body W2gtk_Emit is
          raise;
    end Emit_GtkSpinButton;
 
-   ----------------------
-   -- Emit_GtkComboBox --
-   ----------------------
+   --------------------------
+   -- Emit_GtkComboTextBox --
+   --------------------------
 
-   procedure Emit_GtkComboBox (TWdg    : Widget_Pointer;
-                               Id      : Integer;
-                               Packing : Boolean;
-                               Activate_Default : Boolean) is
+   procedure Emit_GtkComboTextBox (TWdg    : Widget_Pointer;
+                                   Id      : Integer;
+                                   Packing : Boolean;
+                                   Activate_Default : Boolean) is
       procedure Emit_Internal_GtkEntry (Id : Integer);
       procedure Emit_Internal_GtkEntry (Id : Integer) is
       begin
@@ -1514,9 +1581,9 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkCombobox: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkComboTextbox: " & TWdg.Name.all);
          raise;
-   end Emit_GtkComboBox;
+   end Emit_GtkComboTextBox;
 
    --------------------------
    -- Emit_GtkToggleButton --
@@ -1973,7 +2040,7 @@ package body W2gtk_Emit is
                null;
             when GtkMenuBar =>
                null;
-            when GtkMenuItem =>
+            when GtkMenuItem | GtkSubMenu =>
                null;
             when GtkSeparatorMenuItem =>
                null;
@@ -1987,15 +2054,13 @@ package body W2gtk_Emit is
                null;
             when GtkNoteBook =>
                null;
-            when GtkTabChild =>
-               null;
+            when GtkTabChild => null;
+            when GtkTabPage => null;
             when GtkDataGridView =>
                null;
             when GtkTreeGridView =>
                null;
-            when ExpandableColumn =>
-               null;
-            when DataGridViewTextBoxColumn =>
+            when ExpandableColumn | DataGridViewTextBoxColumn =>
                null;
             when DataGridViewCheckBoxColumn =>
                null;
@@ -2007,10 +2072,10 @@ package body W2gtk_Emit is
                Emit_GtkImage (Child, Id + 12);
             when GtkEntry =>
                Emit_GtkEntry (Child, Id + 12, False);
-            when GtkComboBox =>
-               Emit_GtkComboBox (Child, Id + 12,
-                                 Packing => True,
-                                 Activate_Default => False);
+            when GtkComboTextBox =>
+               Emit_GtkComboTextBox (Child, Id + 12,
+                                     Packing => True,
+                                     Activate_Default => False);
             when GtkButton =>
                Emit_GtkButton (Child, Id + 12, "GtkButton",
                                Position    => -1,
@@ -2149,8 +2214,7 @@ package body W2gtk_Emit is
       Child := TWdg.Child_List;
       while Child /= null loop
          case Child.Widget_Type is
-            when No_Widget =>
-               null;
+            when No_Widget => null;
 
             when GtkBox =>
                Emit_GtkBox (Child, Id + 4, Child.Child_Num - 1);
@@ -2165,49 +2229,40 @@ package body W2gtk_Emit is
             when GtkToolBar =>
                Emit_GtkToolBar (Child, Id + 4, Child.Child_Num - 1);
 
-            when GtkSeparatorMenuItem =>
-               null;
-            when GtkMenuItem =>
-               null;
-            when GtkMenuNormalItem =>
-               null;
-            when GtkMenuImageItem =>
-               null;
-            when GtkMenuRadioItem =>
-               null;
-            when GtkMenuCheckItem =>
-               null;
-            when GtkDataGridView =>
-               null;
-            when GtkTreeGridView =>
-               null;
-            when ExpandableColumn =>
-               null;
-            when DataGridViewTextBoxColumn =>
-               null;
-            when DataGridViewCheckBoxColumn =>
-               null;
+            when GtkSeparatorMenuItem => null;
+            when GtkMenuItem | GtkSubMenu => null;
+            when GtkMenuNormalItem => null;
+            when GtkMenuImageItem => null;
+            when GtkMenuRadioItem => null;
+            when GtkMenuCheckItem => null;
+            when GtkDataGridView => null;
+            when GtkTreeGridView => null;
+            when ExpandableColumn | DataGridViewTextBoxColumn =>  null;
+            when DataGridViewCheckBoxColumn => null;
             when GtkTabChild => null;
+            when GtkTabPage => null;
+
             when GtkEntry =>
                Emit_GtkEntry (Child, Id + 4, False);
-            when GtkComboBox =>
-               Emit_GtkComboBox (Child, Id + 4,
-                                 Packing => True,
-                                 Activate_Default => False);
+            when GtkComboTextBox =>
+               Emit_GtkComboTextBox (Child, Id + 4,
+                                     Packing => True,
+                                     Activate_Default => False);
             when GtkCalendar =>
                Emit_GtkCalendar (Child, Id + 4);
             when GtkSpinButton =>
                Emit_GtkSpinButton (Child, Id + 4);
             when GtkFileChooserButton =>
                Emit_GtkFileChooserButton (Child, Id + 4);
+
             when PrintDocument        => null;
             when PrintDialog          => null;
             when PageSetupDialog      => null;
             when FolderBrowserDialog  => null;
             when GtkToolTip           => null;
+
             when GtkColorButton =>
                Emit_GtkColorButton (Child, Id + 4);
-            when BackgroundWorker     => null;
             when GtkListBox =>
                Emit_GtkListBox (Child, Id + 4);
             when GtkLabel =>
@@ -2236,8 +2291,10 @@ package body W2gtk_Emit is
                                      Homog     => False);
             when GtkFrame =>
                Emit_GtkFrame (Child, Id + 4);
+
             when Chart                => null;
             when GtkSeparatorToolItem => null;
+            when BackgroundWorker     => null;
          end case;
          Child := Child.Next;
       end loop;
@@ -2320,8 +2377,8 @@ package body W2gtk_Emit is
          Emit_Line (Sp (Id) & "</child>");
       end Emit_LabelItem;
 
-      procedure Emit_ComboboxItem (TWdg : Widget_Pointer; Id : Integer);
-      procedure Emit_ComboboxItem (TWdg : Widget_Pointer; Id : Integer) is
+      procedure Emit_ComboboxTextItem (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_ComboboxTextItem (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
          Emit_Object (TWdg, Id + 2, "GtkComboBoxText", TWdg.Name.all);
@@ -2337,7 +2394,7 @@ package body W2gtk_Emit is
                                         XY      => False,
                                         Homog   => False);
          Emit_Line (Sp (Id) & "</child>");
-      end Emit_ComboboxItem;
+      end Emit_ComboboxTextItem;
 
       procedure Emit_ButtonItem (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_ButtonItem (TWdg : Widget_Pointer; Id : Integer) is
@@ -2429,8 +2486,8 @@ package body W2gtk_Emit is
             when GtkLabel =>
                Emit_LabelItem (TWdg, Id + 4);
 
-            when GtkComboBox =>
-               Emit_ComboboxItem (TWdg, Id + 4);
+            when GtkComboTextBox =>
+               Emit_ComboboxTextItem (TWdg, Id + 4);
 
             when GtkButton | GtkRadioButton | GtkToggleButton =>
                Emit_ButtonItem (TWdg, Id + 4);
@@ -2499,7 +2556,7 @@ package body W2gtk_Emit is
       while Temp /= null loop
          case Temp.Widget_Type is
             when GtkButton | GtkRadioButton | GtkToggleButton
-               | GtkLabel | GtkComboBox | GtkEntry =>
+               | GtkLabel | GtkComboTextBox | GtkEntry =>
                Emit_ToolItem (Temp, Id + 4);
 
             when GtkSeparatorToolItem =>
@@ -2529,15 +2586,15 @@ package body W2gtk_Emit is
    --             G T K   W I N D O W S              --
    ----------------------------------------------------
 
-   -----------------------
-   -- Emit_GtkTreeStore --
-   -----------------------
+   ----------------
+   -- Emit_Store --
+   ----------------
 
-   procedure Emit_GtkTreeStore (TWin : Window_Pointer; Id : Integer) is
+   procedure Emit_Store (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_Store (TWin : Window_Pointer; Id : Integer) is
       Col  : Widget_Pointer;
       TWdg : constant Widget_Pointer := TWin.Associated_Widget;
    begin
-      Emit_Object (null, Id, "GtkTreeStore", TWin.Name.all);
       Emit_Line (Sp (Id + 2) & "<columns>");
       Col := TWdg.Child_List;
       while Col /= null loop
@@ -2546,7 +2603,24 @@ package body W2gtk_Emit is
                     & " -->");
          case Col.Widget_Type is
             when ExpandableColumn | DataGridViewTextBoxColumn =>
-               Emit_Line (Sp (Id + 2) & "<column type=""gchararray""/>");
+               if Col.DefaultCellStyle in DGVS'Range then
+                  case DGVS (Col.DefaultCellStyle).Format is
+                     when Format_Bool =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gboolean""/>");
+                     when Format_Int =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gint""/>");
+                     when Format_Real =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gchararray""/>");
+                     when Format_String =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gchararray""/>");
+                  end case;
+               else
+                  Emit_Line (Sp (Id + 2) & "<column type=""gchararray""/>");
+               end if;
             when DataGridViewCheckBoxColumn =>
                Emit_Line (Sp (Id + 2)
                           & "<column type=""GtkButtonBoxStyle""/>");
@@ -2564,6 +2638,7 @@ package body W2gtk_Emit is
                           & " -->");
                Emit_Line (Sp (Id + 2)
                           & "<column type=""gboolean""/>");
+
                if not Col.ReadOnly then
                   Emit_Line (Sp (Id + 2) & "<!-- column-name "
                              & Col.Name.all & "_activatable"
@@ -2576,7 +2651,54 @@ package body W2gtk_Emit is
          Col := Col.Next;
       end loop;
 
+      if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+         Emit_Line (Sp (Id + 2) & "<!-- column-name "
+                    & "ALT_Bg_" & TWdg.Name.all
+                    & " -->");
+         Emit_Line (Sp (Id + 2) & "<column type=""gchararray""/>");
+      end if;
+
       Emit_Line (Sp (Id + 2) & "</columns>");
+   end Emit_Store;
+
+   -------------------------
+   -- Emit_GtkModelFilter --
+   -------------------------
+
+   procedure Emit_GtkModelFilter (TWin : Window_Pointer; Id : Integer) is
+   begin
+      Emit_Object (null, Id, "GtkTreeModelFilter", TWin.Name.all);
+      Emit_Property (Id + 2, "child-model", TWin.Underlying_Model.Name.all);
+      Emit_Line (Sp (Id) & "</object>");
+   exception
+      when others =>
+         TIO.Put_Line ("Emit GtkModelFilter: " & TWin.Name.all);
+         raise;
+   end Emit_GtkModelFilter;
+
+   -----------------------
+   -- Emit_GtkModelSort --
+   -----------------------
+
+   procedure Emit_GtkModelSort (TWin : Window_Pointer; Id : Integer) is
+   begin
+      Emit_Object (null, Id, "GtkTreeModelSort", TWin.Name.all);
+      Emit_Property (Id + 2, "model", TWin.Underlying_Model.Name.all);
+      Emit_Line (Sp (Id) & "</object>");
+   exception
+      when others =>
+         TIO.Put_Line ("Emit GtkModelSort: " & TWin.Name.all);
+         raise;
+   end Emit_GtkModelSort;
+
+   -----------------------
+   -- Emit_GtkTreeStore --
+   -----------------------
+
+   procedure Emit_GtkTreeStore (TWin : Window_Pointer; Id : Integer) is
+   begin
+      Emit_Object (null, Id, "GtkTreeStore", TWin.Name.all);
+      Emit_Store (TWin, Id);
       Emit_Line (Sp (Id) & "</object>");
    exception
       when others =>
@@ -2590,11 +2712,19 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkListStore (TWin : Window_Pointer; Id : Integer) is
    begin
-      Emit_Object (null, Id, "GtkListStore", TWin.Name.all);
-      Emit_Line (Sp (Id + 2) & "<columns>");
-      Emit_Line (Sp (Id + 2) & "<column type=""gchar""/>");
-      Emit_Line (Sp (Id + 2) & "</columns>");
-      Emit_Line (Sp (Id) & "</object>");
+      if TWin.Associated_Widget.Widget_Type = GtkDataGridView
+        and then TWin.Associated_Widget.Has_Expander
+      then
+         Emit_GtkTreeStore (TWin, Id);
+      else
+         Emit_Object (null, Id, "GtkListStore", TWin.Name.all);
+         Emit_Store (TWin, Id);
+         Emit_Line (Sp (Id) & "</object>");
+      end if;
+   exception
+      when others =>
+         TIO.Put_Line ("Emit GtkListStore: " & TWin.Name.all);
+         raise;
    end Emit_GtkListStore;
 
    -------------------
@@ -2646,7 +2776,7 @@ package body W2gtk_Emit is
                            Image (TWdg.MinDate, ISO_Date)
                            & ASCII.CR
                            & Image (TWdg.MaxDate, ISO_Date));
-         when GtkEntry | GtkComboBox =>
+         when GtkEntry | GtkComboTextBox =>
             Emit_Property (Id + 2, "text", TWdg.Text_Buffer.all);
          when others => null;
       end case;
@@ -2789,7 +2919,7 @@ package body W2gtk_Emit is
                null;
             when GtkSeparatorMenuItem =>
                null;
-            when GtkMenuItem =>
+            when GtkMenuItem | GtkSubMenu =>
                null;
             when GtkMenuNormalItem =>
                null;
@@ -2804,23 +2934,23 @@ package body W2gtk_Emit is
                null;
             when GtkTreeGridView =>
                null;
-            when ExpandableColumn =>
-               null; --  handled within GtkData/TreeGridView
-            when DataGridViewTextBoxColumn =>
+            when ExpandableColumn | DataGridViewTextBoxColumn =>
                null; --  handled within GtkData/TreeGridView
             when DataGridViewCheckBoxColumn =>
                null; --  handled within GtkData/TreeGridView
 
             when GtkNoteBook =>
                Emit_GtkNoteBook (TWdg, Id + 4, 0);
+
             when GtkTabChild => null;
+            when GtkTabPage => null;
 
             when GtkEntry =>
                Emit_GtkEntry (TWdg, Id + 4, Activate_Default);
-            when GtkComboBox =>
-               Emit_GtkComboBox (TWdg, Id + 4,
-                                 Packing => True,
-                                 Activate_Default => Activate_Default);
+            when GtkComboTextBox =>
+               Emit_GtkComboTextBox (TWdg, Id + 4,
+                                     Packing => True,
+                                     Activate_Default => Activate_Default);
             when GtkCalendar =>
                Emit_GtkCalendar (TWdg, Id + 4);
             when GtkSpinButton =>
@@ -3009,7 +3139,7 @@ package body W2gtk_Emit is
                Emit_GtkMenuBar (TWdg, Id, -1);
             when GtkSeparatorMenuItem =>
                null;
-            when GtkMenuItem =>
+            when GtkMenuItem | GtkSubMenu =>
                null;
             when GtkMenuNormalItem =>
                null;
@@ -3024,23 +3154,23 @@ package body W2gtk_Emit is
                null;
             when GtkTreeGridView =>
                null;
-            when ExpandableColumn =>
-               null;
-            when DataGridViewTextBoxColumn =>
+            when ExpandableColumn | DataGridViewTextBoxColumn =>
                null;
             when DataGridViewCheckBoxColumn =>
                null;
 
             when GtkNoteBook =>
                Emit_GtkNoteBook (TWdg, Id, 0);
+
             when GtkTabChild => null;
+            when GtkTabPage => null;
 
             when GtkEntry =>
                Emit_GtkEntry (TWdg, Id, False);
-            when GtkComboBox =>
-               Emit_GtkComboBox (TWdg, Id,
-                                 Packing => True,
-                                 Activate_Default => False);
+            when GtkComboTextBox =>
+               Emit_GtkComboTextBox (TWdg, Id,
+                                     Packing => True,
+                                     Activate_Default => False);
             when GtkCalendar =>
                Emit_GtkCalendar (TWdg, Id);
             when GtkSpinButton =>

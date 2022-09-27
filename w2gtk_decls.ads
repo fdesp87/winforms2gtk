@@ -18,10 +18,14 @@ with Ada.Text_IO;
 with Ada.Calendar;
 with GNAT.Strings; use GNAT.Strings;
 with GNATCOLL.Tribooleans;  use GNATCOLL.Tribooleans;
+with GNATCOLL.Utils;
 
 package W2gtk_Decls is
    package TIO renames Ada.Text_IO;
    package AC  renames Ada.Calendar;
+
+   Default_Font_Size : constant := -9;
+   Default_Font_Name : constant String := "Calibri";
 
    type DialogResult_Enum is (None, OK, Cancel, Aborted, Retry, Ignore,
                               Yes, No, TryAgain, Continue);
@@ -95,8 +99,8 @@ package W2gtk_Decls is
    type Signal_Pointer is access all Signal_Block;
    type Signal_Block is record
       Next    : Signal_Pointer;
-      Name    : String_Access := null; --  windows name
-      Handler : String_Access := null;
+      Name    : String_Access := null; --  original signal name
+      Handler : String_Access := null; --  handler name
       Line    : Integer;
    end record;
 
@@ -112,28 +116,97 @@ package W2gtk_Decls is
                                 DGVS_Attr_Padding,
                                 DGVS_Attr_WrapMode,
                                 DGVS_Attr_NullValue);
+   type Cell_Style_Enum is (None,
+                            For_TextCell,
+                            For_ToggleCell,
+                            For_Column_Header,
+                            For_Row_Header,
+                            For_TreeGridView);
+   type Cell_Format_Enum is (Format_Bool,
+                             Format_Int,
+                             Format_Real,
+                             Format_String);
    type DataGridViewStyle is record
-      Num         : Integer       := 0;
-      Alignment   : String_Access := null;
-      BgColor     : String_Access := null;
-      FgColor     : String_Access := null;
-      SelBgColor  : String_Access := null;
-      SelFgColor  : String_Access := null;
-      Font_Name   : String_Access := null;
-      Font_Size   : String_Access := null;
-      Font_Weight : String_Access := null;
-      Format      : String_Access := null;
-      Padding     : Margin_Array  := Null_Margin;
-      WrapMode    : Triboolean    := Indeterminate;
-      NullValue   : String_Access := null;
+      Num            : Integer          := 0;
+      Name           : String_Access    := null;
+      Style_For      : Cell_Style_Enum  := None;
+      Emit           : Boolean          := False;
+      Alignment      : String_Access    := null;
+      BgColor        : String_Access    := null;
+      FgColor        : String_Access    := null;
+      SelBgColor     : String_Access    := null;
+      SelFgColor     : String_Access    := null;
+      Font_Name      : String_Access    := null;
+      Font_Size      : Integer          := Default_Font_Size;
+      Font_Weight    : String_Access    := null;
+      Font_Underline : Boolean          := False;
+      Format         : Cell_Format_Enum := Format_String;
+      Padding        : Margin_Array     := Null_Margin;
+      WrapMode       : Boolean          := False;
+      NullValue      : String_Access    := null;
    end record;
    type DGVS_Array is array (Integer range <>) of DataGridViewStyle;
    type DGVS_Array_Pointer is access all DGVS_Array;
    Max_DGVS : Integer := -1;
    DGVS     : DGVS_Array_Pointer;
 
+   type Text_Renderer_Properties is record
+      Text_Column               : Integer := -1;
+      Markup_Column             : Integer := -1;
+      SingleParagraph_Column    : Integer := -1;
+      Width_Chars_Column        : Integer := -1;
+      Max_Width_Chars_Column    : Integer := -1;
+      Wrap_Width_Column         : Integer := -1;
+      Alignment_Column          : Integer := -1;
+      Placeholder_Text_Column   : Integer := -1;
+      bg_Color_Name_Column      : Integer := -1;
+      Fg_Color_Name_Column      : Integer := -1;
+      Font_Column               : Integer := -1;
+      Font_Family_Column        : Integer := -1;
+      Font_Variant_Column       : Integer := -1;
+      Font_Weigt_Column         : Integer := -1;
+      Font_Stretch_Column       : Integer := -1;
+      Font_Size_Column          : Integer := -1;
+      Font_Points_Column        : Integer := -1;
+      Editable_Column           : Integer := -1;
+      Strikethrough_Column      : Integer := -1;
+      Underline_Column          : Integer := -1;
+      Rise_Column               : Integer := -1;
+      Language_Column           : Integer := -1;
+      Ellipsize_Column          : Integer := -1;
+      Wrap_Mode_Column          : Integer := -1;
+      --
+      Visible_Column            : Integer := -1;
+      Active_Column             : Integer := -1; --  also known as sensitive
+      HAlign_Column             : Integer := -1;
+      VAlign_Column             : Integer := -1;
+      HPadding_Column           : Integer := -1;
+      VPadding_Column           : Integer := -1;
+      Width_Column              : Integer := -1;
+      Height_Column             : Integer := -1;
+      Cell_Bg_Color_Name_Column : Integer := -1;
+   end record;
+   type Toggle_Renderer_Properties is record
+      Activatable_Column        : Integer := -1;
+      Toggle_State_Column       : Integer := -1;
+      Radio_State_Column        : Integer := -1;
+      Inconsisten_State_Column  : Integer := -1;
+      Indicator_Size_Column     : Integer := -1;
+      --
+      Visible_Column            : Integer := -1;
+      Active_Column             : Integer := -1; --  also known as sensitive
+      HAlign_Column             : Integer := -1;
+      VAlign_Column             : Integer := -1;
+      HPadding_Column           : Integer := -1;
+      VPadding_Column           : Integer := -1;
+      Cell_Bg_Color_Name_Column : Integer := -1;
+   end record;
+
    --  windows and widgets
    type Have_Block is record
+      --  cellrenderers
+      Font_Underline     : Integer := 0;
+      Font_Weight        : Integer := 0;
       --  widgets
       Buttons            : Integer := 0;
       Labels             : Integer := 0;
@@ -147,8 +220,10 @@ package W2gtk_Decls is
       Notebooks          : Integer := 0;
       TreeViews          : Integer := 0;
       TreeViewColumns    : Integer := 0;
+      TreeViewToggles    : Integer := 0;
+      HDR_CellRenderers  : Integer := 0;
       Entries            : Integer := 0;
-      ComboBoxes         : Integer := 0;
+      ComboTextBoxes     : Integer := 0;
       Boxes              : Integer := 0;
       FileChooserButtons : Integer := 0;
       --  windows
@@ -167,6 +242,8 @@ package W2gtk_Decls is
                         GtkEntryBuffer,
                         GtkListStore,
                         GtkTreeStore,
+                        GtkModelSort,
+                        GtkModelFilter,
                         GtkImage);
    type Window_Properties;
    type Window_Pointer is access all Window_Properties;
@@ -200,8 +277,9 @@ package W2gtk_Decls is
             Modal             : Boolean       := False;
             Is_Dialog         : Boolean       := False;
             Font_Name         : String_Access := null;
-            Font_Size         : String_Access := null;
+            Font_Size         : Integer       := Default_Font_Size;
             Font_Weight       : String_Access := null;
+            Font_Underline    : Boolean       := False;
             Icon              : String_Access := null;
             ToolTip           : String_Access := null;
             Start_Position    : Window_Position_Enum := None;
@@ -224,8 +302,16 @@ package W2gtk_Decls is
             Attached_To       : Widget_Pointer;
          when GtkFileFilter =>
             FilterString      : String_Access := null;
-         when GtkEntryBuffer | GtkListStore | GtkImage | GtkTreeStore =>
-            Associated_Widget :  Widget_Pointer;
+         when GtkEntryBuffer | GtkImage |
+              GtkListStore | GtkTreeStore |
+              GtkModelSort | GtkModelFilter =>
+            Associated_Widget  :  Widget_Pointer;
+            Num_Elements : Integer := 0;
+            case Window_Type is
+               when GtkModelSort | GtkModelFilter =>
+                  Underlying_Model : Window_Pointer;
+               when others => null;
+            end case;
       end case;
    end record;
    Win_List : Window_Pointer := null;
@@ -235,7 +321,7 @@ package W2gtk_Decls is
    type Widget_Enum is
      (No_Widget,
       --
-      GtkLabel, GtkEntry, GtkComboBox,
+      GtkLabel, GtkEntry, GtkComboTextBox,
       --
       GtkButton, GtkRadioButton, GtkCheckButton, GtkToggleButton,
       --
@@ -245,8 +331,8 @@ package W2gtk_Decls is
       GtkToolTip, GtkCalendar, GtkColorButton,
       GtkListBox,
       --
-      GtkMenuBar, GtkMenuItem,
-      GtkMenuNormalItem, GtkMenuImageItem,
+      GtkMenuBar, GtkSubMenu,
+      GtkMenuItem, GtkMenuNormalItem, GtkMenuImageItem,
       GtkMenuRadioItem, GtkMenuCheckItem,
       GtkSeparatorMenuItem,
       --
@@ -256,7 +342,7 @@ package W2gtk_Decls is
       ExpandableColumn, DataGridViewTextBoxColumn,
       DataGridViewCheckBoxColumn,
       --
-      GtkNoteBook, GtkTabChild,
+      GtkNoteBook, GtkTabChild, GtkTabPage,
       --
       PrintDocument, PrintDialog, PageSetupDialog,
       Chart, BackgroundWorker,
@@ -302,6 +388,7 @@ package W2gtk_Decls is
                                   Attr_ColumnHeadersDefaultCellStyle,
                                   Attr_RowHeadersDefaultCellStyle,
                                   Attr_DefaultCellStyle,
+                                  Attr_AlternatingRowsDefaultCellStyle,
                                   Attr_ColumnHeadersHeightSizeMode,
                                   Attr_UserAddedColumn,
                                   Attr_AllowUserToAddRows,
@@ -343,56 +430,59 @@ package W2gtk_Decls is
                                   Attr_FlowDirection);
 
    type Widget_Properties (Widget_Type  : Widget_Enum) is record
-      Next          : Widget_Pointer := null;
-      Prev          : Widget_Pointer := null;
-      Child_List    : Widget_Pointer := null; --  only for containers
-      Num_Children  : Integer        := 0;    --  only for containers
+      Next           : Widget_Pointer := null;
+      Prev           : Widget_Pointer := null;
+      Child_List     : Widget_Pointer := null; --  only for containers
+      Num_Children   : Integer        := 0;    --  only for containers
 
-      Parent_Name   : String_Access  := null;
-      WParent       : Window_Pointer := null; --  parent is a window
-      GParent       : Widget_Pointer := null; --  parent is a widget
-      Child_Num     : Integer        := 0;    --  order in parent's child list
+      Parent_Name    : String_Access  := null;
+      WParent        : Window_Pointer := null; --  parent is a window
+      GParent        : Widget_Pointer := null; --  parent is a widget
+      Child_Num      : Integer        := 0;    --  order in parent's child list
 
-      Windows_Type  : String_Access  := null; --  this is the Windows type
+      Windows_Type   : String_Access  := null; --  this is the Windows type
 
-      Name          : String_Access  := null; --  this is the gtk id
+      Name           : String_Access  := null; --  this is the gtk id
 
-      Location      : Location_Pair;
-      Size          : Size_Pair;
-      TabIndex      : Integer        := -1;
-      TabStop       : Triboolean     := Indeterminate;
-      Next_Focus    : Widget_Pointer := null;
-      Prev_Focus    : Widget_Pointer := null;
-      Has_Focus     : Boolean        := False;
-      Zorder        : Integer        := -1;
+      Location       : Location_Pair;
+      Size           : Size_Pair;
+      TabIndex       : Integer        := -1;
+      TabStop        : Triboolean     := Indeterminate;
+      Next_Focus     : Widget_Pointer := null;
+      Prev_Focus     : Widget_Pointer := null;
+      Has_Focus      : Boolean        := False;
+      Zorder         : Integer        := -1;
 
-      Enabled       : Boolean        := True;  --  sensitive
-      Visible       : Boolean        := True;
-      Text          : String_Access  := null;
-      TextAlign     : TextAlign_Enum := None;
-      AutoSize      : Boolean        := True;
-      AutoSizeMode  : AutoSizeMode_Enum := GrowOnly;
-      Font_Name     : String_Access  := null;
-      Font_Size     : String_Access  := null;
-      Font_Weight   : String_Access  := null;
-      Margins       : Margin_Array   := Null_Margin;
-      Padding       : Integer        := 0;
-      DStyle        : Display_Style_Enum := Unset; --  labels and buttons
-      MaxLength     : Integer        := -1;
-      AutoToolTip   : Boolean        := False;
-      ToolTip       : String_Access  := null;
+      Enabled        : Boolean        := True;  --  sensitive
+      Visible        : Boolean        := True;
+      Text           : String_Access  := null;
+      TextAlign      : TextAlign_Enum := None;
+      AutoSize       : Boolean        := True;
+      AutoSizeMode   : AutoSizeMode_Enum := GrowOnly;
+
+      Font_Name      : String_Access  := null;
+      Font_Size      : Integer        := Default_Font_Size;
+      Font_Weight    : String_Access  := null;
+      Font_Underline : Boolean        := False;
+
+      Margins        : Margin_Array   := Null_Margin;
+      Padding        : Integer        := 0;
+      DStyle         : Display_Style_Enum := Unset; --  labels and buttons
+      MaxLength      : Integer        := -1;
+      AutoToolTip    : Boolean        := False;
+      ToolTip        : String_Access  := null;
       UseVisualStyleBackColor : Boolean := True;
-      BgColor       : String_Access  := null;
-      FgColor       : String_Access  := null;
-      UlColor       : String_Access  := null;
-      FlowDirection : FlowDirection_Enum := LeftToRight;
-      Signal_List   : Signal_Pointer;
+      BgColor        : String_Access  := null;
+      FgColor        : String_Access  := null;
+      UlColor        : String_Access  := null;
+      FlowDirection  : FlowDirection_Enum := LeftToRight;
+      Signal_List    : Signal_Pointer;
 
       case Widget_Type is
          when No_Widget =>
             null;
 
-         when GtkMenuItem => null;
+         when GtkMenuItem | GtkSubMenu => null;
          when GtkSeparatorMenuItem => null;
 
          when GtkMenuNormalItem | GtkMenuImageItem
@@ -409,9 +499,10 @@ package W2gtk_Decls is
 
             case Widget_Type is
                when GtkDataGridView | GtkTreeGridView =>
-                  ColumnHeadersVisible          : Boolean := True;
-                  ColumnHeadersDefaultCellStyle : Integer := -1;
-                  RowHeadersDefaultCellStyle    : Integer := -1;
+                  ColumnHeadersVisible            : Boolean := True;
+                  ColumnHeadersDefaultCellStyle   : Integer := -1;
+                  RowHeadersDefaultCellStyle      : Integer := -1;
+                  AlternatingRowsDefaultCellStyle : Integer := -1;
                   ColumnHeadersHeightSizeMode
                          : ColumnHeadersHeightSizeMode_Enum := EnableResizing;
                   AllowUserToAddRows            : Boolean := True;
@@ -427,14 +518,21 @@ package W2gtk_Decls is
                               : RowHeadersWidthSizeMode_Enum := EnableResizing;
                   RowHeadersBorderStyle : RowHeadersBorderStyle_Enum := None;
                   ScrollBars : ScrollBars_Enum := Both;
+                  Use_Sort   : Boolean := False;
                   Model      : Window_Pointer  := null;
 
-               when ExpandableColumn
-                  | DataGridViewTextBoxColumn
+                  case Widget_Type is
+                     when GtkDataGridView =>
+                        Has_Expander : Boolean := False;
+                     when others => null;
+                  end case;
+
+
+               when ExpandableColumn | DataGridViewTextBoxColumn
                   | DataGridViewCheckBoxColumn
                   =>
-                  Fixed_Width        : Integer := -1;
-                  Min_Width          : Integer := -1;
+                  Fixed_Width        : Integer := 100; --  windows default
+                  Min_Width          : Integer := 13;  --  windows default 5
                   Max_Width          : Integer := -1;
                   UserAddedColumn    : Boolean := True;
                   Level              : Integer := -1;
@@ -444,12 +542,14 @@ package W2gtk_Decls is
                   SortMode           : SortMode_Enum := NotSortable;
                   AutoSizeColumnMode : AutoSizeColumnMode_Enum := NotSet;
                   DefaultNodeImage   : Widget_Pointer := null;
-                  Frozen             : Boolean := False;
+                  Frozen             : Boolean := False; --  not horiz. scroll
 
                   case Widget_Type is
                      when DataGridViewCheckBoxColumn =>
-                        Active_Column      : Integer := -1;
+                        CheckBox_Col_Properties : Toggle_Renderer_Properties;
                         Activatable_Column : Integer := -1;
+                     when ExpandableColumn | DataGridViewTextBoxColumn =>
+                        Text_Col_Properties : Text_Renderer_Properties;
                      when others => null;
                   end case;
 
@@ -466,19 +566,23 @@ package W2gtk_Decls is
             SelectedIndex : Integer := -1;
 
          when GtkTabChild =>
+            null;
+
+         when GtkTabPage =>
             --  will be a hbox with label and close button
+            The_Label  : Widget_Pointer;
             The_Button : Widget_Pointer;
 
-         when GtkEntry | GtkComboBox | GtkCalendar =>
+         when GtkEntry | GtkComboTextBox | GtkCalendar =>
             Buffer      : Window_Pointer;
             Text_Buffer : String_Access := null;
             case Widget_Type is
-               when GtkEntry | GtkComboBox =>
+               when GtkEntry | GtkComboTextBox =>
                   Editable     : Boolean        := True;
                   Has_Frame    : Boolean        := True;
                   PasswordChar : String_Access  := null;
                   case Widget_Type is
-                     when GtkComboBox =>
+                     when GtkComboTextBox =>
                         Sorted : Boolean := False;
                      when others => null;
                   end case;
@@ -634,6 +738,10 @@ package W2gtk_Decls is
                             TS   : Signal_Pointer);
    procedure Insert_Signal (TWdg : Widget_Pointer;
                             TS   : Signal_Pointer);
+   function Signal_Exists (TWin : Window_Pointer;
+                           Signal_Name : String) return Boolean;
+   function Signal_Exists (TWdg        : Widget_Pointer;
+                           Signal_Name : String) return Boolean;
    procedure Insert_Focus (Into : Window_Pointer; Focus : Widget_Pointer);
 
    procedure Insert_Window_By_Tail (TWin : Window_Pointer);
@@ -645,6 +753,7 @@ package W2gtk_Decls is
    function Get_String (F : TIO.File_Type) return String;
    function Convert (WStyle : String) return Display_Style_Enum;
    function Convert (IAlign : String) return Image_Position_Enum;
+   function To_Cell_Format_Enum (Str : String) return Cell_Format_Enum;
    function To_TextAlign (IAlign : String) return TextAlign_Enum;
    function To_Color (WColor : String) return String;
    function To_AutoSizeColumnMode (WLine : String)
@@ -655,19 +764,24 @@ package W2gtk_Decls is
    function Get_Margin_Array (F : TIO.File_Type) return Margin_Array;
    function Get_Boolean (Data : String) return Boolean;
    function Get_Boolean (F : TIO.File_Type) return Boolean;
-   procedure Get_Font (Data        : in String;
-                       Font_Name   : in out String_Access;
-                       Font_Size   : in out String_Access;
-                       Font_Weight : in out String_Access);
-   procedure Get_Font (F           : TIO.File_Type;
-                       Font_Name   : in out String_Access;
-                       Font_Size   : in out String_Access;
-                       Font_Weight : in out String_Access);
+   procedure Get_Font (Data           : in String;
+                       Font_Name      : in out String_Access;
+                       Font_Size      : in out Integer;
+                       Font_Weight    : in out String_Access;
+                       Font_Underline : in out Boolean);
+   procedure Get_Font (F              : TIO.File_Type;
+                       Font_Name      : in out String_Access;
+                       Font_Size      : in out Integer;
+                       Font_Weight    : in out String_Access;
+                       Font_Underline : in out Boolean);
    function Num_Children (TWdg : Widget_Pointer) return Integer;
    function Normalize_Name (TWdg : Widget_Pointer) return String;
    function To_Gtk (T : Window_Pointer) return String;
-   function To_Gtk (T : Widget_Pointer) return String;
+   function To_Gtk (T       : Widget_Pointer;
+                    For_Ada : Boolean := False) return String;
    function To_Gtk (D : DialogResult_Enum) return String;
+   function "+" (Str : String) return String is
+      (GNATCOLL.Utils.Capitalize (Str));
 
    RFile : TIO.File_Type; --  resource     (in)
    DFile : TIO.File_Type; --  designer     (in)

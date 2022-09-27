@@ -71,8 +71,8 @@ package body Symbol_Tables is
       Wst.Insert ("CellMouseEnter", "clicked");
       Wst.Insert ("CellMouseLeave", "clicked");
       Wst.Insert ("CellMouseClick", "clicked");
-      Wst.Insert ("toggled", "toggled");
-      Wst.Insert ("leave", "focus");
+      Wst.Insert ("Toggled", "toggled");
+      Wst.Insert ("LeaveFocus", "focus");
       Wst.Insert ("DoWork", "DoWork");
       Wst.Insert ("ProgressChanged", "ProgressChanged");
       Wst.Insert ("RunWorkerCompleted", "RunWorkerCompleted");
@@ -276,6 +276,8 @@ package body Symbol_Tables is
       Wst.Insert ("ColumnHeadersHeightSizeMode",
                   Attr_ColumnHeadersHeightSizeMode);
       Wst.Insert ("DefaultCellStyle", Attr_DefaultCellStyle);
+      Wst.Insert ("AlternatingRowsDefaultCellStyle",
+                  Attr_AlternatingRowsDefaultCellStyle);
       Wst.Insert ("EnableHeadersVisualStyles", Attr_EnableHeadersVisualStyles);
       Wst.Insert ("MultiSelect", Attr_MultiSelect);
       Wst.Insert ("ScrollBars", Attr_ScrollBars);
@@ -433,8 +435,8 @@ package body Symbol_Tables is
       Wst.Insert ("ListBox", GtkListBox);
       Wst.Insert ("TextBox", GtkEntry);
       Wst.Insert ("ToolStripTextBox", GtkEntry);
-      Wst.Insert ("ComboBox", GtkComboBox);
-      Wst.Insert ("ToolStripComboBox", GtkComboBox);
+      Wst.Insert ("ComboBox", GtkComboTextBox);
+      Wst.Insert ("ToolStripComboBox", GtkComboTextBox);
       Wst.Insert ("RadioButton", GtkRadioButton);
       Wst.Insert ("ToggleButton", GtkToggleButton);
       Wst.Insert ("ToolStripButton", GtkButton);
@@ -458,7 +460,7 @@ package body Symbol_Tables is
       Wst.Insert ("ToolStrip", GtkToolBar);
       Wst.Insert ("TabControl", GtkNoteBook);
       Wst.Insert ("TabControlEx", GtkNoteBook);
-      Wst.Insert ("TabPage", GtkTabChild);
+      Wst.Insert ("TabPage", GtkTabPage);
       Wst.Insert ("FlowLayoutPanel", GtkBox);
       Wst.Insert ("BackgroundWorker", BackgroundWorker);
       Wst.Insert ("BindingNavigator", BindingNavigator);

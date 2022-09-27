@@ -28,6 +28,8 @@ package W2gtk_Emit is
    procedure Emit_GtkFileChooserDialog (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkImage (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkTreeStore (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_GtkModelFilter (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_GtkModelSort (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkTrailer (TWin : Window_Pointer; Id : Integer);
 
 end W2gtk_Emit;

@@ -104,6 +104,15 @@ package body W2Gtk2Ada is
       end loop;
    end For_Each_Widget;
 
+   --------------------
+   --  Emit_With_Use --
+   --------------------
+   procedure Emit_With_Use (Pkg : String);
+   procedure Emit_With_Use (Pkg : String) is
+   begin
+      TIO.Put_Line ("with " & Pkg & ";" & " use " & Pkg & ";");
+   end Emit_With_Use;
+
    ------------------------
    --  Set Have Signals  --
    ------------------------
@@ -127,7 +136,7 @@ package body W2Gtk2Ada is
             TS := Temp_Win.Signal_List;
             while TS /= null loop
                if TS.Handler.all =
-                 "On_" & Capitalize (Temp_Win.Name.all) & "_Formclosing"
+                 "On_" & Temp_Win.Name.all & "_Formclosing"
                then
                   Form_Closing := True;
                   exit;
@@ -155,7 +164,7 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWin0.Signal_List;
    begin
       while TS /= null loop
-         TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
+         TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
          TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class);");
          TIO.New_Line;
          TS := TS.Next;
@@ -168,15 +177,15 @@ package body W2Gtk2Ada is
    begin
       while TS /= null loop
          if TS.Name.all = "leave" then
-            TIO.Put_Line (Sp (3) & "function " & Capitalize (TS.Handler.all));
+            TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
             TIO.Put_Line (Sp (5)
-                          & "(B : access Gtkada_Builder_Record'Class) "
+                          & "(User_Data : access GObject_Record'Class) "
                           & "return Boolean;");
             TIO.New_Line;
          else
-            TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
+            TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
             TIO.Put_Line (Sp (5)
-                          & "(B : access Gtkada_Builder_Record'Class);");
+                          & "(User_Data : access GObject_Record'Class);");
             TIO.New_Line;
          end if;
          TS := TS.Next;
@@ -192,7 +201,7 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWin0.Signal_List;
    begin
       while TS /= null loop
-         TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
+         TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
          TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
                        & " is");
          TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
@@ -206,7 +215,7 @@ package body W2Gtk2Ada is
          else
             TIO.Put_Line (Sp (6) & "null;");
          end if;
-         TIO.Put_Line (Sp (3) & "end " & Capitalize (TS.Handler.all) & ";");
+         TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
          TIO.New_Line;
          TS := TS.Next;
       end loop;
@@ -218,28 +227,28 @@ package body W2Gtk2Ada is
    begin
       while TS /= null loop
          if TS.Name.all = "leave" then
-            TIO.Put_Line (Sp (3) & "function " & Capitalize (TS.Handler.all));
-            TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
+            TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+            TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
                           & " return Boolean is");
-            TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
+            TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
             TIO.Put_Line (Sp (3) & "begin");
             TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
             TIO.Put_Line (Sp (6) & "Gtk.Widget.Grab_Focus");
             TIO.Put_Line (Sp (8) & "(Gtk_Widget (Me."
-                          & Capitalize (TWdg.Next_Focus.Name.all)
+                          & TWdg.Next_Focus.Name.all
                           & "));");
             TIO.Put_Line (Sp (6) & "return True;  --  signal processed");
-            TIO.Put_Line (Sp (3) & "end " & Capitalize (TS.Handler.all) & ";");
+            TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             TIO.New_Line;
          else
-            TIO.Put_Line (Sp (3) & "procedure " & Capitalize (TS.Handler.all));
-            TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
+            TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+            TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
                           & " is");
-            TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
+            TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
             TIO.Put_Line (Sp (3) & "begin");
             TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
             TIO.Put_Line (Sp (6) & "null;");
-            TIO.Put_Line (Sp (3) & "end " & Capitalize (TS.Handler.all) & ";");
+            TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             TIO.New_Line;
          end if;
          TS := TS.Next;
@@ -254,7 +263,8 @@ package body W2Gtk2Ada is
    procedure Emit_Signals (Filename : String) is
       Temp_Win : Window_Pointer;
    begin
-      TIO.Put_Line ("with Gtkada.Builder; use Gtkada.Builder;");
+      Emit_With_Use ("Gtkada.Builder");
+      Emit_With_Use ("Glib.Object");
       TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg.Signals is");
       Temp_Win := Win_List;
@@ -276,7 +286,7 @@ package body W2Gtk2Ada is
       then
          TIO.Put_Line ("with " & Filename & "_Pkg.Object_Collection;");
          TIO.Put_Line ("use " & Filename & "_Pkg.Object_Collection;");
-         TIO.Put_Line ("with Gtk.Widget; use Gtk.Widget;");
+         Emit_With_Use ("Gtk.Widget");
       end if;
       TIO.New_Line;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Signals is");
@@ -304,7 +314,7 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (10) & "Handler_Name =>");
          TIO.Put_Line (Sp (13) & Quoted (TS.Handler.all) & ",");
          TIO.Put_Line (Sp (10) & "Handler      =>");
-         TIO.Put_Line (Sp (13) & Capitalize (TS.Handler.all) & "'Access);");
+         TIO.Put_Line (Sp (13) & TS.Handler.all & "'Access);");
          TS := TS.Next;
          TIO.New_Line;
       end loop;
@@ -321,7 +331,7 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (10) & "Handler_Name =>");
          TIO.Put_Line (Sp (13) & Quoted (TS.Handler.all) & ",");
          TIO.Put_Line (Sp (10) & "Handler      =>");
-         TIO.Put_Line (Sp (13) & Capitalize (TS.Handler.all) & "'Access);");
+         TIO.Put_Line (Sp (13) & TS.Handler.all & "'Access);");
          TS := TS.Next;
          TIO.New_Line;
       end loop;
@@ -335,15 +345,14 @@ package body W2Gtk2Ada is
    procedure Emit_Register_Signals (Filename : String) is
       Temp_Win : Window_Pointer;
    begin
-      TIO.Put_Line ("with Gtkada.Builder; use Gtkada.Builder;");
+      Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg.Register_Signals is");
       TIO.Put_Line (Sp (3) & "procedure Register"
                     & " (Builder : Gtkada.Builder.Gtkada_Builder);");
       TIO.Put_Line ("end " & Filename & "_Pkg.Register_Signals;");
 
-      TIO.Put_Line ("with " & Filename & "_Pkg.Signals; "
-                    & "use " & Filename & "_Pkg.Signals;");
+      Emit_With_Use (Filename & "_Pkg.Signals");
       TIO.New_Line;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Register_Signals is");
       TIO.Put_Line (Sp (3) & "procedure Register"
@@ -359,7 +368,746 @@ package body W2Gtk2Ada is
       TIO.Put_Line ("end " & Filename & "_Pkg.Register_Signals;");
    end Emit_Register_Signals;
 
-   ------------------------
+   ------------------------------
+   --  Emit Object Collection  --
+   ------------------------------
+
+   procedure Set_TreeView_Header_Style (TWdg : Widget_Pointer);
+   procedure Set_TreeView_Header_Style (TWdg : Widget_Pointer) is
+      HS : DataGridViewStyle;
+   begin
+      if TWdg.Widget_Type in GtkDataGridView | GtkTreeGridView
+        and then TWdg.ColumnHeadersDefaultCellStyle in DGVS'Range
+      then
+         HS := DGVS (TWdg.ColumnHeadersDefaultCellStyle);
+         TIO.Put_Line (Sp (6) & "Set_Header_Style");
+         TIO.Put_Line (Sp (8) & "(Tree => Me." & TWdg.Name.all & ",");
+         if HS.BgColor /= null then
+            TIO.Put_Line (Sp (9)
+                          & "Bgcolor => " & Quoted (HS.BgColor.all) & ",");
+         else
+            TIO.Put_Line (Sp (9)
+                          & "Bgcolor => " & Quoted ("white") & ",");
+         end if;
+         if HS.FgColor /= null then
+            TIO.Put_Line (Sp (9)
+                          & "Fgcolor => " & Quoted (HS.FgColor.all) & ",");
+         else
+            TIO.Put_Line (Sp (9)
+                          & "Fgcolor => " & Quoted ("black") & ",");
+         end if;
+         if HS.Font_Name /= null then
+            TIO.Put_Line (Sp (9)
+                          & "Font_Name => " & Quoted (HS.Font_Name.all) & ",");
+         else
+            TIO.Put_Line (Sp (9)
+                          & "Font_Name => " & Quoted (Default_Font_Name) & ",");
+         end if;
+         TIO.Put_Line (Sp (9) & "Font_Size => " & Img (HS.Font_Size) & ",");
+         if HS.Font_Weight /= null then
+            TIO.Put (Sp (9)
+                     & "Font_Weight => " & Quoted (HS.Font_Weight.all));
+         else
+            TIO.Put (Sp (9) & "Font_Weight => """"");
+         end if;
+         TIO.Put_Line (");");
+      end if;
+   end Set_TreeView_Header_Style;
+
+   procedure Initialize_Object (TWdg : Widget_Pointer);
+   procedure Initialize_Object (TWdg : Widget_Pointer) is
+   begin
+      case TWdg.Widget_Type is
+         when BackgroundWorker => null;
+         when PrintDocument => null;
+         when PrintDialog => null;
+         when Chart => null;
+         when FolderBrowserDialog => null;
+         when PageSetupDialog => null;
+         when others =>
+            case TWdg.Widget_Type is
+               when GtkMenuItem | GtkMenuNormalItem | GtkMenuImageItem =>
+                  if TWdg.Child_List /= null then
+                     TIO.New_Line;
+                     TIO.Put_Line (Sp (6)
+                                   & "OC." & TWdg.Name.all & "_Submenu" & " := "
+                                   & "Gtk_Menu"
+                                   & " (Builder.Get_Object (");
+                     TIO.Put_Line (Sp (8)
+                                   & Quoted
+                                     (TWdg.Name.all & "_Submenu") & "));");
+                  end if;
+               when others => null;
+            end case;
+
+            TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & " :=");
+            TIO.Put_Line (Sp (8)
+                          & To_Gtk (TWdg, True)
+                          & " (Builder.Get_Object (");
+            TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all) & "));");
+
+            case TWdg.Widget_Type is
+               when GtkDataGridView | GtkTreeGridView =>
+                  TIO.Put_Line (Sp (6)
+                                & "OC." & TWdg.Name.all & "_Selection := "
+                                & "Gtk_Tree_Selection"
+                                & " (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8)
+                                & Quoted
+                                  (TWdg.Name.all & "_Selection") & "));");
+
+               when ExpandableColumn | DataGridViewTextBoxColumn =>
+                  TIO.Put_Line (Sp (6) & "OC."
+                                & "CRT_"
+                                & TWdg.Name.all & " :=");
+                  TIO.Put_Line (Sp (8)
+                                & " Gtk_Cell_Renderer_Text"
+                                & " (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8)
+                                & """CRT_"
+                                & TWdg.Name.all
+                                & """));");
+
+               when DataGridViewCheckBoxColumn =>
+                  TIO.Put_Line (Sp (6) & "OC."
+                                & "CRTG_"
+                                & TWdg.Name.all
+                                & " :=");
+                  TIO.Put_Line (Sp (8)
+                                & " Gtk_Cell_Renderer_Toggle"
+                                & " (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8)
+                                & """CRTG_"
+                                & TWdg.Name.all
+                                & """));");
+               when others =>
+                  null;
+            end case;
+      end case;
+   end Initialize_Object;
+
+   procedure Emit_Object (TWdg : Widget_Pointer);
+   procedure Emit_Object (TWdg : Widget_Pointer) is
+   begin
+      case TWdg.Widget_Type is
+         when GtkMenuBar |
+              GtkBox |
+              GtkToolBar |
+              GtkNoteBook | GtkTabPage |
+              GtkDataGridView | GtkTreeGridView
+            =>  TIO.New_Line;
+
+         when GtkMenuItem | GtkMenuNormalItem | GtkMenuImageItem
+            =>
+            if TWdg.Child_List /= null then
+               TIO.New_Line;
+               TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Submenu" & " : "
+                             & "Gtk_Menu" & ";");
+            end if;
+
+         when others => null;
+      end case;
+      TIO.Put_Line (Sp (6) & TWdg.Name.all & " : "
+                    & To_Gtk (TWdg, True) & ";");
+      case TWdg.Widget_Type is
+         when GtkDataGridView | GtkTreeGridView =>
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Selection : "
+                          & "Gtk_Tree_Selection" & ";");
+
+         when ExpandableColumn | DataGridViewTextBoxColumn =>
+            if TWdg.DefaultCellStyle /= -1 then
+               TIO.Put_Line (Sp (6) & "CRT_"
+                             & TWdg.Name.all & " : "
+                             & "Gtk_Cell_Renderer_Text" & ";"
+                             & " --  " & Img (TWdg.DefaultCellStyle));
+            else
+               TIO.Put_Line (Sp (6)
+                             & "CRT_"
+                             & TWdg.Name.all & " : "
+                             & "Gtk_Cell_Renderer_Text" & ";");
+            end if;
+
+         when DataGridViewCheckBoxColumn =>
+            TIO.Put_Line (Sp (6) & "CRTG_"
+                          & TWdg.Name.all & " : "
+                          & "Gtk_Cell_Renderer_Toggle" & ";"
+                          & " --  " & Img (TWdg.DefaultCellStyle));
+         when others => null;
+      end case;
+   end Emit_Object;
+
+   procedure Emit_Object_Collection (Filename : String);
+   procedure Emit_Object_Collection (Filename : String) is
+      Temp_Win : Window_Pointer := Win_List;
+   begin
+      if Main_Window then
+         Emit_With_Use ("Gtk.Window");
+      else
+         Emit_With_Use ("Gtk.Dialog");
+      end if;
+      if Have.FileFilters > 0 then
+         Emit_With_Use ("Gtk.File_Filter");
+      end if;
+      if Have.Filechooserdialogs > 0 then
+         Emit_With_Use ("Gtk.File_Chooser_Dialog");
+      end if;
+      if Have.Entrybuffers > 0 then
+         Emit_With_Use ("Gtk.Entry_Buffer");
+      end if;
+      if Have.FileChooserButtons > 0 then
+         Emit_With_Use ("Gtk.File_Chooser_Button");
+      end if;
+      if Have.Images > 0 then
+         Emit_With_Use ("Gtk.Image");
+      end if;
+      if Have.Buttons > 0 then
+         Emit_With_Use ("Gtk.Button");
+      end if;
+      if Have.Labels > 0 then
+         Emit_With_Use ("Gtk.Label");
+      end if;
+      if Have.Menus > 0 then
+         Emit_With_Use ("Gtk.Menu");
+         Emit_With_Use ("Gtk.Menu_Bar");
+      end if;
+      if Have.MenuImageItems > 0 then
+         Emit_With_Use ("Gtk.Image_Menu_Item");
+      end if;
+      if Have.MenuSeparators > 0 then
+         Emit_With_Use ("Gtk.Separator_Menu_Item");
+      end if;
+      if Have.Toolbars > 0 then
+         Emit_With_Use ("Gtk.Toolbar");
+      end if;
+      if Have.ToolSeparators > 0 then
+         Emit_With_Use ("Gtk.Separator_Tool_Item");
+      end if;
+      if Have.Notebooks > 0 then
+         Emit_With_Use ("Gtk.Notebook");
+         Emit_With_Use ("Gtk.Widget");
+         if Have.Boxes = 0 then
+            Emit_With_Use ("Gtk.Box");
+         end if;
+      end if;
+      if Have.TreeStores > 0 then
+         Emit_With_Use ("Gtk.Tree_Store");
+         Emit_With_Use ("Gtk.Tree_Model_Filter");
+         Emit_With_Use ("Gtk.Tree_Model_Sort");
+      end if;
+      if Have.ListStores > 0 then
+         Emit_With_Use ("Gtk.List_Store");
+         if Have.TreeStores = 0 then
+            Emit_With_Use ("Gtk.Tree_Model_Filter");
+            Emit_With_Use ("Gtk.Tree_Model_Sort");
+         end if;
+      end if;
+      if Have.TreeViews > 0 then
+         Emit_With_Use ("Gtk.Tree_View");
+         Emit_With_Use ("Gtk.Tree_Selection");
+      end if;
+      if Have.TreeViewColumns > 0 then
+         Emit_With_Use ("Gtk.Tree_View_Column");
+      end if;
+      if Have.Entries > 0 then
+         Emit_With_Use ("Gtk.GEntry");
+      end if;
+      if Have.ComboTextBoxes > 0 then
+         Emit_With_Use ("Gtk.Combo_Box_Text");
+      end if;
+      if Have.Boxes > 0 then
+         Emit_With_Use ("Gtk.Box");
+      end if;
+      if Max_DGVS > 0 then
+         Emit_With_Use ("Gtk.Cell_Renderer_Text");
+      end if;
+      if Have.TreeViewToggles > 0 then
+         Emit_With_Use ("Gtk.Cell_Renderer_Toggle");
+      end if;
+      TIO.Put_Line ("with Glib;");
+      Emit_With_Use ("Glib.Object");
+      TIO.New_Line;
+      TIO.Put_Line ("package " & Filename & "_Pkg.Object_Collection is");
+      TIO.Put_Line (Sp (3) & "type Widget_Collection_Record is new "
+                    & "Glib.Object.GObject_Record with record");
+      while Temp_Win /= null loop
+         if Temp_Win.Window_Type = GtkWindow then
+            TIO.New_Line;
+         end if;
+         TIO.Put_Line (Sp (6) & Temp_Win.Name.all & " : "
+                       & To_Gtk (Temp_Win) & ";");
+         Temp_Win := Temp_Win.Next;
+      end loop;
+      For_Each_Widget (Win_List, Emit_Object'Access);
+      TIO.Put_Line (Sp (3) & "end record;");
+      TIO.Put_Line (Sp (3) & "type Widget_Collection is access all "
+                    & "Widget_Collection_Record'Class;");
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "procedure New_Widget_Collection ("
+                    & "OC : out Widget_Collection);");
+      TIO.Put_Line (Sp (3) & "procedure Initialize ("
+                    & "OC : not null access Widget_Collection_Record'Class);");
+      TIO.Put_Line (Sp (3) & "function New_Widget_Collection return "
+                    & "Widget_Collection;");
+      if Have.TreeViews > 0
+        and then Have.TreeViewColumns + Have.TreeViewToggles > 0
+      then
+         TIO.New_Line;
+         TIO.Put_Line (Sp (3) & "procedure Set_Treeviews_Header_Style;");
+      end if;
+      if Have.TreeViews > 0
+        and then Have.HDR_CellRenderers > 0
+        and then Have.TreeViewColumns + Have.TreeViewToggles > 0
+      then
+         TIO.New_Line;
+         TIO.Put_Line (Sp (3) & "procedure Set_Header_Style");
+         TIO.Put_Line (Sp (5) & "(Tree        : Gtk_Tree_View;");
+         TIO.Put_Line (Sp (6) & "Bgcolor     : String;");
+         TIO.Put_Line (Sp (6) & "Fgcolor     : String;");
+         TIO.Put_Line (Sp (6) & "Font_Name   : String;");
+         TIO.Put_Line (Sp (6) & "Font_Size   : Integer;");
+         TIO.Put_Line (Sp (6) & "Font_Weight : String);");
+      end if;
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "Me : Widget_Collection;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
+
+      ------------------ body --------------------
+      if Have.TreeViews > 0
+        and then Have.HDR_CellRenderers > 0
+        and then Have.TreeViewColumns + Have.TreeViewToggles > 0
+      then
+         if Have.Buttons = 0 then
+            Emit_With_Use ("Gtk.Button");
+         end if;
+         Emit_With_Use ("Gtk.Enums");
+         Emit_With_Use ("Gdk.RGBA");
+         Emit_With_Use ("Gdk.Color");
+         Emit_With_Use ("Gdk.Color.IHLS");
+         Emit_With_Use ("Pango.Font");
+         Emit_With_Use ("Pango.Enums");
+      end if;
+      TIO.Put_Line ("package body " & Filename & "_Pkg.Object_Collection is");
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "procedure New_Widget_Collection ("
+                    & "OC : out Widget_Collection) is");
+      TIO.Put_Line (Sp (3) & "begin");
+      TIO.Put_Line (Sp (6) & "OC := new Widget_Collection_Record;");
+      TIO.Put_Line (Sp (6) & Filename & "_Pkg.Object_Collection."
+                    & "Initialize (OC);");
+      TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "procedure Initialize ("
+                    & "OC : not null access Widget_Collection_Record'Class)");
+      TIO.Put_Line (Sp (3) & " is");
+      TIO.Put_Line (Sp (3) & "begin");
+      if Win_List = null then
+         TIO.Put_Line (Sp (6) & "null;");
+      else
+         Temp_Win := Win_List;
+         while Temp_Win /= null loop
+            TIO.Put_Line (Sp (6) & "OC."
+                          & Temp_Win.Name.all & " :=");
+            TIO.Put_Line (Sp (8) & To_Gtk (Temp_Win)
+                          & " (Builder.Get_Object (");
+            TIO.Put_Line (Sp (8) & Quoted (Temp_Win.Name.all) & "));");
+            Temp_Win := Temp_Win.Next;
+         end loop;
+         For_Each_Widget (Win_List, Initialize_Object'Access);
+      end if;
+      TIO.Put_Line (Sp (3) & "end Initialize;");
+
+      if Have.TreeViews > 0
+        and then Have.HDR_CellRenderers > 0
+        and then Have.TreeViewColumns + Have.TreeViewToggles > 0
+      then
+         TIO.New_Line;
+         TIO.Put_Line (Sp (3) & "function Lighten "
+                       & "(RGBA : Gdk_RGBA; By : Gdk_Luminance) "
+                       & "return Gdk_RGBA;");
+         TIO.Put_Line (Sp (3) & "function Lighten "
+                       & "(RGBA : Gdk_RGBA; By : Gdk_Luminance) "
+                       & "return Gdk_RGBA is");
+         TIO.Put_Line (Sp (6) & "G : Gdk_Color;");
+         TIO.Put_Line (Sp (6) & "R : Gdk_RGBA;");
+         TIO.Put_Line (Sp (6) & "use Glib;");
+         TIO.Put_Line (Sp (3) & "begin");
+         TIO.Put_Line (Sp (6) & "--  convert to gdk_color");
+         TIO.Put_Line (Sp (6) & "Set_Rgb (G,");
+         TIO.Put_Line (Sp (15) & "Guint16 (256.0 * RGBA.Red) * 256,");
+         TIO.Put_Line (Sp (15) & "Guint16 (256.0 * RGBA.Green) * 256,");
+         TIO.Put_Line (Sp (15) & "Guint16 (256.0 * RGBA.Blue) * 256);");
+         TIO.Put_Line (Sp (6) & "--  lighten it");
+         TIO.Put_Line (Sp (6) & "G := Lighten (G, By);");
+         TIO.Put_Line (Sp (6) & "--  convert back to RGBA");
+         TIO.Put_Line (Sp (6) & "R := Gdk_RGBA'("
+                       & "Gdouble (Red (G)) / (256.0 * 256.0),");
+         TIO.Put_Line (Sp (21) & "Gdouble (Green (G)) /  (256.0 * 256.0),");
+         TIO.Put_Line (Sp (21) & "Gdouble (Blue (G)) / (256.0 * 256.0),");
+         TIO.Put_Line (Sp (21) & "RGBA.Alpha);");
+         TIO.Put_Line (Sp (6) & "return R;");
+         TIO.Put_Line (Sp (3) & "end Lighten;");
+         TIO.New_Line;
+         TIO.Put_Line (Sp (3) & "procedure Set_Header_Style");
+         TIO.Put_Line (Sp (5) & "(Tree        : Gtk_Tree_View;");
+         TIO.Put_Line (Sp (6) & "Bgcolor     : String;");
+         TIO.Put_Line (Sp (6) & "Fgcolor     : String;");
+         TIO.Put_Line (Sp (6) & "Font_Name   : String;");
+         TIO.Put_Line (Sp (6) & "Font_Size   : Integer;");
+         TIO.Put_Line (Sp (6) & "Font_Weight : String)");
+         TIO.Put_Line (Sp (3) & "is");
+
+         TIO.Put_Line (Sp (6) & "RGBA_BgColor   : Gdk_RGBA;");
+         TIO.Put_Line (Sp (6) & "RGBA_FgColor   : Gdk_RGBA;");
+         TIO.Put_Line (Sp (6) & "RGBA_PLBgColor : Gdk_RGBA;");
+         TIO.Put_Line (Sp (6) & "RGBA_PLFgColor : Gdk_RGBA;");
+         TIO.Put_Line (Sp (6) & "BT     : Gtk_Button;");
+         TIO.Put_Line (Sp (6) & "OK     : Boolean;");
+         TIO.Put_Line (Sp (6) & "Col    : Gtk_Tree_View_Column;");
+         TIO.Put_Line (Sp (6) & "NCols  : Glib.Guint;");
+         TIO.Put_Line (Sp (6) & "use type Glib.Guint;");
+         TIO.Put_Line (Sp (6) & "use Pango.Enums;");
+         TIO.Put_Line (Sp (3) & "begin");
+
+         TIO.Put_Line (Sp (6) & "--  parse input colors");
+         TIO.Put_Line (Sp (6) & "Parse (RGBA_BgColor, Bgcolor, OK);");
+         TIO.Put_Line (Sp (6) & "if not OK then");
+         TIO.Put_Line (Sp (9) & "return;");
+         TIO.Put_Line (Sp (6) & "end if;");
+         TIO.Put_Line (Sp (6) & "Parse (RGBA_FgColor, Fgcolor, OK);");
+         TIO.Put_Line (Sp (6) & "if not OK then");
+         TIO.Put_Line (Sp (9) & "return;");
+         TIO.Put_Line (Sp (6) & "end if;");
+         TIO.Put_Line (Sp (6) & "RGBA_PLBgColor := "
+                       & "Lighten (RGBA_BgColor, 6000);");
+         TIO.Put_Line (Sp (6) & "RGBA_PLFgColor := "
+                       & "Lighten (RGBA_FgColor, Gdk_Luminance'First);");
+         TIO.Put_Line (Sp (6) & "NCols := Tree.Get_N_Columns;");
+         TIO.Put_Line (Sp (6) & "for J in 0 .. NCols - 1 loop");
+         TIO.Put_Line (Sp (9) & "Col := Tree.Get_Column (Glib.Gint (J));");
+         TIO.Put_Line (Sp (9) & "BT := Gtk_Button (Col.Get_Button);");
+         TIO.Put_Line (Sp (9) & "BT.Override_Background_Color "
+                       & "(Gtk_State_Flag_Normal,");
+         TIO.Put_Line (Sp (39) & "RGBA_BgColor);");
+         TIO.Put_Line (Sp (9) & "BT.Override_Background_Color "
+                       & "(Gtk_State_Flag_Prelight,");
+         TIO.Put_Line (Sp (39) & "RGBA_PLBgColor);");
+         TIO.Put_Line (Sp (9) & "BT.Override_Color "
+                       & "(Gtk_State_Flag_Normal, RGBA_FgColor);");
+         TIO.Put_Line (Sp (9) & "BT.Override_Color "
+                       & "(Gtk_State_Flag_Prelight, RGBA_PLFgColor);");
+
+         TIO.Put_Line (Sp (9) & "BT.Override_Font");
+         TIO.Put_Line (Sp (11) & "(To_Font_Description");
+         TIO.Put_Line (Sp (14) & "(Family_Name => Font_Name,");
+         TIO.Put_Line (Sp (15) & "Size => Glib.Gint (Font_Size),");
+         TIO.Put_Line (Sp (15) & "Weight => (if Font_Weight = ""Bold""");
+         TIO.Put_Line (Sp (26) & "then Pango_Weight_Bold");
+         TIO.Put_Line (Sp (26) & "else Pango_Weight_Normal)));");
+         TIO.Put_Line (Sp (6) & "end loop;");
+         TIO.Put_Line (Sp (3) & "end Set_Header_Style;");
+         TIO.New_Line;
+         TIO.Put_Line (Sp (3) & "procedure Set_Treeviews_Header_Style is");
+         TIO.Put_Line (Sp (3) & "begin");
+         For_Each_Widget (TWin, Set_TreeView_Header_Style'Access);
+         TIO.Put_Line (Sp (3) & "end Set_Treeviews_Header_Style;");
+      end if;
+
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "function New_Widget_Collection return "
+                    & "Widget_Collection is");
+      TIO.Put_Line (Sp (6) & "OC : constant Widget_Collection := "
+                   & "new Widget_Collection_Record;");
+      TIO.Put_Line (Sp (3) & "begin");
+      TIO.Put_Line (Sp (6) & Filename & "_Pkg.Object_Collection."
+                    & "Initialize (OC);");
+      TIO.New_Line;
+      TIO.Put_Line (Sp (6) & "return OC;");
+      TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
+   end Emit_Object_Collection;
+
+   ---------------------------
+   --  Emit Stores_Enum  --
+   ---------------------------
+   procedure Emit_Stores_Enum (Filename : String);
+   procedure Emit_Stores_Enum (Filename : String) is
+      Temp_Win : Window_Pointer := Win_List;
+      Col      : Widget_Pointer;
+      TWdg     : Widget_Pointer;
+   begin
+      Emit_With_Use ("Glib");
+      TIO.Put_Line ("package " & Filename & "_Pkg.Stores_Enum is");
+      while Temp_Win /= null loop
+         case Temp_Win.Window_Type is
+            when GtkListStore | GtkTreeStore =>
+               TWdg := Temp_Win.Associated_Widget;
+               Col := TWdg.Child_List;
+               if Col /= null then
+                  TIO.New_Line;
+                  TIO.Put_Line (Sp (3) & "type "
+                                & TWdg.Name.all & "_Enum" & " is");
+                  TIO.Put (Sp (5) & "(" & Col.Name.all);
+                  Col := Col.Next;
+               end if;
+               while Col /= null loop
+                  TIO.Put_Line (",");
+                  TIO.Put (Sp (6) & Col.Name.all);
+                  Col := Col.Next;
+               end loop;
+               if TWdg.Child_List /= null then
+                  Col := TWdg.Child_List;
+                  while Col /= null loop
+                     if Col.Widget_Type = DataGridViewCheckBoxColumn then
+                        TIO.Put_Line (",");
+                        TIO.Put (Sp (6) & Col.Name.all & "_Data");
+                        if not Col.ReadOnly then
+                           TIO.Put_Line (",");
+                           TIO.Put (Sp (6) & Col.Name.all & "_Activatable");
+                        end if;
+                     end if;
+                     Col := Col.Next;
+                  end loop;
+                  if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+                     TIO.Put_Line (",");
+                     TIO.Put (Sp (6) & "ALT_Bg_" & TWdg.Name.all);
+                  end if;
+
+                  TIO.Put_Line (");");
+                  TIO.New_Line;
+                  TIO.Put_Line (Sp (3) & "function ""+"" (X : "
+                                & TWdg.Name.all & "_Enum" & ")");
+                  TIO.Put_Line (Sp (16) & "return Gint is");
+                  TIO.Put_Line (Sp (5) & "("
+                                & TWdg.Name.all & "_Enum"
+                                & "'Pos (X));");
+               end if;
+            when others => null;
+         end case;
+         Temp_Win := Temp_Win.Next;
+      end loop;
+      TIO.Put_Line ("end " & Filename & "_Pkg.Stores_Enum;");
+   end Emit_Stores_Enum;
+
+      ------------------------
+   --  Emit Cell_Renderers  --
+   ---------------------------
+   procedure Emit_Cell_Renderers (Filename : String);
+   procedure Emit_Cell_Renderers (Filename : String) is
+   begin
+      TIO.Put_Line ("package " & Filename & "_Pkg.Cell_Renderers is");
+      TIO.Put_Line (Sp (3) & "procedure Initialize;");
+      TIO.Put_Line ("end " & Filename & "_Pkg.Cell_Renderers;");
+
+      Emit_With_Use (Filename & "_Pkg.Object_Collection");
+      Emit_With_Use ("Gtk.Cell_Renderer");
+      Emit_With_Use ("Gtk.Cell_Renderer_Text");
+      Emit_With_Use ("Glib.Properties");
+      Emit_With_Use ("Gtk.Tree_View_Column");
+      if Have.Font_Underline > 0 then
+         Emit_With_Use ("Pango.Enums");
+      end if;
+      if Have.Font_Weight > 0 then
+         Emit_With_Use ("Pango.Font");
+      end if;
+
+      TIO.New_Line;
+      TIO.Put_Line ("package body " & Filename & "_Pkg.Cell_Renderers is");
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "procedure Initialize is");
+      TIO.Put_Line (Sp (3) & "begin");
+      TIO.Put_Line (Sp (6) & "null; --  if no cell renderers are generated");
+      for I in 1 .. Max_DGVS loop
+         if DGVS (I).Emit and then DGVS (I).Name /= null then
+            case DGVS (I).Style_For is
+               when For_TextCell | For_ToggleCell =>
+                  TIO.New_Line;
+                  if DGVS (I).Alignment /= null then
+                     case To_TextAlign (DGVS (I).Alignment.all) is
+                        when None => null;
+                        when TopLeft =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.0);");
+                        when TopCenter =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.5);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.0);");
+                        when TopRight =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 1.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.0);");
+                        when MiddleLeft =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.5);");
+                        when MiddleCenter =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.5);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.5);");
+                        when MiddleRight =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 1.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.5);");
+                        when BottomLeft =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                      & DGVS (I).Name.all & ", "
+                                      & "Xalign_Property, 0.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 1.0);");
+                        when BottomCenter =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.5);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 1.0);");
+                        when BottomRight =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 1.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 1.0);");
+                        when Left =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                      & "Xalign_Property, 0.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.5);");
+                        when Right =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 1.0);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.5);");
+                        when Center =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.5);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.5);");
+                        when Top =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.5);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 0.0);");
+                        when Bottom =>
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Xalign_Property, 0.5);");
+                           TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                         & DGVS (I).Name.all & ", "
+                                         & "Yalign_Property, 1.0);");
+                     end case;
+                  end if;
+                  if DGVS (I).BgColor /= null then
+                     TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                   & DGVS (I).Name.all & ", "
+                                   & "Background_Property, """
+                                   & DGVS (I).BgColor.all & """);");
+                  end if;
+                  if DGVS (I).SelBgColor /= null then
+                     null; --  pending
+                  end if;
+                  if DGVS (I).Padding (2) /= -1 then
+                     TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                   & DGVS (I).Name.all & ", "
+                                   & "Xpad_Property, "
+                                   & DGVS (I).Padding (2)'Image & ");");
+                  end if;
+                  if DGVS (I).Padding (1) /= -1 then
+                     TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                   & DGVS (I).Name.all & ", "
+                                   & "Ypad_Property, "
+                                   & DGVS (I).Padding (1)'Image & ");");
+                  end if;
+                  if DGVS (I).Style_For = For_TextCell then
+                     if DGVS (I).FgColor /= null then
+                        TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                      & DGVS (I).Name.all & ", "
+                                      & "Foreground_Property, """
+                                      & DGVS (I).FgColor.all & """);");
+                     end if;
+                     if DGVS (I).SelFgColor /= null then
+                        null; --  pending
+                     end if;
+                     if DGVS (I).Font_Name /= null then
+                        TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                      & DGVS (I).Name.all & ", "
+                                      & "Font_Desc_Property,");
+                        TIO.Put_Line (Sp (20) & "To_Font_Description");
+                        TIO.Put_Line (Sp (22)
+                                      & "(Family_Name => "
+                                      & Quoted (DGVS (I).Font_Name.all)
+                                      & ",");
+                        TIO.Put (Sp (23)
+                                 & "Size => "
+                                 & Img (DGVS (I).Font_Size));
+                        if DGVS (I).Font_Weight /= null then
+                           TIO.Put_Line (",");
+                           TIO.Put_Line (Sp (23)
+                                    & "Weight => Pango_Weight_"
+                                    &  "+" (DGVS (I).Font_Weight.all)
+                                    & "));");
+                        else
+                           TIO.Put_Line ("));");
+                        end if;
+                     end if;
+                     if DGVS (I).Font_Underline then
+                        TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                      & DGVS (I).Name.all & ", "
+                                      & "Underline_Property, "
+                                      & "Pango_Underline_Single" & ");");
+                     end if;
+                     --  if DGVS (I).Format /= Format_String then
+                     --     null; --  pending
+                     --  end if;
+                     if DGVS (I).WrapMode then
+                        null; --  pending
+                        --  Wrap_Mode_Property
+                        --  Pango.Enums.Property_Wrap_Mode;
+                     end if;
+                     if DGVS (I).NullValue /= null then
+                        null; --  pending
+                     end if;
+                  end if;
+               when For_Column_Header => null; --  pending
+               when For_TreeGridView => null; --  pending
+               when For_Row_Header => null; --  not supported
+               when None => null;
+            end case;
+         end if;
+      end loop;
+      TIO.Put_Line (Sp (3) & "end Initialize;");
+      TIO.New_Line;
+      TIO.Put_Line ("end " & Filename & "_Pkg.Cell_Renderers;");
+   end Emit_Cell_Renderers;
+
+------------------------
    --  Emit Main Window  --
    ------------------------
 
@@ -375,37 +1123,40 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (3) & "procedure Initialize;");
          TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
       else
-         TIO.Put_Line ("with Gtk.Window; use Gtk.Window;");
+         Emit_With_Use ("Gtk.Window");
          TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
          TIO.Put_Line (Sp (3) & "procedure Initialize "
                        & "(Parent : access Gtk_Window_Record'Class);");
          TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
       end if;
 
-      TIO.Put_Line ("with " & Filename & "_Pkg.Object_Collection; "
-                    & "use " & Filename & "_Pkg.Object_Collection;");
+      Emit_With_Use (Filename & "_Pkg.Object_Collection");
       if Signals then
-         TIO.Put_Line ("with " & Filename & "_Pkg.Register_Signals;");
+         Emit_With_Use (Filename & "_Pkg.Register_Signals");
       end if;
-      TIO.Put_Line ("with Ada.Text_IO; use Ada.Text_IO;");
+      if Have.TreeStores > 0 or Have.ListStores > 0 then
+         Emit_With_Use (Filename & "_Pkg.Cell_Renderers");
+      end if;
+      Emit_With_Use ("Ada.Text_IO");
       TIO.Put_Line ("with Gtk.Main;");
       if Main_Window then
-         TIO.Put_Line ("with Gtk.Style_Provider; use Gtk.Style_Provider;");
-         TIO.Put_Line ("with Gtkada.Style; use Gtkada.Style;");
+         Emit_With_Use ("Gtk.Style_Provider");
+         Emit_With_Use ("Gtkada.Style");
       end if;
-      TIO.Put_Line ("with Gtk.Widget; use Gtk.Widget;");
-      TIO.Put_Line ("with Gtkada.Builder; use Gtkada.Builder;");
-      TIO.Put_Line ("with Gtk.Dialog; use Gtk.Dialog;");
-      TIO.Put_Line ("with Gtkada.Dialogs; use Gtkada.Dialogs;");
+      Emit_With_Use ("Gtk.Widget");
+      Emit_With_Use ("Gtkada.Builder");
+      Emit_With_Use ("Gtk.Dialog");
+      Emit_With_Use ("Gtkada.Dialogs");
       TIO.Put_Line ("with Glib;");
-      TIO.Put_Line ("with Glib.Object; use Glib.Object;");
-      TIO.Put_Line ("with Glib.Error; use Glib.Error;");
+      Emit_With_Use ("Glib.Object");
+      Emit_With_Use ("Glib.Error");
       TIO.New_Line;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Main_Windows is");
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "Glade_Filename : constant String :=");
       TIO.Put_Line (Sp (6)
-                    & Quoted (Glade_Path & "/" & TWin.Name.all  & ".glade")
+                    & Quoted (Glade_Path & "/"
+                      & To_Lower (TWin.Name.all)  & ".glade")
                     & ";");
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "procedure Report_Glade_Error (Err : GError);");
@@ -477,6 +1228,11 @@ package body W2Gtk2Ada is
       end if;
       TIO.Put_Line (Sp (6) & "Builder.Do_Connect;");
       TIO.New_Line;
+      if Have.TreeStores > 0 or Have.ListStores > 0 then
+         TIO.Put_Line (Sp (6) & "--  Initialize cell renderers");
+         TIO.Put_Line (Sp (6) & Filename & "_Pkg.Cell_Renderers.Initialize;");
+      end if;
+      TIO.New_Line;
       TIO.Put_Line (Sp (6) & "--  set initial data");
       TIO.Put_Line (Sp (6) & "--     INSERT YOUR INITIAL DATA");
       TIO.New_Line;
@@ -491,236 +1247,18 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (8) & "(Builder.Get_Object ("
                     & Quoted (TWin.Name.all)
                     & ")).Show_All;");
+      TIO.New_Line;
+      if Have.TreeViews > 0
+        and then Have.HDR_CellRenderers > 0
+        and then Have.TreeViewColumns + Have.TreeViewToggles > 0
+      then
+         TIO.Put_Line (Sp (6) & "--  eventually set treeviews header style");
+         TIO.Put_Line (Sp (6) & "Set_Treeviews_Header_Style;");
+         TIO.New_Line;
+      end if;
       TIO.Put_Line (Sp (3) & "end Initialize;");
       TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
    end Emit_Main_Window;
-
-   ------------------------------
-   --  Emit Object Collection  --
-   ------------------------------
-
-   procedure Initialize_Object (TWdg : Widget_Pointer);
-   procedure Initialize_Object (TWdg : Widget_Pointer) is
-   begin
-      case TWdg.Widget_Type is
-         when BackgroundWorker => null;
-         when PrintDocument => null;
-         when PrintDialog => null;
-         when Chart => null;
-         when FolderBrowserDialog => null;
-         when PageSetupDialog => null;
-         when others =>
-            TIO.Put_Line (Sp (6) & "OC." & Capitalize (TWdg.Name.all) & " :=");
-            TIO.Put_Line (Sp (8) & To_Gtk (TWdg)
-                          & " (Builder.Get_Object (");
-            TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all) & "));");
-      end case;
-   end Initialize_Object;
-
-   procedure Emit_Object (TWdg : Widget_Pointer);
-   procedure Emit_Object (TWdg : Widget_Pointer) is
-   begin
-      TIO.Put_Line (Sp (6) & Capitalize (TWdg.Name.all) & " : "
-                    & To_Gtk (TWdg) & ";");
-   end Emit_Object;
-
-   procedure Emit_Object_Collection (Filename : String);
-   procedure Emit_Object_Collection (Filename : String) is
-      Temp_Win : Window_Pointer := Win_List;
-   begin
-      if Main_Window then
-         TIO.Put_Line ("with Gtk.Window; use Gtk.Window;");
-      else
-         TIO.Put_Line ("with Gtk.Dialog; use Gtk.Dialog;");
-      end if;
-      if Have.ListStores > 0 then
-         TIO.Put_Line ("with Gtk.List_Store; use Gtk.List_Store;");
-      end if;
-      if Have.FileFilters > 0 then
-         TIO.Put_Line ("with Gtk.File_Filter; use Gtk.File_Filter;");
-      end if;
-      if Have.Filechooserdialogs > 0 then
-         TIO.Put_Line ("with Gtk.File_Chooser_Dialog; "
-                       & "use Gtk.File_Chooser_Dialog;");
-      end if;
-      if Have.Entrybuffers > 0 then
-         TIO.Put_Line ("with Gtk.Entry_Buffer; use Gtk.Entry_Buffer;");
-      end if;
-      if Have.FileChooserButtons > 0 then
-         TIO.Put_Line ("with Gtk.File_Chooser_Button; "
-                       & "use Gtk.File_Chooser_Button;");
-      end if;
-      if Have.Images > 0 then
-         TIO.Put_Line ("with Gtk.Image; use Gtk.Image;");
-      end if;
-      if Have.Buttons > 0 then
-         TIO.Put_Line ("with Gtk.Button; use Gtk.Button;");
-      end if;
-      if Have.Labels > 0 then
-         TIO.Put_Line ("with Gtk.Label; use Gtk.Label;");
-      end if;
-      if Have.Menus > 0 then
-         TIO.Put_Line ("with Gtk.Menu_Bar; use Gtk.Menu_Bar;");
-      end if;
-      if Have.MenuImageItems > 0 then
-         TIO.Put_Line ("with Gtk.Image_Menu_Item; use Gtk.Image_Menu_Item;");
-      end if;
-      if Have.MenuSeparators > 0 then
-         TIO.Put_Line ("with Gtk.Separator_Menu_Item; "
-                       & "use Gtk.Separator_Menu_Item;");
-      end if;
-      if Have.Toolbars > 0 then
-         TIO.Put_Line ("with Gtk.Toolbar; use Gtk.Toolbar;");
-      end if;
-      if Have.ToolSeparators > 0 then
-         TIO.Put_Line ("with Gtk.Separator_Tool_Item; "
-                       & "use Gtk.Separator_Tool_Item;");
-      end if;
-      if Have.Notebooks > 0 then
-         TIO.Put_Line ("with Gtk.Notebook; use Gtk.Notebook;");
-      end if;
-      if Have.TreeStores > 0 then
-         TIO.Put_Line ("with Gtk.Tree_Store; use Gtk.Tree_Store;");
-      end if;
-      if Have.TreeViews > 0 then
-         TIO.Put_Line ("with Gtk.Tree_View; use Gtk.Tree_View;");
-      end if;
-      if Have.TreeViewColumns > 0 then
-         TIO.Put_Line ("with Gtk.Tree_View_Column; use Gtk.Tree_View_Column;");
-      end if;
-      if Have.Entries > 0 then
-         TIO.Put_Line ("with Gtk.GEntry; use Gtk.GEntry;");
-      end if;
-      if Have.ComboBoxes > 0 then
-         TIO.Put_Line ("with Gtk.Combo_Box_Text; use Gtk.Combo_Box_Text;");
-      end if;
-      if Have.Boxes > 0 then
-         TIO.Put_Line ("with Gtk.Box; use Gtk.Box;");
-      end if;
-      TIO.Put_Line ("with Glib;");
-      TIO.Put_Line ("with Glib.Object; use Glib.Object;");
-      TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_Pkg.Object_Collection is");
-      TIO.Put_Line (Sp (3) & "type Widget_Collection_Record is new "
-                    & "Glib.Object.GObject_Record with record");
-      while Temp_Win /= null loop
-         TIO.Put_Line (Sp (6) & Capitalize (Temp_Win.Name.all) & " : "
-                       & To_Gtk (Temp_Win) & ";");
-         Temp_Win := Temp_Win.Next;
-      end loop;
-      For_Each_Widget (Win_List, Emit_Object'Access);
-      TIO.Put_Line (Sp (3) & "end record;");
-      TIO.Put_Line (Sp (3) & "type Widget_Collection is access all "
-                    & "Widget_Collection_Record'Class;");
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "procedure New_Widget_Collection ("
-                    & "OC : out Widget_Collection);");
-      TIO.Put_Line (Sp (3) & "procedure Initialize ("
-                    & "OC : not null access Widget_Collection_Record'Class);");
-      TIO.Put_Line (Sp (3) & "function New_Widget_Collection return "
-                    & "Widget_Collection;");
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "Me : Widget_Collection;");
-      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
-
-      TIO.Put_Line ("package body " & Filename & "_Pkg.Object_Collection is");
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "procedure New_Widget_Collection ("
-                    & "OC : out Widget_Collection) is");
-      TIO.Put_Line (Sp (3) & "begin");
-      TIO.Put_Line (Sp (6) & "OC := new Widget_Collection_Record;");
-      TIO.Put_Line (Sp (6) & Filename & "_Pkg.Object_Collection."
-                    & "Initialize (OC);");
-      TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "procedure Initialize ("
-                    & "OC : not null access Widget_Collection_Record'Class)");
-      TIO.Put_Line (Sp (3) & " is");
-      TIO.Put_Line (Sp (3) & "begin");
-      if Win_List = null then
-         TIO.Put_Line (Sp (6) & "null;");
-      else
-         Temp_Win := Win_List;
-         while Temp_Win /= null loop
-            TIO.Put_Line (Sp (6) & "OC."
-                          & Capitalize (Temp_Win.Name.all) & " :=");
-            TIO.Put_Line (Sp (8) & To_Gtk (Temp_Win)
-                          & " (Builder.Get_Object (");
-            TIO.Put_Line (Sp (8) & Quoted (Temp_Win.Name.all) & "));");
-            Temp_Win := Temp_Win.Next;
-         end loop;
-         For_Each_Widget (Win_List, Initialize_Object'Access);
-      end if;
-      TIO.Put_Line (Sp (3) & "end Initialize;");
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "function New_Widget_Collection return "
-                    & "Widget_Collection is");
-      TIO.Put_Line (Sp (6) & "OC : constant Widget_Collection := "
-                   & "new Widget_Collection_Record;");
-      TIO.Put_Line (Sp (3) & "begin");
-      TIO.Put_Line (Sp (6) & Filename & "_Pkg.Object_Collection."
-                    & "Initialize (OC);");
-      TIO.Put_Line (Sp (6) & "return OC;");
-      TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
-      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
-   end Emit_Object_Collection;
-
-   ---------------------------
-   --  Emit TreeStore_Enum  --
-   ---------------------------
-   procedure Emit_TreeStores_Enum (Filename : String);
-   procedure Emit_TreeStores_Enum (Filename : String) is
-      Temp_Win : Window_Pointer := Win_List;
-      Col      : Widget_Pointer;
-      TWdg     : Widget_Pointer;
-   begin
-      TIO.Put_Line ("with Glib; use Glib;");
-      TIO.Put_Line ("package " & Filename & "_Pkg.Tree_Stores_Enum is");
-      while Temp_Win /= null loop
-         if Temp_Win.Window_Type = GtkTreeStore then
-            TWdg := Temp_Win.Associated_Widget;
-            Col := TWdg.Child_List;
-            if Col /= null then
-               TIO.New_Line;
-               TIO.Put_Line (Sp (3) & "type "
-                             & Capitalize (TWdg.Name.all) & "_Enum" & " is");
-               TIO.Put (Sp (5) & "(" & Capitalize (Col.Name.all));
-               Col := Col.Next;
-            end if;
-            while Col /= null loop
-               TIO.Put_Line (",");
-               TIO.Put (Sp (6) & Capitalize (Col.Name.all));
-               Col := Col.Next;
-            end loop;
-            if TWdg.Child_List /= null then
-               Col := TWdg.Child_List;
-               while Col /= null loop
-                  if Col.Widget_Type = DataGridViewCheckBoxColumn then
-                     TIO.Put_Line (",");
-                     TIO.Put (Sp (6)
-                              & Capitalize (Col.Name.all) & "_Data");
-                     if not Col.ReadOnly then
-                        TIO.Put_Line (",");
-                        TIO.Put (Sp (6)
-                                 & Capitalize (Col.Name.all) & "_Activatable");
-                     end if;
-                  end if;
-                  Col := Col.Next;
-               end loop;
-               TIO.Put_Line (");");
-               TIO.New_Line;
-               TIO.Put_Line (Sp (3) & "function ""+"" (X : "
-                             & Capitalize (TWdg.Name.all) & "_Enum" & ")");
-               TIO.Put_Line (Sp (16) & "return Gint is");
-               TIO.Put_Line (Sp (5) & "("
-                             & Capitalize (TWdg.Name.all) & "_Enum"
-                             & "'Pos (X));");
-            end if;
-         end if;
-         Temp_Win := Temp_Win.Next;
-      end loop;
-      TIO.Put_Line ("end " & Filename & "_Pkg.Tree_Stores_Enum;");
-   end Emit_TreeStores_Enum;
 
    -------------------------
    --  Emit Main Program  --
@@ -729,7 +1267,7 @@ package body W2Gtk2Ada is
    procedure Emit_Main_Package (Filename : String);
    procedure Emit_Main_Package (Filename : String) is
    begin
-      TIO.Put_Line ("with Gtkada.Builder; use Gtkada.Builder;");
+      Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg is");
       TIO.Put_Line (Sp (3) & "Builder : Gtkada_Builder;");
@@ -786,8 +1324,8 @@ package body W2Gtk2Ada is
       TIO.Put_Line (GPRFile, "      for Switches (""Ada"") use");
       TIO.Put_Line (GPRFile, "        (""-g"","
                     & "             --  debug");
-      TIO.Put_Line (GPRFile, "        (""-gnat2022"","
-                    & "             --  Ada 2022");
+      TIO.Put_Line (GPRFile, "         ""-gnat2022"","
+                    & "      --  Ada 2022");
       TIO.Put_Line (GPRFile, "         ""-O0"","
                     & "            --  optimization level 0");
       TIO.Put_Line (GPRFile, "         ""-fstack-check"","
@@ -802,8 +1340,40 @@ package body W2Gtk2Ada is
                     & "        --  validity checking all");
       TIO.Put_Line (GPRFile, "         ""-gnaty"","
                     & "         --  enable built-in style checks");
-      TIO.Put_Line (GPRFile, "         ""-gnaty3abcefhiklM79nprst"","
-                    & " --  many style checks");
+      TIO.Put_Line (GPRFile, "         ""-gnaty3"","
+                    & "        --  Identation level");
+      TIO.Put_Line (GPRFile, "         ""-gnatya"","
+                    & "        --  Check attribute casing");
+      TIO.Put_Line (GPRFile, "         ""-gnatyb"","
+                    & "        --  Blanks not allowed at statement end");
+      TIO.Put_Line (GPRFile, "         ""-gnatyc"","
+                    & "        --  Check comments, double space");
+      TIO.Put_Line (GPRFile, "         ""-gnatye"","
+                    & "        --  Check end/exit labels");
+      TIO.Put_Line (GPRFile, "         ""-gnatyf"","
+                    & "        --  No form feeds or vertical tabs");
+      TIO.Put_Line (GPRFile, "         ""-gnatyh"","
+                    & "        --  No horizontal tabs");
+      TIO.Put_Line (GPRFile, "         ""-gnatyi"","
+                    & "        --  Check if-then layout");
+      TIO.Put_Line (GPRFile, "         ""-gnatyk"","
+                    & "        --  Check keyword casing");
+      TIO.Put_Line (GPRFile, "         ""-gnatyl"","
+                    & "        --  Check layout");
+      TIO.Put_Line (GPRFile, "         ""-gnatyM120"","
+                    & "     --  Set maximum line length");
+      TIO.Put_Line (GPRFile, "         ""-gnatyn"","
+                    & "        --  Check casing of entities in Standard");
+      TIO.Put_Line (GPRFile, "         ""-gnatyp"","
+                    & "        --  Check pragma casing");
+      TIO.Put_Line (GPRFile, "         ""-gnatyr"","
+                    & "        --  Check references");
+      TIO.Put_Line (GPRFile, "         ""-gnatys"","
+                    & "        --  Check separate specs");
+      TIO.Put_Line (GPRFile, "         ""-gnatyS"","
+                    & "        --  Check no statements after then/else");
+      TIO.Put_Line (GPRFile, "         ""-gnatyt"","
+                    & "        --  Check token spacing");
       TIO.Put_Line (GPRFile, "--         ""-gnatwe"","
                     & "        --  warnings and style checks are errors");
       TIO.Put_Line (GPRFile, "         ""-gnatwa"","
@@ -1178,8 +1748,10 @@ package body W2Gtk2Ada is
          Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-signals.ads");
          Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-signals.adb");
       end if;
-      if Have.TreeStores > 0 then
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-tree_store_enum.ads");
+      if Have.TreeStores > 0 or Have.ListStores > 0 then
+         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-stores_enum.ads");
+         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-cell_renderers.ads");
+         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-cell_renderers.adb");
       end if;
 
       if Main_Window then
@@ -1198,8 +1770,10 @@ package body W2Gtk2Ada is
          Make_Backup (Ada_Path & "/" & Filename & "_pkg-signals.ads");
          Make_Backup (Ada_Path & "/" & Filename & "_pkg-signals.adb");
       end if;
-      if Have.TreeStores > 0 then
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-tree_store_enum.ads");
+      if Have.TreeStores > 0 or Have.ListStores > 0 then
+         Make_Backup (Ada_Path & "/" & Filename & "_pkg-stores_enum.ads");
+         Make_Backup (Ada_Path & "/" & Filename & "_pkg-cell_renderers.ads");
+         Make_Backup (Ada_Path & "/" & Filename & "_pkg-cell_renderers.ads");
       end if;
       return 0;
    exception
@@ -1227,6 +1801,16 @@ package body W2Gtk2Ada is
 
       if Debug then
          TIO.New_Line;
+         TIO.Put_Line ("Generating Backups...");
+      end if;
+      Status := Generate_Backups (Ada_Path,
+                                  To_Lower (Filename), Debug);
+      if Status < 0 then
+         return Status;
+      end if;
+
+      if Debug then
+         TIO.New_Line;
          TIO.Put_Line ("Generating Ada files...");
       end if;
 
@@ -1245,18 +1829,13 @@ package body W2Gtk2Ada is
          Emit_Signals (Capitalize (Filename));
          Emit_Register_Signals (Capitalize (Filename));
       end if;
-      if Have.TreeStores > 0 then
-         Emit_TreeStores_Enum (Capitalize (Filename));
+      if Have.TreeStores > 0 or Have.ListStores > 0 then
+         Emit_Stores_Enum (Capitalize (Filename));
+         Emit_Cell_Renderers (Capitalize (Filename));
       end if;
       TIO.Set_Output (TIO.Standard_Output);
 
       TIO.Close (AdaFile);
-
-      Status := Generate_Backups (Ada_Path,
-                                  To_Lower (Filename), Debug);
-      if Status < 0 then
-         return Status;
-      end if;
 
       if Main_Window then
          if Debug then
@@ -1355,11 +1934,23 @@ package body W2Gtk2Ada is
                                           & "_pkg-signals.adb",
                                           Max_Gen, Debug);
                end if;
-               if Status = 0 or Status = 2 then
-                  if Have.TreeStores > 0 then
+            end if;
+            if Status = 0 or Status = 2 then
+               if Have.TreeStores > 0 or Have.ListStores > 0 then
+                  Status := Perform_Diff (Ada_Path,
+                                          To_Lower (Filename)
+                                          & "_pkg-stores_enum.ads",
+                                          Max_Gen, Debug);
+                  if Status = 0 then
                      Status := Perform_Diff (Ada_Path,
                                              To_Lower (Filename)
-                                             & "_pkg-tree_stores_enum.ads",
+                                             & "_pkg-cell_renderers.ads",
+                                             Max_Gen, Debug);
+                  end if;
+                  if Status = 0 then
+                     Status := Perform_Diff (Ada_Path,
+                                             To_Lower (Filename)
+                                             & "_pkg-cell_renderers.adb",
                                              Max_Gen, Debug);
                   end if;
                end if;

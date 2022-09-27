@@ -123,6 +123,32 @@ package body W2gtk_Decls is
       end if;
    end Convert;
 
+   -------------------------
+   -- To_Cell_Format_Enum --
+   -------------------------
+
+   function To_Cell_Format_Enum (Str : String) return Cell_Format_Enum is
+   begin
+      if Str = "" then
+         return Format_String;
+      end if;
+      if To_Lower (Str (Str'First + 1)) = 'r' then
+         return Format_Int;
+      elsif To_Lower (Str (Str'First + 1)) = 'n' then
+         return Format_Real;
+      elsif To_Lower (Str (Str'First + 1)) = 'd' then
+         return Format_String;
+      elsif To_Lower (Str (Str'First + 1)) = 'g' then
+         return Format_String;
+      elsif To_Lower (Str (Str'First + 1)) = '0' then
+         return Format_Int;
+      elsif To_Lower (Str (Str'First + 1)) = 'b' then
+         return Format_Bool;
+      else
+         return Format_String;
+      end if;
+   end To_Cell_Format_Enum;
+
    ------------------
    -- To TextAlign --
    ------------------
@@ -214,15 +240,17 @@ package body W2gtk_Decls is
          if WColor (Idx0 + 1 .. WColor'Last) = "Control" then
             return "white";
          elsif WColor (Idx0 + 1 .. WColor'Last) = "Highlight" then
-            return "white";
+            return "DodgerBlue1";  --  "white"; --  3399FF
          elsif WColor (Idx0 + 1 .. WColor'Last) = "Window" then
-            return "#c0c0bfbfbcbc";
+            return "grey81";
+         elsif WColor (Idx0 + 1 .. WColor'Last) = "ButtonFace" then
+            return "grey81";
          elsif WColor (Idx0 + 1 .. WColor'Last) = "ControlText" then
             return "black";
          elsif WColor (Idx0 + 1 .. WColor'Last) = "WindowText" then
             return "black";
          elsif WColor (Idx0 + 1 .. WColor'Last) = "HighlightText" then
-            return "blue";
+            return "white";
          else
             return WColor (Idx0 + 1 .. WColor'Last);
          end if;
@@ -325,7 +353,7 @@ package body W2gtk_Decls is
       To.AutoSize := From.AutoSize;
       To.AutoSizeMode := From.AutoSizeMode;
       To.Font_Name := New_String (From.Font_Name);
-      To.Font_Size := New_String (From.Font_Size);
+      To.Font_Size := From.Font_Size;
       To.Font_Weight := New_String (From.Font_Weight);
       To.Margins := From.Margins;
       To.DStyle := From.DStyle;
@@ -372,7 +400,6 @@ package body W2gtk_Decls is
       Free (WT.Name);
       Free (WT.Text);
       Free (WT.Font_Name);
-      Free (WT.Font_Size);
       Free (WT.Font_Weight);
       Free (WT.ToolTip);
       Free (WT.BgColor);
@@ -383,7 +410,7 @@ package body W2gtk_Decls is
          when No_Widget =>
             null;
 
-         when GtkMenuItem => null;
+         when GtkMenuItem | GtkSubMenu => null;
          when GtkSeparatorMenuItem => null;
 
          when GtkMenuNormalItem | GtkMenuImageItem
@@ -399,8 +426,7 @@ package body W2gtk_Decls is
                when GtkDataGridView | GtkTreeGridView =>
                   null;
 
-               when ExpandableColumn
-                  | DataGridViewTextBoxColumn
+               when ExpandableColumn | DataGridViewTextBoxColumn
                   | DataGridViewCheckBoxColumn
                   =>
                   null;
@@ -420,13 +446,17 @@ package body W2gtk_Decls is
          when GtkTabChild =>
             null;
 
-         when GtkEntry | GtkComboBox | GtkCalendar =>
+         when GtkTabPage =>
+            Free (WT.The_Label);
+            Free (WT.The_Button);
+
+         when GtkEntry | GtkComboTextBox | GtkCalendar =>
             Free (WT.Text_Buffer);
             case WT.Widget_Type is
-               when GtkEntry | GtkComboBox =>
+               when GtkEntry | GtkComboTextBox =>
                   Free (WT.PasswordChar);
                   case WT.Widget_Type is
-                     when GtkComboBox =>
+                     when GtkComboTextBox =>
                         null;
                      when others => null;
                   end case;
@@ -759,8 +789,8 @@ package body W2gtk_Decls is
             Have.TreeViewColumns := Have.TreeViewColumns + 1;
          when GtkEntry =>
             Have.Entries := Have.Entries + 1;
-         when GtkComboBox =>
-            Have.ComboBoxes := Have.ComboBoxes + 1;
+         when GtkComboTextBox =>
+            Have.ComboTextBoxes := Have.ComboTextBoxes + 1;
          when GtkBox =>
             Have.Boxes := Have.Boxes + 1;
          when GtkFileChooserButton =>
@@ -822,6 +852,38 @@ package body W2gtk_Decls is
          TWdg.Signal_List := TS;
       end if;
    end Insert_Signal;
+
+   ------------------
+   -- Signal Exists--
+   ------------------
+
+   function Signal_Exists (TWin : Window_Pointer;
+                           Signal_Name : String) return Boolean is
+      TS : Signal_Pointer;
+   begin
+      TS := TWin.Signal_List;
+      while TS /= null loop
+         if TS.Name.all = Signal_Name then
+            return True;
+         end if;
+         TS := TS.Next;
+      end loop;
+      return False;
+   end Signal_Exists;
+
+   function Signal_Exists (TWdg        : Widget_Pointer;
+                           Signal_Name : String) return Boolean is
+      TS : Signal_Pointer;
+   begin
+      TS := TWdg.Signal_List;
+      while TS /= null loop
+         if TS.Name.all = Signal_Name then
+            return True;
+         end if;
+         TS := TS.Next;
+      end loop;
+      return False;
+   end Signal_Exists;
 
    -----------------
    -- Insert_Focus --
@@ -988,33 +1050,78 @@ package body W2gtk_Decls is
    -------------------------
 
    procedure Process_Inheritable (TWin : Window_Pointer) is
-      TWdg  : Widget_Pointer;
-      --  TWdg1 : Widget_Pointer;
+      TWdg : Widget_Pointer;
+      Changed : Boolean;
    begin
       --  inherits font
       TWdg := TWin.Widget_List;
       while TWdg /= null loop
-         if TWdg.Font_Name = null and then TWin.Font_Name /= null
-         then
+         Changed := False;
+         if TWdg.Font_Name = null and then TWin.Font_Name /= null then
             TWdg.Font_Name := new String'(TWin.Font_Name.all);
+            Changed := True;
          end if;
-         if TWdg.Font_Size = null and then TWin.Font_Size /= null
-         then
-            TWdg.Font_Size := new String'(TWin.Font_Size.all);
+         if TWdg.Font_Size = Default_Font_Size then
+            TWdg.Font_Size := TWin.Font_Size;
+            Changed := True;
          end if;
-         if TWdg.Font_Weight = null and then TWin.Font_Weight /= null
-         then
+         if TWdg.Font_Weight = null and then TWin.Font_Weight /= null then
             TWdg.Font_Weight := new String'(TWin.Font_Weight.all);
+            Changed := True;
          end if;
-         if TWdg.Font_Name /= null then
+         if not TWdg.Font_Underline and then TWin.Font_Underline then
+            TWdg.Font_Underline := True;
+         end if;
+         if Changed then
             Debug (0, "Set Inherited Property " & TWdg.Name.all & ".Font="""
-                   & TWdg.Font_Name.all & " "
-                   & (if TWdg.Font_Size /= null then
-                        TWdg.Font_Size.all else "") & " "
+                   & TWdg.Font_Name.all
+                   & ", " & Img (TWdg.Font_Size)
                    & (if TWdg.Font_Weight /= null then
-                        TWdg.Font_Weight.all else "") & """");
+                        ", " & TWdg.Font_Weight.all else "") & """"
+                   & (if TWdg.Font_Underline then "underline" else ""));
          end if;
          TWdg := TWdg.Next;
+      end loop;
+
+      for I in 1 .. Max_DGVS loop
+         Changed := False;
+         if DGVS (I).Font_Name = null and then TWin.Font_Name /= null then
+            DGVS (I).Font_Name := new String'(TWin.Font_Name.all);
+            Changed := True;
+         end if;
+         if DGVS (I).Font_Size = Default_Font_Size then
+            DGVS (I).Font_Size := TWin.Font_Size;
+            Changed := True;
+         end if;
+         if DGVS (I).Font_Weight = null and then TWin.Font_Weight /= null
+         then
+            DGVS (I).Font_Weight := new String'(TWin.Font_Weight.all);
+            Changed := True;
+         end if;
+         if not DGVS (I).Font_Underline and then TWin.Font_Underline then
+            DGVS (I).Font_Underline := True;
+            Changed := True;
+         end if;
+         if Changed then
+            if DGVS (I).Name /= null then
+               Debug (0, "Set Inherited Property Gtk_Cell_Renderer "
+                      & "(" & Img (I) & ")"
+                      & DGVS (I).Name.all
+                      & ".Font=""" & DGVS (I).Font_Name.all
+                      & ", " & Img (DGVS (I).Font_Size)
+                      & (if DGVS (I).Font_Weight /= null then
+                           ", " & DGVS (I).Font_Weight.all else "") & """"
+                      & (if DGVS (I).Font_Underline then "underline" else ""));
+            else
+               Debug (0, "Set Inherited Property Gtk_Cell_Renderer "
+                      & "(" & Img (I) & ")"
+                      & ".Font=""" & DGVS (I).Font_Name.all
+                      & ", " & Img (DGVS (I).Font_Size)
+                      & (if DGVS (I).Font_Weight /= null then
+                           ", " & DGVS (I).Font_Weight.all else "") & """"
+                      & (if DGVS (I).Font_Underline then "underline" else ""));
+            end if;
+         end if;
       end loop;
    end Process_Inheritable;
 
@@ -1195,17 +1302,17 @@ package body W2gtk_Decls is
    -- Get_Font --
    --------------
 
-   procedure Get_Font (Data        : in String;
-                       Font_Name   : in out String_Access;
-                       Font_Size   : in out String_Access;
-                       Font_Weight : in out String_Access) is
+   procedure Get_Font (Data           : in String;
+                       Font_Name      : in out String_Access;
+                       Font_Size      : in out Integer;
+                       Font_Weight    : in out String_Access;
+                       Font_Underline : in out Boolean) is
       Idx0  : Integer;
       Idx1  : Integer;
       Idx2  : Integer;
       Idx3  : Integer;
       Last  : Integer;
       Num   : Float;
-      FSize : Integer;
    begin
       Idx0 := Index (Data, """");
       if Idx0 not in Data'Range then
@@ -1217,45 +1324,52 @@ package body W2gtk_Decls is
          raise TIO.Data_Error;
       end if;
       Idx1 := Idx1 - 1;
+
+      --  font name
       if Data (Idx0 .. Idx1) = "Calibri" then
          Font_Name := new String'("Sans");
       else
          Font_Name := new String'(Data (Idx0 .. Idx1));
       end if;
 
+      --  font size
       Idx2 := Index (Data (Idx1 + 1 .. Data'Last), """, ");
       if not (Idx2 in Idx1 + 1 .. Data'Last) then
          raise TIO.Data_Error;
       end if;
       Idx2 := Idx2 + 3;
       FTIO.Get (Data (Idx2 .. Data'Last), Num, Last);
-      FSize := Integer (Num);
-      Font_Size := new String'(Img (FSize));
+      Font_Size := Integer (Num);
 
+      --  optional font weitht
       Idx3 := Index (Data (Idx2 + 1 .. Data'Last), ", style=");
       if Idx3 in Idx2 + 1 .. Data'Last - 1 then
          Font_Weight := new String'(To_Lower
                                     (Data (Idx3 + 8 .. Data'Last - 1)));
       else
-         Font_Weight := new String'("none");
+         Font_Weight := null;
       end if;
+
+      --  optional font underline
+      Idx3 :=  Index (Data,  "System.Drawing.FontStyle.Underline");
+      Font_Underline := Idx3 in Data'Range;
    end Get_Font;
 
    --------------
    -- Get_Font --
    --------------
 
-   procedure Get_Font (F           : TIO.File_Type;
-                       Font_Name   : in out String_Access;
-                       Font_Size   : in out String_Access;
-                       Font_Weight : in out String_Access) is
+   procedure Get_Font (F              : TIO.File_Type;
+                       Font_Name      : in out String_Access;
+                       Font_Size      : in out Integer;
+                       Font_Weight    : in out String_Access;
+                       Font_Underline : in out Boolean) is
       Data  : constant String := Get_String (F);
       Idx0  : Integer;
       Idx1  : Integer;
       Idx2  : Integer;
       Last  : Integer;
       Num   : Float;
-      FSize : Integer;
    begin
       Idx0 := Index (Data, ",");
       if not (Idx0 in Data'Range)
@@ -1263,52 +1377,33 @@ package body W2gtk_Decls is
       then
          raise TIO.Data_Error;
       end if;
+
+      --  font name
       if Data (Data'First .. Idx0 - 1) = "Calibri" then
          Font_Name := new String'("Sans");
       else
          Font_Name := new String'(Data (Data'First .. Idx0 - 1));
       end if;
 
+      --  font size
       Idx1 := Index (Data (Idx0 + 1 .. Data'Last), "pt");
       if not (Idx1 in Idx0 + 1 .. Data'Last) then
          raise TIO.Data_Error;
       end if;
       FTIO.Get (Data (Idx0 + 1 .. Idx1 - 1), Num, Last);
-      FSize := Integer (Num);
-      Font_Size := new String'(Img (FSize));
+      Font_Size := Integer (Num);
 
+      --  font weight
       Idx2 := Index (Data (Idx1 + 1 .. Data'Last), ", style=");
       if Idx2 in Idx1 + 1 .. Data'Last - 1 then
          Font_Weight := new String'(To_Lower (Data (Idx2 + 8 .. Data'Last)));
       else
          Font_Weight := null;
       end if;
-      Idx0 := Index (Data, ",");
-      if not (Idx0 in Data'Range)
-        or else Idx0 = Data'First
-      then
-         raise TIO.Data_Error;
-      end if;
-      if Data (Data'First .. Idx0 - 1) = "Calibri" then
-         Font_Name := new String'("Sans");
-      else
-         Font_Name := new String'(Data (Data'First .. Idx0 - 1));
-      end if;
 
-      Idx1 := Index (Data (Idx0 + 1 .. Data'Last), "pt");
-      if not (Idx1 in Idx0 + 1 .. Data'Last) then
-         raise TIO.Data_Error;
-      end if;
-      FTIO.Get (Data (Idx0 + 1 .. Idx1 - 1), Num, Last);
-      FSize := Integer (Num);
-      Font_Size := new String'(Img (FSize));
-
-      Idx2 := Index (Data (Idx1 + 1 .. Data'Last), ", style=");
-      if Idx2 in Idx1 + 1 .. Data'Last - 1 then
-         Font_Weight := new String'(To_Lower (Data (Idx2 + 8 .. Data'Last)));
-      else
-         Font_Weight := new String'("none");
-      end if;
+      --  optional font underline
+      Idx2 :=  Index (Data,  "System.Drawing.FontStyle.Underline");
+      Font_Underline := Idx2 in Data'Range;
    end Get_Font;
 
    ------------------
@@ -1367,19 +1462,27 @@ package body W2gtk_Decls is
                return "Gtk_Window";
             end if;
          when GtkFileChooserDialog => return "Gtk_File_Chooser_Dialog";
-         when GtkFileFilter => return "Gtk_File_Filter";
-         when GtkEntryBuffer => return "Gtk_Entry_Buffer";
-         when GtkListStore => return "Gtk_List_Store";
-         when GtkTreeStore => return "Gtk_Tree_Store";
-         when GtkImage => return "Gtk_Image";
+         when GtkFileFilter        => return "Gtk_File_Filter";
+         when GtkEntryBuffer       => return "Gtk_Entry_Buffer";
+         when GtkListStore         => return "Gtk_List_Store";
+         when GtkTreeStore         => return "Gtk_Tree_Store";
+         when GtkModelSort         => return "Gtk_Tree_Model_Sort";
+         when GtkModelFilter       => return "Gtk_Tree_Model_Filter";
+         when GtkImage             => return "Gtk_Image";
       end case;
    end To_Gtk;
 
-   function To_Gtk (T : Widget_Pointer) return String is
+   function To_Gtk (T       : Widget_Pointer;
+                    For_Ada : Boolean := False) return String is
    begin
+      if T.Widget_Type = GtkTabPage and then For_Ada then
+         return "Gtk_Widget";
+      end if;
+
       case T.Widget_Type is
          when GtkLabel => return "Gtk_Label";
          when GtkNoteBook => return "Gtk_Notebook";
+         when GtkTabPage => return "tab";
          when GtkTabChild => return "Gtk_Box";
          when GtkDataGridView => return "Gtk_Tree_View";
          when GtkTreeGridView => return "Gtk_Tree_View";
@@ -1388,7 +1491,7 @@ package body W2gtk_Decls is
          when DataGridViewTextBoxColumn => return "Gtk_Tree_View_Column";
          when GtkListBox => return "Gtk_List_Box";
          when GtkEntry => return "Gtk_Entry";
-         when GtkComboBox => return "Gtk_Combo_Box_Text";
+         when GtkComboTextBox => return "Gtk_Combo_Box_Text";
          when GtkToolBar => return "Gtk_Toolbar";
          when GtkButton => return "Gtk_Button";
          when GtkRadioButton => return "Gtk_Radio_Button";

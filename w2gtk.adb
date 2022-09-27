@@ -156,7 +156,7 @@ begin
                                      Glade_File_Name.all);
    end if;
 
-   if Ada_Path /= null and then Ada_Path.all /= "" then
+   if Result = 0 and then Ada_Path /= null and then Ada_Path.all /= "" then
       Result := Generate_Ada_Packages (Ada_Path   => Ada_Path.all,
                                        Glade_Path => Glade_Path.all,
                                        Filename   => Glade_File_Name.all,
