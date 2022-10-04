@@ -102,6 +102,8 @@ package W2gtk_Decls is
       Name    : String_Access := null; --  original signal name
       Handler : String_Access := null; --  handler name
       Line    : Integer;
+      Proc    : Boolean := True;       --  false means function
+      After   : Boolean := False;      --  emit After if true
    end record;
 
    --  datagridview style

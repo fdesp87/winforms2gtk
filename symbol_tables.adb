@@ -51,33 +51,34 @@ package body Symbol_Tables is
    procedure Initialize_Signal_Symbol_Table is
       Wst : Signal_Map.Map renames Signal_Symbol_Table;
    begin
-      Wst.Insert ("Load", "realize");
-      Wst.Insert ("FormClosing", "destroy");
+      Wst.Insert ("Load", "realize");                 --  main window, dialog
+      Wst.Insert ("FormClosing", "destroy");          --  main window, dialog
       Wst.Insert ("TextChanged", "changed");          --  gtkentry gtkcombobox
       Wst.Insert ("SelectedIndexChanged", "changed"); --  combobox
       Wst.Insert ("ValueChanged", "value-changed");   --  spin
       Wst.Insert ("SelectedValueChanged", "changed"); --  combobox
       Wst.Insert ("CheckedChanged", "toggled");       --  checkbutton
       Wst.Insert ("Checked", "toggled");              --  radiobutton
-      Wst.Insert ("Click", "clicked");
+      Wst.Insert ("Click", "clicked");      --  gtkbutton, treeviewcol-checkbox
       Wst.Insert ("BeginPrint", "begin-print");
       Wst.Insert ("PrintPage", "print-page");
       Wst.Insert ("MouseClick", "clicked");
       Wst.Insert ("Leave", "leave-notify-event");
       Wst.Insert ("FileOk", "file-set");
       Wst.Insert ("MouseDoubleClick", "clicked");
-      Wst.Insert ("CloseButtonClick", "clicked");
+      Wst.Insert ("CloseButtonClick", "clicked");     --  not used
       Wst.Insert ("Selected", "clicked");
       Wst.Insert ("CellMouseEnter", "clicked");
       Wst.Insert ("CellMouseLeave", "clicked");
       Wst.Insert ("CellMouseClick", "clicked");
-      Wst.Insert ("Toggled", "toggled");
+      Wst.Insert ("Toggled", "toggled");              --  gtkcheckboxcolum
       Wst.Insert ("LeaveFocus", "focus");
       Wst.Insert ("DoWork", "DoWork");
       Wst.Insert ("ProgressChanged", "ProgressChanged");
       Wst.Insert ("RunWorkerCompleted", "RunWorkerCompleted");
    end Initialize_Signal_Symbol_Table;
 
+   function Get_Gtk_Signal (WSignal : String) return String;
    function Get_Gtk_Signal (WSignal : String) return String
    is
       use Signal_Map;
@@ -126,9 +127,9 @@ package body Symbol_Tables is
             if WSignal = "Selected" then
                return "switch-page";
             elsif WSignal = "MouseDoubleClick" then
-               return "switch-page";
+               return "button-press-event";
             elsif WSignal = "CloseButtonClick" then
-               return "switch-page";
+               return "clicked";
             end if;
          when GtkMenuBar =>
             if WSignal = "Click" then

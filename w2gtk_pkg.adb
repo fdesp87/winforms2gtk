@@ -1369,13 +1369,21 @@ package body W2gtk_Pkg is
          begin
             TS := TWdgP.Signal_List;
             while TS /= null loop
-               Put_Property ("Signal");
+               if TS.After then
+                  Put_Property ("Signal (after)");
+               else
+                  Put_Property ("Signal (before)");
+               end if;
                TIO.Put (LFile, TS.Name.all
                         & " ("
                         & Convert_Signal_To_Gtk (TWdgP, TS.Name.all)
                         & ") ");
                if TS.Handler /= null then
-                  TIO.Put (LFile, " => " & TS.Handler.all);
+                  if TS.Proc then
+                     TIO.Put (LFile, " => procedure " & TS.Handler.all);
+                  else
+                     TIO.Put (LFile, " => function " & TS.Handler.all);
+                  end if;
                end if;
                TIO.New_Line (LFile);
                TS := TS.Next;
@@ -4560,7 +4568,12 @@ package body W2gtk_Pkg is
                   end if;
                end;
                WS.Line := NLin;
-               Insert_Signal (WT, WS); --  original name
+               if WT.Widget_Type = GtkNoteBook
+                 and then WS.Name.all = "Selected"
+               then
+                  WS.After := True;
+               end if;
+               Insert_Signal (WT, WS);
                if Ret = 1 then
                   Debug (NLin, "Created Signal "
                          & Complete_Signal (Complete_Signal'First ..

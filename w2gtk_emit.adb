@@ -272,11 +272,20 @@ package body W2gtk_Emit is
                Emit := False;
             end if;
             if Emit then
-               Emit_Line (Sp (Id) & "<signal name="""
-                          & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
-                          & """ handler=""" & TS.Handler.all & """"
-                          & " object=""" & TWdg.Name.all & """"
-                          & " swapped=""no""/>");
+               if TS.After then
+                  Emit_Line (Sp (Id) & "<signal name="""
+                             & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
+                             & """ handler=""" & TS.Handler.all & """"
+                             & " object=""" & TWdg.Name.all & """"
+                             & " after=""yes"""
+                             & " swapped=""no""/>");
+               else
+                  Emit_Line (Sp (Id) & "<signal name="""
+                             & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
+                             & """ handler=""" & TS.Handler.all & """"
+                             & " object=""" & TWdg.Name.all & """"
+                             & " swapped=""no""/>");
+               end if;
             end if;
             TS := TS.Next;
          end loop;
@@ -2462,7 +2471,6 @@ package body W2gtk_Emit is
             Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);
          end if;
          Emit_Has_Frame (TWdg, Id + 4);
-         Emit_GtkSignal (TWdg, Id + 4);
          Emit_GtkSignal (TWdg, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
          Emit_Packing_Child (TWdg, Id,
