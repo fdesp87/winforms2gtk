@@ -1085,7 +1085,7 @@ package body W2gtk_Pkg is
                Put_Property ("Signal");
                TIO.Put (LFile, TS.Name.all
                         & " ("
-                        & Convert_Signal_To_Gtk (TWin, TS.Name.all)
+                        & Convert_Signal_To_Gtk (TWin, TS)
                         & ") ");
                if TS.Handler /= null then
                   TIO.Put (LFile, " => " & TS.Name.all);
@@ -1369,14 +1369,22 @@ package body W2gtk_Pkg is
          begin
             TS := TWdgP.Signal_List;
             while TS /= null loop
-               if TS.After then
-                  Put_Property ("Signal (after)");
+               if TS.Glade then
+                  if TS.After then
+                     Put_Property ("Glade Signal (after)");
+                  else
+                     Put_Property ("Glade Signal (before)");
+                  end if;
                else
-                  Put_Property ("Signal (before)");
+                  if TS.After then
+                     Put_Property ("Signal (after)");
+                  else
+                     Put_Property ("Signal (before)");
+                  end if;
                end if;
                TIO.Put (LFile, TS.Name.all
                         & " ("
-                        & Convert_Signal_To_Gtk (TWdgP, TS.Name.all)
+                        & Convert_Signal_To_Gtk (TWdgP, TS)
                         & ") ");
                if TS.Handler /= null then
                   if TS.Proc then

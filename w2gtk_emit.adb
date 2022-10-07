@@ -229,11 +229,22 @@ package body W2gtk_Emit is
          TS : Signal_Pointer := TWin.Signal_List;
       begin
          while TS /= null loop
-            Emit_Line (Sp (Id) & "<signal name="""
-                       & Convert_Signal_To_Gtk (TWin, TS.Name.all)
-                       & """ handler="""
-                       & TS.Handler.all
-                       & """ swapped=""no""/>");
+            if TS.Glade then
+               if TS.After then
+                  Emit_Line (Sp (Id) & "<signal name="""
+                             & Convert_Signal_To_Gtk (TWin, TS)
+                             & """ handler="""
+                             & TS.Handler.all
+                             & " after=""yes"""
+                             & """ swapped=""no""/>");
+               else
+                  Emit_Line (Sp (Id) & "<signal name="""
+                             & Convert_Signal_To_Gtk (TWin, TS)
+                             & """ handler="""
+                             & TS.Handler.all
+                             & """ swapped=""no""/>");
+               end if;
+            end if;
             TS := TS.Next;
          end loop;
       exception
@@ -262,29 +273,31 @@ package body W2gtk_Emit is
             raise Program_Error;
          end if;
          while TS /= null loop
-            if Except = "" and then Only_For = "" then
-               Emit := True;
-            elsif Except /= "" then
-               Emit := Except /= TS.Name.all;
-            elsif Only_For /= "" then
-               Emit := Only_For = TS.Name.all;
-            else
-               Emit := False;
-            end if;
-            if Emit then
-               if TS.After then
-                  Emit_Line (Sp (Id) & "<signal name="""
-                             & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
-                             & """ handler=""" & TS.Handler.all & """"
-                             & " object=""" & TWdg.Name.all & """"
-                             & " after=""yes"""
-                             & " swapped=""no""/>");
+            if TS.Glade then
+               if Except = "" and then Only_For = "" then
+                  Emit := True;
+               elsif Except /= "" then
+                  Emit := Except /= TS.Name.all;
+               elsif Only_For /= "" then
+                  Emit := Only_For = TS.Name.all;
                else
-                  Emit_Line (Sp (Id) & "<signal name="""
-                             & Convert_Signal_To_Gtk (TWdg, TS.Name.all)
-                             & """ handler=""" & TS.Handler.all & """"
-                             & " object=""" & TWdg.Name.all & """"
-                             & " swapped=""no""/>");
+                  Emit := False;
+               end if;
+               if Emit then
+                  if TS.After then
+                     Emit_Line (Sp (Id) & "<signal name="""
+                                & Convert_Signal_To_Gtk (TWdg, TS)
+                                & """ handler=""" & TS.Handler.all & """"
+                                & " object=""" & TWdg.Name.all & """"
+                                & " after=""yes"""
+                                & " swapped=""no""/>");
+                  else
+                     Emit_Line (Sp (Id) & "<signal name="""
+                                & Convert_Signal_To_Gtk (TWdg, TS)
+                                & """ handler=""" & TS.Handler.all & """"
+                                & " object=""" & TWdg.Name.all & """"
+                                & " swapped=""no""/>");
+                  end if;
                end if;
             end if;
             TS := TS.Next;
@@ -1085,7 +1098,7 @@ package body W2gtk_Emit is
          while TS /= null loop
             if TS.Name.all = "CloseButtonClick" then
                Emit_Line (Sp (Id + 8) & "<signal name="""
-                          & Convert_Signal_To_Gtk (Button, TS.Name.all)
+                          & Convert_Signal_To_Gtk (Button, TS)
                           & """ handler=""" & TS.Handler.all & """"
                           & " object=""" & Button.Name.all & """"
                           & " swapped=""no""/>");

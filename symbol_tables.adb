@@ -63,14 +63,14 @@ package body Symbol_Tables is
       Wst.Insert ("BeginPrint", "begin-print");
       Wst.Insert ("PrintPage", "print-page");
       Wst.Insert ("MouseClick", "clicked");
-      Wst.Insert ("Leave", "leave-notify-event");
+      --  Wst.Insert ("Leave", "leave-notify-event");
       Wst.Insert ("FileOk", "file-set");
       Wst.Insert ("MouseDoubleClick", "clicked");
       Wst.Insert ("CloseButtonClick", "clicked");     --  not used
       Wst.Insert ("Selected", "clicked");
       Wst.Insert ("CellMouseEnter", "clicked");
       Wst.Insert ("CellMouseLeave", "clicked");
-      Wst.Insert ("CellMouseClick", "clicked");
+      Wst.Insert ("CellMouseClick", "row-activated");
       Wst.Insert ("Toggled", "toggled");              --  gtkcheckboxcolum
       Wst.Insert ("LeaveFocus", "focus");
       Wst.Insert ("DoWork", "DoWork");
@@ -93,9 +93,9 @@ package body Symbol_Tables is
    end Get_Gtk_Signal;
 
    function Convert_Signal_To_Gtk (TWin    : Window_Pointer;
-                                   WSignal : String) return String is
+                                   TS      : Signal_Pointer) return String is
       pragma Unreferenced (TWin);
-      Gtk_Signal : constant String := Get_Gtk_Signal (WSignal);
+      Gtk_Signal : constant String := Get_Gtk_Signal (TS.Name.all);
    begin
       if Gtk_Signal = "" then
          raise Unknown_Signal;
@@ -104,8 +104,9 @@ package body Symbol_Tables is
    end Convert_Signal_To_Gtk;
 
    function Convert_Signal_To_Gtk (TWdg    : Widget_Pointer;
-                                   WSignal : String) return String is
-      Gtk_Signal : constant String := Get_Gtk_Signal (WSignal);
+                                   TS      : Signal_Pointer) return String is
+      Gtk_Signal : constant String := Get_Gtk_Signal (TS.Name.all);
+      WSignal    : String renames TS.Name.all;
    begin
       if Gtk_Signal = "" then
          raise Unknown_Signal;
@@ -113,20 +114,22 @@ package body Symbol_Tables is
       case TWdg.Widget_Type is
          when GtkDataGridView | GtkTreeGridView =>
             if WSignal = "CellMouseClick" then
-               return "cursor-changed";
+               TS.Proc  := False;
+               TS.Glade := False;
+               TS.GAda  := False;
+               return "row-activated";
             elsif WSignal = "CellMouseEnter" then
                return "cursor-changed";
             elsif WSignal = "CellMouseLeave" then
                return "cursor-changed";
             end if;
-         when DataGridViewCheckBoxColumn =>
-            if WSignal = "toggled" then
-               return "clicked";
-            end if;
          when GtkNoteBook =>
             if WSignal = "Selected" then
                return "switch-page";
             elsif WSignal = "MouseDoubleClick" then
+               TS.Proc  := False;
+               TS.Glade := False;
+               TS.GAda  := False;
                return "button-press-event";
             elsif WSignal = "CloseButtonClick" then
                return "clicked";

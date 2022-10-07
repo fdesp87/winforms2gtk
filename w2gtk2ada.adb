@@ -176,16 +176,17 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWdg.Signal_List;
    begin
       while TS /= null loop
-         if TS.Name.all = "leave" then
-            TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
-            TIO.Put_Line (Sp (5)
-                          & "(User_Data : access GObject_Record'Class) "
-                          & "return Boolean;");
-            TIO.New_Line;
-         else
-            TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
-            TIO.Put_Line (Sp (5)
-                          & "(User_Data : access GObject_Record'Class);");
+         if TS.GAda then
+            if TS.Proc then
+               TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+               TIO.Put_Line (Sp (5)
+                             & "(User_Data : access GObject_Record'Class);");
+            else
+               TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+               TIO.Put_Line (Sp (5)
+                             & "(User_Data : access GObject_Record'Class) "
+                             & "return Boolean;");
+            end if;
             TIO.New_Line;
          end if;
          TS := TS.Next;
@@ -201,22 +202,35 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWin0.Signal_List;
    begin
       while TS /= null loop
-         TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
-         TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
-                       & " is");
-         TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
-         TIO.Put_Line (Sp (3) & "begin");
-         TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-         if Form_Closing and then
-           TS.Handler.all =
-             "On_" & Capitalize (TWin0.Name.all) & "_Formclosing"
-         then
-            TIO.Put_Line (Sp (6) & "Gtk.Main.Main_Quit;");
-         else
-            TIO.Put_Line (Sp (6) & "null;");
+         if TS.GAda then
+            if TS.Proc then
+               TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+               TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
+                             & " is");
+               TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
+               TIO.Put_Line (Sp (3) & "begin");
+               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               if Form_Closing and then
+                 TS.Handler.all =
+                   "On_" & Capitalize (TWin0.Name.all) & "_Formclosing"
+               then
+                  TIO.Put_Line (Sp (6) & "Gtk.Main.Main_Quit;");
+               else
+                  TIO.Put_Line (Sp (6) & "null;");
+               end if;
+               TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+            else
+               TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+               TIO.Put_Line (Sp (5)
+                             & "(User_Data : access GObject_Record'Class) "
+                             & "return Boolean is");
+               TIO.Put_Line (Sp (3) & "begin");
+               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               TIO.Put_Line (Sp (6) & "return False;");
+               TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+            end if;
+            TIO.New_Line;
          end if;
-         TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
-         TIO.New_Line;
          TS := TS.Next;
       end loop;
    end Emit_Signal_Bodies;
@@ -226,29 +240,30 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWdg.Signal_List;
    begin
       while TS /= null loop
-         if TS.Name.all = "leave" then
-            TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
-            TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
-                          & " return Boolean is");
-            TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
-            TIO.Put_Line (Sp (3) & "begin");
-            TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-            TIO.Put_Line (Sp (6) & "Gtk.Widget.Grab_Focus");
-            TIO.Put_Line (Sp (8) & "(Gtk_Widget (Me."
-                          & TWdg.Next_Focus.Name.all
-                          & "));");
-            TIO.Put_Line (Sp (6) & "return True;  --  signal processed");
-            TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
-            TIO.New_Line;
-         else
-            TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
-            TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
-                          & " is");
-            TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
-            TIO.Put_Line (Sp (3) & "begin");
-            TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-            TIO.Put_Line (Sp (6) & "null;");
-            TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+         if TS.GAda then
+            if TS.Name.all = "leave" then
+               TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+               TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                             & " return Boolean is");
+               TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+               TIO.Put_Line (Sp (3) & "begin");
+               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               TIO.Put_Line (Sp (6) & "Gtk.Widget.Grab_Focus");
+               TIO.Put_Line (Sp (8) & "(Gtk_Widget (Me."
+                             & TWdg.Next_Focus.Name.all
+                             & "));");
+               TIO.Put_Line (Sp (6) & "return True;  --  signal processed");
+               TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+            else
+               TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+               TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                             & " is");
+               TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+               TIO.Put_Line (Sp (3) & "begin");
+               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               TIO.Put_Line (Sp (6) & "null;");
+               TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+            end if;
             TIO.New_Line;
          end if;
          TS := TS.Next;
@@ -309,12 +324,14 @@ package body W2Gtk2Ada is
    begin
       TS := TWin0.Signal_List;
       while TS /= null loop
-         TIO.Put_Line (Sp (6) & "Register_Handler");
-         TIO.Put_Line (Sp (9) & "(Builder      => Builder,");
-         TIO.Put_Line (Sp (10) & "Handler_Name =>");
-         TIO.Put_Line (Sp (13) & Quoted (TS.Handler.all) & ",");
-         TIO.Put_Line (Sp (10) & "Handler      =>");
-         TIO.Put_Line (Sp (13) & TS.Handler.all & "'Access);");
+         if TS.GAda then
+            TIO.Put_Line (Sp (6) & "Register_Handler");
+            TIO.Put_Line (Sp (9) & "(Builder      => Builder,");
+            TIO.Put_Line (Sp (10) & "Handler_Name =>");
+            TIO.Put_Line (Sp (13) & Quoted (TS.Handler.all) & ",");
+            TIO.Put_Line (Sp (10) & "Handler      =>");
+            TIO.Put_Line (Sp (13) & TS.Handler.all & "'Access);");
+         end if;
          TS := TS.Next;
          TIO.New_Line;
       end loop;
@@ -326,12 +343,14 @@ package body W2Gtk2Ada is
    begin
       TS := TWdg.Signal_List;
       while TS /= null loop
-         TIO.Put_Line (Sp (6) & "Register_Handler");
-         TIO.Put_Line (Sp (9) & "(Builder      => Builder,");
-         TIO.Put_Line (Sp (10) & "Handler_Name =>");
-         TIO.Put_Line (Sp (13) & Quoted (TS.Handler.all) & ",");
-         TIO.Put_Line (Sp (10) & "Handler      =>");
-         TIO.Put_Line (Sp (13) & TS.Handler.all & "'Access);");
+         if TS.GAda then
+            TIO.Put_Line (Sp (6) & "Register_Handler");
+            TIO.Put_Line (Sp (9) & "(Builder      => Builder,");
+            TIO.Put_Line (Sp (10) & "Handler_Name =>");
+            TIO.Put_Line (Sp (13) & Quoted (TS.Handler.all) & ",");
+            TIO.Put_Line (Sp (10) & "Handler      =>");
+            TIO.Put_Line (Sp (13) & TS.Handler.all & "'Access);");
+         end if;
          TS := TS.Next;
          TIO.New_Line;
       end loop;
@@ -437,6 +456,12 @@ package body W2Gtk2Ada is
                                    & Quoted
                                      (TWdg.Name.all & "_Submenu") & "));");
                   end if;
+               when GtkMenuBar |
+                    GtkBox |
+                    GtkToolBar |
+                    GtkNoteBook | GtkTabPage |
+                    GtkDataGridView | GtkTreeGridView
+                  =>  TIO.New_Line;
                when others => null;
             end case;
 
@@ -449,12 +474,17 @@ package body W2Gtk2Ada is
             case TWdg.Widget_Type is
                when GtkDataGridView | GtkTreeGridView =>
                   TIO.Put_Line (Sp (6)
-                                & "OC." & TWdg.Name.all & "_Selection := "
+                                & "OC." & TWdg.Name.all & "_Selection :=");
+                  TIO.Put_Line (Sp (8)
                                 & "Gtk_Tree_Selection"
                                 & " (Builder.Get_Object (");
-                  TIO.Put_Line (Sp (8)
+                  TIO.Put_Line (Sp (28)
                                 & Quoted
                                   (TWdg.Name.all & "_Selection") & "));");
+                  TIO.Put_Line (Sp (6) & "Set_Activate_On_Single_Click");
+                  TIO.Put_Line (Sp (8)
+                                & "(OC." & TWdg.Name.all & ", True);");
+                  TIO.New_Line;
 
                when ExpandableColumn | DataGridViewTextBoxColumn =>
                   TIO.Put_Line (Sp (6) & "OC."

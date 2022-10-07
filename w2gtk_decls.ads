@@ -104,6 +104,8 @@ package W2gtk_Decls is
       Line    : Integer;
       Proc    : Boolean := True;       --  false means function
       After   : Boolean := False;      --  emit After if true
+      Glade   : Boolean := True;       --  generate glade signal
+      GAda    : Boolean := True;       --  generate Ada signal handler
    end record;
 
    --  datagridview style
