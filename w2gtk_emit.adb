@@ -881,6 +881,12 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id + 10) & "<attribute name=""text"">"
                  & Img (Num) & "</attribute>");
 
+      if TWdg.Text_Col_Properties.Fg_Color_Name_Column /= -1 then
+         NCol := TWdg.Text_Col_Properties.Fg_Color_Name_Column;
+         Emit_Line (Sp (Id + 10) & "<attribute name=""foreground"">"
+                    & Img (NCol) & "</attribute>");
+      end if;
+
       NCol := TWdg.GParent.Model.Num_Elements - 1;
       if TWdg.GParent.AlternatingRowsDefaultCellStyle in DGVS'Range then
          Emit_Line (Sp (Id + 10) & "<attribute name=""background"">"
@@ -935,7 +941,7 @@ package body W2gtk_Emit is
    --------------------------------------------
    procedure Emit_GtkGridView (TWdg : Widget_Pointer; Id : Integer) is
       Child : Widget_Pointer;
-      Num   : Integer := 0;
+      Num   : Integer;
    begin
       Emit_Child (TWdg, Id, False);
       Emit_Object (TWdg, Id + 2, "GtkTreeView", TWdg.Name.all);
@@ -975,6 +981,7 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id + 4) & "</child>");
 
       Child := TWdg.Child_List;
+      Num := 0;
       while Child /= null loop
          case Child.Widget_Type is
             when ExpandableColumn | DataGridViewTextBoxColumn =>
@@ -2626,13 +2633,28 @@ package body W2gtk_Emit is
             when ExpandableColumn | DataGridViewTextBoxColumn =>
                if Col.DefaultCellStyle in DGVS'Range then
                   case DGVS (Col.DefaultCellStyle).Format is
-                     when Format_Bool =>
+                     when Format_Boolean =>
                         Emit_Line (Sp (Id + 2)
                                    & "<column type=""gboolean""/>");
-                     when Format_Int =>
+                     when Format_Integer =>
                         Emit_Line (Sp (Id + 2)
-                                   & "<column type=""gint""/>");
+                                   & "<column type=""gchararray""/>");
                      when Format_Real =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gchararray""/>");
+                     when Format_Exponential =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gchararray""/>");
+                     when Format_Decimal =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gchararray""/>");
+                     when Format_Date =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gchararray""/>");
+                     when Format_Percent =>
+                        Emit_Line (Sp (Id + 2)
+                                   & "<column type=""gchararray""/>");
+                     when Format_Currency =>
                         Emit_Line (Sp (Id + 2)
                                    & "<column type=""gchararray""/>");
                      when Format_String =>
@@ -2654,18 +2676,28 @@ package body W2gtk_Emit is
       while Col /= null loop
          case Col.Widget_Type is
             when DataGridViewCheckBoxColumn =>
-               Emit_Line (Sp (Id + 2) & "<!-- column-name "
-                          & Col.Name.all & "_data"
-                          & " -->");
-               Emit_Line (Sp (Id + 2)
-                          & "<column type=""gboolean""/>");
-
-               if not Col.ReadOnly then
+               if Col.CheckBox_Col_Properties.Active_Column /= -1 then
                   Emit_Line (Sp (Id + 2) & "<!-- column-name "
-                             & Col.Name.all & "_activatable"
+                             & Col.Name.all & "_data"
                              & " -->");
                   Emit_Line (Sp (Id + 2)
                              & "<column type=""gboolean""/>");
+
+                  if not Col.ReadOnly then
+                     Emit_Line (Sp (Id + 2) & "<!-- column-name "
+                                & Col.Name.all & "_activatable"
+                                & " -->");
+                     Emit_Line (Sp (Id + 2)
+                                & "<column type=""gboolean""/>");
+                  end if;
+               end if;
+            when ExpandableColumn | DataGridViewTextBoxColumn =>
+               if Col.Text_Col_Properties.Fg_Color_Name_Column /= -1 then
+                  Emit_Line (Sp (Id + 2) & "<!-- column-name "
+                             & Col.Name.all & "_fg_color"
+                             & " -->");
+                  Emit_Line (Sp (Id + 2)
+                             & "<column type=""gchararray""/>");
                end if;
             when others => null;
          end case;

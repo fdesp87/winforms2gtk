@@ -132,18 +132,26 @@ package body W2gtk_Decls is
       if Str = "" then
          return Format_String;
       end if;
-      if To_Lower (Str (Str'First + 1)) = 'r' then
-         return Format_Int;
-      elsif To_Lower (Str (Str'First + 1)) = 'n' then
+      if To_Lower (Str (Str'First + 1)) = 'r' then    --  integer
+         return Format_Integer;
+      elsif To_Lower (Str (Str'First + 1)) = 'n' then --  real
          return Format_Real;
-      elsif To_Lower (Str (Str'First + 1)) = 'd' then
+      elsif To_Lower (Str (Str'First + 1)) = 'p' then --  percent
+         return Format_Percent;
+      elsif To_Lower (Str (Str'First + 1)) = 'd' then --  date
+         return Format_Date;
+      elsif To_Lower (Str (Str'First + 1)) = 'c' then --  currency
+         return Format_Currency;
+      elsif To_Lower (Str (Str'First + 1)) = 'e' then --  exponential
+         return Format_Exponential;
+      elsif To_Lower (Str (Str'First + 1)) = 'f' then --  fixed point decimal
+         return Format_Decimal;
+      elsif To_Lower (Str (Str'First + 1)) = 'g' then --  date
          return Format_String;
-      elsif To_Lower (Str (Str'First + 1)) = 'g' then
-         return Format_String;
-      elsif To_Lower (Str (Str'First + 1)) = '0' then
-         return Format_Int;
-      elsif To_Lower (Str (Str'First + 1)) = 'b' then
-         return Format_Bool;
+      elsif To_Lower (Str (Str'First + 1)) = '0' then --  integer
+         return Format_Integer;
+      elsif To_Lower (Str (Str'First + 1)) = 'b' then --  boolean
+         return Format_Boolean;
       else
          return Format_String;
       end if;
@@ -787,6 +795,8 @@ package body W2gtk_Decls is
             Have.TreeViews := Have.TreeViews + 1;
          when ExpandableColumn | DataGridViewTextBoxColumn =>
             Have.TreeViewColumns := Have.TreeViewColumns + 1;
+         when DataGridViewCheckBoxColumn =>
+            Have.TreeViewToggles := Have.TreeViewToggles + 1;
          when GtkEntry =>
             Have.Entries := Have.Entries + 1;
          when GtkComboTextBox =>
@@ -1283,7 +1293,7 @@ package body W2gtk_Decls is
          raise TIO.Data_Error;
       end if;
       Q := Get_Pair (Data (Idx1 + 1 .. Data'Last));
-      --  1 => top, 2 => start or left, 3 => bottom, 4 => end or right
+      --  1 => start or left, 2 => top, 3 => end or right, 4 => bottom
       return Margin_Array'(1 => P.One, 2 => P.Two,
                            3 => Q.One, 4 => Q.Two);
    end Get_Margin_Array;

@@ -134,11 +134,8 @@ package body W2gtk_Pkg is
          Visit_GtkTree_Widget_For_GtkBox (Parent.Child_List);
       end Visit_GtkTree_Widget_For_GtkBox;
 
-      procedure Visit_GtkTree_Widget_For_Toggle_Buttons
-        (TWdg : Widget_Pointer);
-      procedure Visit_GtkTree_Widget_For_Toggle_Buttons
-        (TWdg : Widget_Pointer)
-      is
+      procedure Visit_GtkTree_Widget_For_Columns (TWdg : Widget_Pointer);
+      procedure Visit_GtkTree_Widget_For_Columns (TWdg : Widget_Pointer) is
          Num : Integer;
       begin
          if TWdg = null then
@@ -153,40 +150,55 @@ package body W2gtk_Pkg is
             if Num > 0 then
                Temp := TWdg.Child_List;
                while Temp /= null loop
-                  if Temp.Widget_Type = DataGridViewCheckBoxColumn then
-                     Have.TreeViewToggles := Have.TreeViewToggles + 1;
-                     Temp.CheckBox_Col_Properties.Active_Column := Num;
-                     Num := Num + 1;
-                     if not Temp.ReadOnly then
-                        Temp.CheckBox_Col_Properties.Activatable_Column := Num;
+                  case Temp.Widget_Type is
+                     when DataGridViewCheckBoxColumn =>
+                        Temp.CheckBox_Col_Properties.Active_Column := Num;
                         Debug (0, Temp.Name.all
-                               & ": activatable Column => "
+                               & ": active Column => "
                                & Img (Num));
                         Num := Num + 1;
-                        Found := Signal_Exists (Temp, "Toggled");
-                        if not Found then
-                           TS := new Signal_Block;
-                           TS.Name := new String'("Toggled");
-                           TS.Handler :=
-                             new String'("On_"
-                                         & Temp.Name.all
-                                         & "_Toggled");
-                           TS.Line    := -1;
-                           Insert_Signal (Temp, TS); --  Toggled
+                        if not Temp.ReadOnly then
+                           Temp.CheckBox_Col_Properties.Activatable_Column
+                             := Num;
                            Debug (0, Temp.Name.all
-                                  & ": generated "
-                                  & TS.Handler.all);
+                                  & ": activatable Column => "
+                                  & Img (Num));
+                           Num := Num + 1;
+                           Found := Signal_Exists (Temp, "Toggled");
+                           if not Found then
+                              TS := new Signal_Block;
+                              TS.Name := new String'("Toggled");
+                              TS.Handler :=
+                                new String'("On_"
+                                            & Temp.Name.all
+                                            & "_Toggled");
+                              TS.Line    := -1;
+                              Insert_Signal (Temp, TS); --  Toggled
+                              Debug (0, Temp.Name.all
+                                     & ": generated "
+                                     & TS.Handler.all);
+                           end if;
                         end if;
-                     end if;
-                  end if;
+                     when ExpandableColumn | DataGridViewTextBoxColumn =>
+                        if Temp.DefaultCellStyle in DGVS'Range and then
+                          DGVS (Temp.DefaultCellStyle).Format = Format_Currency
+                        then
+                           Temp.Text_Col_Properties.Fg_Color_Name_Column := Num;
+                           Debug (0, Temp.Name.all
+                                  & ": Fg Color Column => "
+                                  & Img (Num));
+                           Num := Num + 1;
+                        end if;
+                     when others => null;
+                  end case;
                   Temp := Temp.Next;
                end loop;
             end if;
          end if;
 
-         Visit_GtkTree_Widget_For_Toggle_Buttons (TWdg.Next);
-         Visit_GtkTree_Widget_For_Toggle_Buttons (TWdg.Child_List);
-      end Visit_GtkTree_Widget_For_Toggle_Buttons;
+         Visit_GtkTree_Widget_For_Columns (TWdg.Next);
+         Visit_GtkTree_Widget_For_Columns (TWdg.Child_List);
+      end Visit_GtkTree_Widget_For_Columns;
 
       procedure Recast_To_GtkNormalMenuItem (TWdg : in out Widget_Pointer);
       procedure Recast_To_GtkNormalMenuItem (TWdg : in out Widget_Pointer) is
@@ -856,37 +868,6 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      --  compute num_elements for stores
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: compute num. elements for models");
-      TWin := Win_List;
-      while TWin /= null loop
-         case TWin.Window_Type is
-            when GtkListStore | GtkTreeStore =>
-               TWdg := TWin.Associated_Widget;
-               NCol := TWdg.Child_List;
-               while NCol /= null loop
-                  TWin.Num_Elements := TWin.Num_Elements + 1;
-                  if NCol.Widget_Type = DataGridViewCheckBoxColumn then
-                     TWin.Num_Elements := TWin.Num_Elements + 1;
-                     if not NCol.ReadOnly then
-                        TWin.Num_Elements := TWin.Num_Elements + 1;
-                     end if;
-                  end if;
-                  NCol := NCol.Next;
-               end loop;
-               if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
-                  TWin.Num_Elements := TWin.Num_Elements + 1;
-               end if;
-            when GtkModelFilter =>
-               TWin.Num_Elements := TWin.Underlying_Model.Num_Elements;
-            when GtkModelSort =>
-               TWin.Num_Elements := TWin.Underlying_Model.Num_Elements;
-            when others => null;
-         end case;
-         TWin := TWin.Next;
-      end loop;
-
       --  remove a gtkbox parent which contains only one child container
       Debug (0, "");
       Debug (0, "Removing gtkbox with only one child container");
@@ -898,14 +879,52 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      --  generating format columns for toggle buttons
+      --  generating format columns
       Debug (0, "");
       Debug (0, "Preparing toggle buttons");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
-            Visit_GtkTree_Widget_For_Toggle_Buttons (TWin.Widget_List);
+            Visit_GtkTree_Widget_For_Columns (TWin.Widget_List);
          end if;
+         TWin := TWin.Next;
+      end loop;
+
+      --  compute num_elements for stores. Must be after adjust format columns
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: compute num. elements for models");
+      TWin := Win_List;
+      while TWin /= null loop
+         case TWin.Window_Type is
+            when GtkListStore | GtkTreeStore =>
+               TWdg := TWin.Associated_Widget;
+               NCol := TWdg.Child_List;
+               while NCol /= null loop
+                  TWin.Num_Elements := TWin.Num_Elements + 1;
+                  case NCol.Widget_Type is
+                     when DataGridViewCheckBoxColumn =>
+                        TWin.Num_Elements := TWin.Num_Elements + 1;
+                        if not NCol.ReadOnly then
+                           TWin.Num_Elements := TWin.Num_Elements + 1;
+                        end if;
+                     when ExpandableColumn | DataGridViewTextBoxColumn =>
+                        if NCol.Text_Col_Properties.Fg_Color_Name_Column /= -1
+                        then
+                           TWin.Num_Elements := TWin.Num_Elements + 1;
+                        end if;
+                     when others => null;
+                  end case;
+                  NCol := NCol.Next;
+               end loop;
+               if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+                  TWin.Num_Elements := TWin.Num_Elements + 1;
+               end if;
+            when GtkModelFilter =>
+               TWin.Num_Elements := TWin.Underlying_Model.Num_Elements;
+            when GtkModelSort =>
+               TWin.Num_Elements := TWin.Underlying_Model.Num_Elements;
+            when others => null;
+         end case;
          TWin := TWin.Next;
       end loop;
 
@@ -1051,10 +1070,10 @@ package body W2gtk_Pkg is
             TIO.Put_Line (LFile, DGVS (I).Format'Image);
 
             Put_Property ("Padding");
-            TIO.Put (LFile, "Top " & Img (DGVS (I).Padding (1))
-                     & ", Bottom " & Img (DGVS (I).Padding (3))
-                     & ", Start " & Img (DGVS (I).Padding (2))
-                     & ", End " & Img (DGVS (I).Padding (4)));
+            TIO.Put (LFile, "Start" & Img (DGVS (I).Padding (1))
+                     & ", Top " & Img (DGVS (I).Padding (2))
+                     & ", End " & Img (DGVS (I).Padding (3))
+                     & ", Bottom " & Img (DGVS (I).Padding (4)));
             TIO.New_Line (LFile);
 
             Put_Property ("WrapMode");
@@ -2884,10 +2903,10 @@ package body W2gtk_Pkg is
                   Debug (NLin, "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ". Margins "
-                         & Img (DGVS (DGVS_Num).Padding (1)) & ", "
-                         & Img (DGVS (DGVS_Num).Padding (2)) & ", "
-                         & Img (DGVS (DGVS_Num).Padding (3)) & ", "
-                         & Img (DGVS (DGVS_Num).Padding (4)));
+                         & "Start " & Img (DGVS (DGVS_Num).Padding (1)) & ", "
+                         & ", Top " & Img (DGVS (DGVS_Num).Padding (2)) & ", "
+                         & ", End " & Img (DGVS (DGVS_Num).Padding (3)) & ", "
+                         & ", Bottom " & Img (DGVS (DGVS_Num).Padding (4)));
 
                when DGVS_Attr_WrapMode =>
                   if Index (Line (Idx2 .. Len), "True") in Idx2 .. Len then

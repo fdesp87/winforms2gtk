@@ -126,9 +126,14 @@ package W2gtk_Decls is
                             For_Column_Header,
                             For_Row_Header,
                             For_TreeGridView);
-   type Cell_Format_Enum is (Format_Bool,
-                             Format_Int,
+   type Cell_Format_Enum is (Format_Boolean,
+                             Format_Integer,
                              Format_Real,
+                             Format_Decimal,
+                             Format_Percent,
+                             Format_Exponential,
+                             Format_Currency,
+                             Format_Date,
                              Format_String);
    type DataGridViewStyle is record
       Num            : Integer          := 0;
@@ -163,7 +168,7 @@ package W2gtk_Decls is
       Wrap_Width_Column         : Integer := -1;
       Alignment_Column          : Integer := -1;
       Placeholder_Text_Column   : Integer := -1;
-      bg_Color_Name_Column      : Integer := -1;
+      Bg_Color_Name_Column      : Integer := -1;
       Fg_Color_Name_Column      : Integer := -1;
       Font_Column               : Integer := -1;
       Font_Family_Column        : Integer := -1;
@@ -475,7 +480,7 @@ package W2gtk_Decls is
       MaxLength      : Integer        := -1;
       AutoToolTip    : Boolean        := False;
       ToolTip        : String_Access  := null;
-      UseVisualStyleBackColor : Boolean := True;
+      UseVisualStyleBackColor : Boolean := False;
       BgColor        : String_Access  := null;
       FgColor        : String_Access  := null;
       UlColor        : String_Access  := null;

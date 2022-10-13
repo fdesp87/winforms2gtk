@@ -887,14 +887,23 @@ package body W2Gtk2Ada is
                if TWdg.Child_List /= null then
                   Col := TWdg.Child_List;
                   while Col /= null loop
-                     if Col.Widget_Type = DataGridViewCheckBoxColumn then
-                        TIO.Put_Line (",");
-                        TIO.Put (Sp (6) & Col.Name.all & "_Data");
-                        if not Col.ReadOnly then
+                     case Col.Widget_Type is
+                        when DataGridViewCheckBoxColumn =>
                            TIO.Put_Line (",");
-                           TIO.Put (Sp (6) & Col.Name.all & "_Activatable");
-                        end if;
-                     end if;
+                           TIO.Put (Sp (6) & Col.Name.all & "_Data");
+                           if not Col.ReadOnly then
+                              TIO.Put_Line (",");
+                              TIO.Put (Sp (6) & Col.Name.all & "_Activatable");
+                           end if;
+                        when ExpandableColumn | DataGridViewTextBoxColumn =>
+                           if Col.Text_Col_Properties.Fg_Color_Name_Column
+                             /= -1
+                           then
+                              TIO.Put_Line (",");
+                              TIO.Put (Sp (6) & Col.Name.all & "_Fg_Color");
+                           end if;
+                        when others => null;
+                     end case;
                      Col := Col.Next;
                   end loop;
                   if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
@@ -1063,17 +1072,17 @@ package body W2Gtk2Ada is
                   if DGVS (I).SelBgColor /= null then
                      null; --  pending
                   end if;
-                  if DGVS (I).Padding (2) /= -1 then
-                     TIO.Put_Line (Sp (6) & "Set_Property (Me."
-                                   & DGVS (I).Name.all & ", "
-                                   & "Xpad_Property, "
-                                   & DGVS (I).Padding (2)'Image & ");");
-                  end if;
                   if DGVS (I).Padding (1) /= -1 then
                      TIO.Put_Line (Sp (6) & "Set_Property (Me."
                                    & DGVS (I).Name.all & ", "
-                                   & "Ypad_Property, "
+                                   & "Xpad_Property,"
                                    & DGVS (I).Padding (1)'Image & ");");
+                  end if;
+                  if DGVS (I).Padding (2) /= -1 then
+                     TIO.Put_Line (Sp (6) & "Set_Property (Me."
+                                   & DGVS (I).Name.all & ", "
+                                   & "Ypad_Property,"
+                                   & DGVS (I).Padding (2)'Image & ");");
                   end if;
                   if DGVS (I).Style_For = For_TextCell then
                      if DGVS (I).FgColor /= null then
