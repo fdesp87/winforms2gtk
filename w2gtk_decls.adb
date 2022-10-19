@@ -1115,7 +1115,7 @@ package body W2gtk_Decls is
          if Changed then
             if DGVS (I).Name /= null then
                Debug (0, "Set Inherited Property Gtk_Cell_Renderer "
-                      & "(" & Img (I) & ")"
+                      & "(" & Img (I) & ") "
                       & DGVS (I).Name.all
                       & ".Font=""" & DGVS (I).Font_Name.all
                       & ", " & Img (DGVS (I).Font_Size)
