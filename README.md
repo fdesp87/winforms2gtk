@@ -136,6 +136,11 @@ Pending widgets:
 
 - GtkCombobox and sorted GtkComboTextBox
 
+Other Windows Forms elements are generated:
+
+- Date Picker
+- Time Picker
+
 In addition, several Windows Forms elements are accepted however code is not generated:
 
 - PrintDocument

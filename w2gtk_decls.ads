@@ -241,6 +241,11 @@ package W2gtk_Decls is
       FileFilters        : Integer := 0;
       Filechooserdialogs : Integer := 0;
       Entrybuffers       : Integer := 0;
+      --  others
+      Date_Pickers       : Integer := 0;
+      Time_Pickers       : Integer := 0;
+      Radio_Buttons      : Integer := 0;
+      Tooltips           : Integer := 0;
    end record;
    Have : Have_Block;
 
@@ -596,11 +601,12 @@ package W2gtk_Decls is
                      when others => null;
                   end case;
                when GtkCalendar =>
-                  Start_Date  : Ada.Calendar.Time := Ada.Calendar.Clock;
+                  Start_Date  : Ada.Calendar.Time := AC.Clock;
                   MinDate     : Ada.Calendar.Time := AC.Time_Of (1901, 12, 30);
                   MaxDate     : Ada.Calendar.Time := AC.Time_Of (2399, 12, 30);
                   Format_Date : String_Access     := null;
-                  ShowUpDown  : Boolean           := True;
+                  Is_DatePicker : Boolean         := True;  --  else timepicker
+                  ShowUpDown    : Boolean         := True;  --  only for time
                when others => null;
             end case;
 
@@ -743,6 +749,7 @@ package W2gtk_Decls is
                       NewWdg : Widget_Pointer);
    procedure Insert_Widget_By_Tail (Parent : Window_Pointer;
                                     WT     : Widget_Pointer);
+   procedure Set_Have (WT : Widget_Pointer);
    procedure Insert_Signal (TWin : Window_Pointer;
                             TS   : Signal_Pointer);
    procedure Insert_Signal (TWdg : Widget_Pointer;
@@ -755,6 +762,7 @@ package W2gtk_Decls is
 
    procedure Insert_Window_By_Tail (TWin : Window_Pointer);
    procedure Insert_Window_By_Front (TWin : Window_Pointer);
+   procedure Set_Have (WP : Window_Pointer);
 
    function Contains (Source : String; Pattern : String) return Boolean;
    function Get_Integer (Data : String) return Integer;

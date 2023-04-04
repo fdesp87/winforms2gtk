@@ -741,7 +741,6 @@ package body W2gtk_Decls is
    --------------
    -- Set Have --
    --------------
-   procedure Set_Have (WP : Window_Pointer);
    procedure Set_Have (WP : Window_Pointer) is
    begin
       case WP.Window_Type is
@@ -761,7 +760,6 @@ package body W2gtk_Decls is
       end case;
    end Set_Have;
 
-   procedure Set_Have (WT : Widget_Pointer);
    procedure Set_Have (WT : Widget_Pointer) is
    begin
       case WT.Widget_Type is
@@ -805,6 +803,20 @@ package body W2gtk_Decls is
             Have.Boxes := Have.Boxes + 1;
          when GtkFileChooserButton =>
             Have.FileChooserButtons := Have.FileChooserButtons + 1;
+         when GtkToolTip =>
+            Have.Tooltips := Have.Tooltips + 1;
+         when GtkCalendar =>
+            if WT.Is_DatePicker then
+               Have.Date_Pickers := Have.Date_Pickers + 1;
+               Have.Entries := Have.Entries + 3;
+               Have.Buttons := Have.Buttons + 1;
+            else
+               Have.Time_Pickers := Have.Time_Pickers + 1;
+               Have.Entries := Have.Entries + 3;
+               Have.Buttons := Have.Buttons + 6;
+            end if;
+         when GtkRadioButton =>
+            Have.Radio_Buttons := Have.Radio_Buttons + 1;
          when others => null;
       end case;
    end Set_Have;
@@ -813,25 +825,54 @@ package body W2gtk_Decls is
    -- Insert_Widget --
    -------------------
    --  insert by the tail, by the order found when parsing Designer step 1
+   --  except date_pickers which are inserted at the end and by reverse order
    procedure Insert_Widget_By_Tail (Parent : Window_Pointer;
                                     WT     : Widget_Pointer) is
-      Temp : Widget_Pointer;
+      Temp0 : Widget_Pointer; --  the last widget in the list
+      Temp1 : Widget_Pointer; --  the first date picker in the list
    begin
+      --  if list if empty, insert WT
       if Parent.Widget_List = null then
          Parent.Widget_List := WT;
          WT.Next := null;
          WT.Prev := null;
          return;
       end if;
-      Temp := Parent.Widget_List;
+
+      --  set Temp0 to the last widget and set Temp1 to the last date_picker
+      Temp0 := Parent.Widget_List;
+      Temp1 := null;
       loop
-         exit when Temp.Next = null;
-         Temp := Temp.Next;
+         if Temp1 = null
+           and then Temp0.Widget_Type = GtkCalendar
+           and then Temp0.Is_DatePicker
+         then
+            Temp1 := Temp0;
+         end if;
+         exit when Temp0.Next = null;
+         Temp0 := Temp0.Next;
       end loop;
-      Temp.Next := WT;
-      WT.Next   := null;
-      WT.Prev   := Temp;
-      Set_Have (WT);
+
+      if Temp1 = null then    --  no date pickers in the list
+         Temp0.Next := WT;    --  insert WT by the end
+         WT.Next    := null;
+         WT.Prev    := Temp0;
+         return;
+      end if;
+
+      --  Temp1 is a date picker
+      if Temp1 = Parent.Widget_List then  --  temp1 is the first widget
+         WT.Next := Temp1;                --  insert WT by the front
+         WT.Prev := null;
+         Parent.Widget_List := WT;
+         return;
+      end if;
+
+      --  insert WT before Temp1
+      WT.Next := Temp1;
+      WT.Prev := Temp1.Prev;
+      Temp1.Prev.Next := WT;
+      Temp1.Prev := WT;
    end Insert_Widget_By_Tail;
 
    -------------------
@@ -1009,7 +1050,6 @@ package body W2gtk_Decls is
       end loop;
       Temp.Next := TWin;
       TWin.Next := null;
-      Set_Have (TWin);
    end Insert_Window_By_Tail;
 
    -------------------
@@ -1020,7 +1060,6 @@ package body W2gtk_Decls is
    begin
       TWin.Next := Win_List;
       Win_List  := TWin;
-      Set_Have (TWin);
    end Insert_Window_By_Front;
 
    -------------------------------
@@ -1517,7 +1556,7 @@ package body W2gtk_Decls is
          when GtkSeparatorMenuItem => return "Gtk_Separator_Menu_Item";
          when GtkColorButton => return "Gtk_Color_Button";
          when GtkCalendar => return "Gtk_Calendar";
-         when GtkToolTip => return "Gtk_Tool_Tip";
+         when GtkToolTip => return "Gtk_Tooltip";
          when GtkFileChooserButton => return "Gtk_File_Chooser_Button";
          when GtkStatusBar => return "Gtk_Status_Bar";
          when GtkBox => return "Gtk_Box";

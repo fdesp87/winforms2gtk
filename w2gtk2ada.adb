@@ -22,9 +22,12 @@ with GNATCOLL.Arg_Lists;         use GNATCOLL.Arg_Lists;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
 with GNAT.Expect;                use GNAT.Expect;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
+with GNAT.Calendar.Time_IO;
+
 
 package body W2Gtk2Ada is
    package TIO renames Ada.Text_IO;
+   package GC renames GNAT.Calendar.Time_IO;
 
    Max_Gen      : Integer := 1;
    AdaFile      : TIO.File_Type;
@@ -196,6 +199,114 @@ package body W2Gtk2Ada is
    --------------------------
    --  Emit Signal_Bodies  --
    --------------------------
+   First_Radio_Button : Widget_Pointer := null;
+   procedure Emit_RB_Group (TWdg : Widget_Pointer);
+   procedure Emit_RB_Group (TWdg : Widget_Pointer) is
+   begin
+      if TWdg.Widget_Type = GtkRadioButton then
+         if First_Radio_Button = null then
+            First_Radio_Button := TWdg;
+         else
+            TIO.Put_Line (Sp (6) & "RB_Group := "
+                          & "Me." & First_Radio_Button.Name.all
+                          & ".Get_Group;");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & ".Set_Group (RB_Group);");
+         end if;
+      end if;
+   end Emit_RB_Group;
+
+   procedure Emit_Time_Picker_CSS (TWdg : Widget_Pointer);
+   procedure Emit_Time_Picker_CSS (TWdg : Widget_Pointer) is
+   begin
+      if TWdg.Widget_Type = GtkCalendar then
+         if not TWdg.Is_DatePicker then
+            TIO.Put_Line (Sp (6) & "CSS_" & TWdg.Name.all & " : "
+                          & "constant String :=");
+            TIO.Put_Line (Sp (9) & """button#Time_Picker_Hour_Button_Up,""");
+            TIO.Put_Line (Sp (9) & "& ""button#Time_Picker_Hour_Button_Down,""");
+            TIO.Put_Line (Sp (9) & "& ""button#Time_Picker_Min_Button_Up,""");
+            TIO.Put_Line (Sp (9) & "& ""button#Time_Picker_Min_Button_Down,""");
+            TIO.Put_Line (Sp (9) & "& ""button#Time_Picker_Sec_Button_Up,""");
+            TIO.Put_Line (Sp (9) & "& ""button#Time_Picker_Sec_Button_Down {""");
+            TIO.Put_Line (Sp (9) & "& ""    padding: 0px;""");
+            TIO.Put_Line (Sp (9) & "& ""    margin: 0px;""");
+            TIO.Put_Line (Sp (9) & "& ""    min-width: 0px;""");
+            TIO.Put_Line (Sp (9) & "& ""    min-height: 0px;""");
+            TIO.Put_Line (Sp (9) & "& ""}""");
+            TIO.Put_Line (Sp (9) & "& ""entry#Time_Picker_Hour_Entry,""");
+            TIO.Put_Line (Sp (9) & "& ""entry#Time_Picker_Min_Entry,""");
+            TIO.Put_Line (Sp (9) & "& ""entry#Time_Picker_Sec_Entry {""");
+            TIO.Put_Line (Sp (9) & "& ""    margin: 0px;""");
+            TIO.Put_Line (Sp (9) & "& ""    min-width: 0px;""");
+            TIO.Put_Line (Sp (9) & "& ""    min-height: 0px;""");
+            TIO.Put_Line (Sp (9) & "& ""}"";");
+            TIO.Put_Line (Sp (6) & "Provider_" & TWdg.Name.all & " : "
+                          & "constant Gtk_Css_Provider := "
+                          & "Gtk_Css_Provider_New;");
+            TIO.Put_Line (Sp (6) & "package FA is new Forall_User_Data "
+                          & "(Gtk_Style_Provider);");
+            TIO.Put_Line (Sp (6) & "procedure Apply_Css");
+            TIO.Put_Line (Sp (8) & "(Widget : not null access Gtk.Widget."
+                          & "Gtk_Widget_Record'Class;");
+            TIO.Put_Line (Sp (9) & "Provider : Gtk_Style_Provider);");
+            TIO.Put_Line (Sp (6) & "procedure Apply_Css");
+            TIO.Put_Line (Sp (8) & "(Widget : not null access Gtk.Widget."
+                          & "Gtk_Widget_Record'Class;");
+            TIO.Put_Line (Sp (9) & "Provider : Gtk_Style_Provider) is");
+            TIO.Put_Line (Sp (6) & "begin");
+            TIO.Put_Line (Sp (9) & "Get_Style_Context (Widget).Add_Provider "
+                          & "(Provider, Glib.Guint'Last);");
+            TIO.Put_Line (Sp (9) & "if Widget.all in Gtk_Container_Record'Class "
+                          & "then");
+            TIO.Put_Line (Sp (12) & "declare");
+            TIO.Put_Line (Sp (15) & "Container : constant Gtk_Container := "
+                          & "Gtk_Container (Widget);");
+            TIO.Put_Line (Sp (12) & "begin");
+            TIO.Put_Line (Sp (15) & "FA.Forall (Container, "
+                          & "Apply_Css'Unrestricted_Access, Provider);");
+            TIO.Put_Line (Sp (12) & "end;");
+            TIO.Put_Line (Sp (9) & "end if;");
+            TIO.Put_Line (Sp (6) & "end Apply_Css;");
+         end if;
+      end if;
+   end Emit_Time_Picker_CSS;
+
+   procedure Emit_Init_Date_Time_Pickers (TWdg : Widget_Pointer);
+   procedure Emit_Init_Date_Time_Pickers (TWdg : Widget_Pointer) is
+   begin
+      if TWdg.Widget_Type = GtkCalendar then
+         if TWdg.Is_DatePicker then
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all & "_Calendar"
+                          & ".Set_Visible (False);");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+         else
+            TIO.Put_Line (Sp (6) & "if Provider_" & TWdg.Name.all & "."
+                          & "Load_From_Data (CSS_" & TWdg.Name.all & ", "
+                          & "Error'Access) then");
+            TIO.Put_Line (Sp (9) & "Apply_Css (Me."
+                          & TWdg.WParent.Name.all & ", "
+                          & "+Provider_" & TWdg.Name.all & ");");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.New_Line;
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Reset_Entries;");
+         end if;
+      end if;
+   end Emit_Init_Date_Time_Pickers;
+
+   procedure Emit_Declare_Set_Date_Time_Pickers (TWdg : Widget_Pointer);
+   procedure Emit_Declare_Set_Date_Time_Pickers (TWdg : Widget_Pointer) is
+   begin
+      if TWdg.Widget_Type = GtkCalendar then
+         if TWdg.Is_DatePicker then
+            TIO.Put_Line (Sp (3) & "procedure "
+                          & TWdg.Name.all & "_Set_Entries;");
+         else
+            TIO.Put_Line (Sp (3) & "procedure "
+                          & TWdg.Name.all & "_Reset_Entries;");
+         end if;
+      end if;
+   end Emit_Declare_Set_Date_Time_Pickers;
 
    procedure Emit_Signal_Bodies (TWin0 : Window_Pointer);
    procedure Emit_Signal_Bodies (TWin0 : Window_Pointer) is
@@ -208,7 +319,30 @@ package body W2Gtk2Ada is
                TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
                              & " is");
                TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
+               if TS.Name.all = "Load" then
+                  if Have.Radio_Buttons > 0 then
+                     TIO.Put_Line (Sp (6) & "RB_Group : "
+                                   & "Gtk.Widget.Widget_SList.GSlist := "
+                                   & "Widget_SList.Null_List;");
+                  end if;
+                  if Have.Time_Pickers > 0 then
+                     TIO.Put_Line (Sp (6) & "Error : aliased Glib.Error.GError;");
+                     For_Each_Widget (Win_List, Emit_Time_Picker_CSS'Access);
+                  end if;
+               end if;
                TIO.Put_Line (Sp (3) & "begin");
+               if TS.Name.all = "Load" then
+                  if Have.Radio_Buttons > 0 then
+                     For_Each_Widget (Win_List, Emit_RB_Group'Access);
+                     TIO.Put_Line (Sp (6) & "Me." & First_Radio_Button.Name.all
+                                   & ".Set_Active (True);");
+                     TIO.New_Line;
+                  end if;
+                  if  Have.Date_Pickers > 0 then
+                     For_Each_Widget (Win_List, Emit_Init_Date_Time_Pickers'Access);
+                     TIO.New_Line;
+                  end if;
+               end if;
                TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
                if Form_Closing and then
                  TS.Handler.all =
@@ -226,7 +360,7 @@ package body W2Gtk2Ada is
                              & "return Boolean is");
                TIO.Put_Line (Sp (3) & "begin");
                TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-               TIO.Put_Line (Sp (6) & "return False;");
+               TIO.Put_Line (Sp (6) & "return False; --  signal not processed");
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             end if;
             TIO.New_Line;
@@ -239,6 +373,631 @@ package body W2Gtk2Ada is
    procedure Emit_Signal_Bodies (TWdg : Widget_Pointer) is
       TS : Signal_Pointer := TWdg.Signal_List;
    begin
+      if TWdg.Widget_Type = GtkCalendar then
+         if TWdg.Is_DatePicker then
+            TIO.Put_Line (Sp (3)
+                          & TWdg.Name.all
+                          & "_Min_Date : constant Time := Time_Of ("
+                          & GC.Image (TWdg.MinDate, "%Y") & ", "
+                          & GC.Image (TWdg.MinDate, "%m") & ", "
+                          & GC.Image (TWdg.MinDate, "%d") & ");");
+            TIO.Put_Line (Sp (3)
+                          & TWdg.Name.all
+                          & "_Max_Date : constant Time := Time_Of ("
+                          & GC.Image (TWdg.MaxDate, "%Y") & ", "
+                          & GC.Image (TWdg.MaxDate, "%m") & ", "
+                          & GC.Image (TWdg.MaxDate, "%d") & ");");
+            TIO.New_Line;
+            TIO.Put_Line (Sp (3) & "procedure " & TWdg.Name.all
+                          & "_Set_Entries is");
+            TIO.Put_Line (Sp (6) & "Year, Month, Day : Guint;");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Calendar.Get_Date (Year, Month, Day);");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Day_Entry.Set_Text (Img (Day));");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Month_Entry.Set_Text (Img (Month + 1));");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Year_Entry.Set_Text (Img (Year));");
+            TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Set_Entries;");
+            TIO.New_Line;
+
+            while TS /= null loop
+               if Starts_With (TS.Handler.all, "On_Entry_Day_Leavefocus")
+               then
+                  TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5)
+                                & "(User_Data : access GObject_Record'Class)"
+                                & " return Boolean is");
+                  TIO.Put_Line (Sp (6) & "--  pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "On_Entry_Day_Activate_"
+                                & TWdg.Name.all
+                                & " (User_Data);");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6)
+                                & "return False; --  signal not processed");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Day_Activate")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Day_String : constant String := Me."
+                                & TWdg.Name.all & "_Day_Entry.Get_Text;");
+                  TIO.Put_Line (Sp (6) & "New_Day   : Day_Number;");
+                  TIO.Put_Line (Sp (6) & "Year_Old  : Guint;");
+                  TIO.Put_Line (Sp (6) & "Month_Old : Guint;");
+                  TIO.Put_Line (Sp (6) & "Day_Old   : Guint;");
+                  TIO.Put_Line (Sp (6) & "New_Time  : Time;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "New_Day := Day_Number'Value (Day_String);");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Constraint_Error =>");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Calendar.Get_Date " &
+                                  "(Year_Old, Month_Old, Day_Old);");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "New_Time := Time_Of "
+                                & "(Year_Number (Year_Old),");
+                  TIO.Put_Line (Sp (30) & "Month_Number (Month_Old + 1),");
+                  TIO.Put_Line (Sp (30) & "New_Day);");
+                  TIO.Put_Line (Sp (9) & "if New_Time < " &
+                                  TWdg.Name.all & "_Min_Date then");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (9) & "end if;");
+                  TIO.Put_Line (Sp (9) & "if New_Time > "
+                                  & TWdg.Name.all & "_Max_Date then");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (9) & "end if;");
+                  TIO.Put_Line (Sp (9) & "Me."
+                                & TWdg.Name.all
+                                & "_Calendar.Select_Day (Guint (New_Day));");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Ada.Calendar.Time_Error =>");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Month_Leavefocus")
+               then
+                  TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5)
+                                & "(User_Data : access GObject_Record'Class)"
+                                & " return Boolean is");
+                  TIO.Put_Line (Sp (6) & "--  pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "On_Entry_Month_Activate_"
+                                & TWdg.Name.all
+                                & " (User_Data);");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6)
+                                & "return False; --  signal not processed");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Month_Activate")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Month_String : constant String := Me."
+                                & TWdg.Name.all & "_Month_Entry.Get_Text;");
+                  TIO.Put_Line (Sp (6) & "New_Month  : Month_Number;");
+                  TIO.Put_Line (Sp (6) & "Year_Old   : Guint;");
+                  TIO.Put_Line (Sp (6) & "Month_Old  : Guint;");
+                  TIO.Put_Line (Sp (6) & "Day_Old    : Guint;");
+                  TIO.Put_Line (Sp (6) & "New_Time   : Time;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "New_Month := Month_Number'Value (Month_String);");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Constraint_Error =>");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Calendar.Get_Date " &
+                                  "(Year_Old, Month_Old, Day_Old);");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "New_Time := Time_Of "
+                                & "(Year_Number (Year_Old),");
+                  TIO.Put_Line (Sp (30) & "New_Month,");
+                  TIO.Put_Line (Sp (30) & "Day_Number (Day_Old));");
+                  TIO.Put_Line (Sp (9) & "if New_Time < " &
+                                  TWdg.Name.all & "_Min_Date then");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (9) & "end if;");
+                  TIO.Put_Line (Sp (9) & "if New_Time > "
+                                  & TWdg.Name.all & "_Max_Date then");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (9) & "end if;");
+                  TIO.Put_Line (Sp (9) & "Me."
+                                & TWdg.Name.all
+                                & "_Calendar.Select_Month "
+                                & "(Guint (New_Month - 1), Year_Old);");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Ada.Calendar.Time_Error =>");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Year_Leavefocus")
+               then
+                  TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5)
+                                & "(User_Data : access GObject_Record'Class)"
+                                & " return Boolean is");
+                  TIO.Put_Line (Sp (6) & "--  pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "On_Entry_Year_Activate_"
+                                & TWdg.Name.all
+                                & " (User_Data);");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6)
+                                & "return False; --  signal not processed");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Year_Activate")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Year_String : constant String := Me."
+                                & TWdg.Name.all & "_Year_Entry.Get_Text;");
+                  TIO.Put_Line (Sp (6) & "New_Year  : Year_Number;");
+                  TIO.Put_Line (Sp (6) & "Year_Old  : Guint;");
+                  TIO.Put_Line (Sp (6) & "Month_Old : Guint;");
+                  TIO.Put_Line (Sp (6) & "Day_Old   : Guint;");
+                  TIO.Put_Line (Sp (6) & "New_Time  : Time;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "New_Year := Year_Number'Value (Year_String);");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Constraint_Error =>");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Calendar.Get_Date " &
+                                  "(Year_Old, Month_Old, Day_Old);");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "New_Time := Time_Of "
+                                & "(New_Year,");
+                  TIO.Put_Line (Sp (30) & "Month_Number (Month_Old + 1),");
+                  TIO.Put_Line (Sp (30) & "Day_Number (Day_Old));");
+                  TIO.Put_Line (Sp (9) & "if New_Time < " &
+                                  TWdg.Name.all & "_Min_Date then");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (9) & "end if;");
+                  TIO.Put_Line (Sp (9) & "if New_Time > "
+                                  & TWdg.Name.all & "_Max_Date then");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (9) & "end if;");
+                  TIO.Put_Line (Sp (9) & "Me."
+                                & TWdg.Name.all
+                                & "_Calendar.Select_Month "
+                                & "(Month_Old, Guint (New_Year));");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Ada.Calendar.Time_Error =>");
+                  TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (12) & "return;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Button_Clicked")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "Me."
+                                & TWdg.Name.all & "_Calendar"
+                                & ".Set_Visible");
+                  TIO.Put_Line (Sp (9) & "(not Me."
+                                & TWdg.Name.all & "_Calendar"
+                                & ".Get_Visible);");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Day_Selected")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Day_Selected_Double_Click")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all & "_Calendar"
+                                & ".Set_Visible (False);");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Prev_Year")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Next_Year")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Prev_Month")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Next_Month")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+               end if;
+
+               TIO.New_Line;
+               TS := TS.Next;
+            end loop;
+
+         else  --  time_picker
+            TIO.Put_Line (Sp (3)
+                          & TWdg.Name.all & "_Hour : Integer  := 0;");
+            TIO.Put_Line (Sp (3)
+                          & TWdg.Name.all & "_Min  : Integer  := 0;");
+            TIO.Put_Line (Sp (3)
+                          & TWdg.Name.all & "_Sec  : Duration := 0.0;");
+            TIO.New_Line;
+            TIO.Put_Line (Sp (3) & "procedure " & TWdg.Name.all
+                          & "_Reset_Entries is");
+            TIO.Put_Line (Sp (6) & "Now : constant Ada.Calendar.Time := "
+                          & "Ada.Calendar.Clock;");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Hour := "
+                          & "GNAT.Calendar.Hour (Now);");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min  := "
+                          & "GNAT.Calendar.Minute (Now);");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec  :=");
+            TIO.Put_Line (Sp (8) & "GNAT.Calendar.Second (Now) * "
+                          & "GNAT.Calendar.Sub_Second (Now);");
+            TIO.New_Line;
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Hour_Entry.Set_Text (Img ("
+                          & TWdg.Name.all & "_Hour));");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Min_Entry.Set_Text (Img ("
+                          & TWdg.Name.all & "_Min));");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Sec_Entry.Set_Text (Img ("
+                          & TWdg.Name.all & "_Sec));");
+            TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Reset_Entries;");
+            TIO.New_Line;
+
+            while TS /= null loop
+               if Starts_With (TS.Handler.all, "On_Entry_Sec_Leavefocus")
+               then
+                  TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " return Boolean is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Sec_String : constant String := "
+                                & "Me." & TWdg.Name.all & "_Sec_Entry.Get_Text;");
+                  TIO.Put_Line (Sp (6) & "Sec        : Duration;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "Sec := Duration'Value (Sec_String);");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Constraint_Error =>");
+                  TIO.Put_Line (Sp (12) & "Me." & TWdg.Name.all
+                                & "_Sec_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Sec));");
+                  TIO.Put_Line (Sp (12) & "return False;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "if Sec not in 0.0 .. 59.999999 then");
+                  TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                                & "_Sec_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Sec));");
+                  TIO.Put_Line (Sp (9) & "return False;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec := Sec;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "return False;  --  signal not processed");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Sec_Activate")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "--  pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Temp : Boolean;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "Temp := On_Entry_Sec_Leavefocus_"
+                                & TWdg.Name.all & " (User_Data);");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Min_Leavefocus")
+               then
+                  TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " return Boolean is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Min_String : constant String := "
+                                & "Me." & TWdg.Name.all & "_Min_Entry.Get_Text;");
+                  TIO.Put_Line (Sp (6) & "Min        : Integer;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "Min := Integer'Value (Min_String);");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Constraint_Error =>");
+                  TIO.Put_Line (Sp (12) & "Me." & TWdg.Name.all
+                                & "_Min_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Min));");
+                  TIO.Put_Line (Sp (12) & "return False;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "if Min not in 0 .. 59 then");
+                  TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                                & "_Min_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Min));");
+                  TIO.Put_Line (Sp (9) & "return False;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min := Min;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "return False;  --  signal not processed");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Min_Activate")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "--  pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Temp : Boolean;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "Temp := On_Entry_Min_Leavefocus_"
+                                & TWdg.Name.all & " (User_Data);");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Hour_Leavefocus")
+               then
+                  TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " return Boolean is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Hour_String : constant String := "
+                                & "Me." & TWdg.Name.all & "_Hour_Entry.Get_Text;");
+                  TIO.Put_Line (Sp (6) & "Hour        : Integer;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "begin");
+                  TIO.Put_Line (Sp (9) & "Hour := Integer'Value (Hour_String);");
+                  TIO.Put_Line (Sp (6) & "exception");
+                  TIO.Put_Line (Sp (9) & "when Constraint_Error =>");
+                  TIO.Put_Line (Sp (12) & "Me." & TWdg.Name.all
+                                & "_Hour_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Hour));");
+                  TIO.Put_Line (Sp (12) & "return False;");
+                  TIO.Put_Line (Sp (6) & "end;");
+                  TIO.Put_Line (Sp (6) & "if Hour not in 0 .. 23 then");
+                  TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                                & "_Hour_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Hour));");
+                  TIO.Put_Line (Sp (9) & "return False;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Hour := Hour;");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "return False;  --  signal not processed");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Entry_Hour_Activate")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "--  pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (6) & "Temp : Boolean;");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & "Temp := On_Entry_Hour_Leavefocus_"
+                                & TWdg.Name.all & " (User_Data);");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Sec_Button_Up_Clicked")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec := "
+                                & TWdg.Name.all & "_Sec + 1.0;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Sec >= 60.0 then");
+                  TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Sec := "
+                                & TWdg.Name.all & "_Sec - 60.0;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Sec_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Sec" & "));");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Sec_Button_Down_Clicked")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec := "
+                                & TWdg.Name.all & "_Sec - 1.0;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Sec < 0.0 then");
+                  TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Sec := "
+                                & TWdg.Name.all & "_Sec + 60.0;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Sec_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Sec" & "));");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Min_Button_Up_Clicked")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min := "
+                                & TWdg.Name.all & "_Min + 1;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Min >= 60 then");
+                  TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Min := "
+                                & TWdg.Name.all & "_Min - 60;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Min_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Min" & "));");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Min_Button_Down_Clicked")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min := "
+                                & TWdg.Name.all & "_Min - 1;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Min < 0 then");
+                  TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Min := "
+                                & TWdg.Name.all & "_Min + 60;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Min_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Min" & "));");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Hour_Button_Up_Clicked")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Hour := "
+                                & TWdg.Name.all & "_Hour + 1;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Hour >= 24 then");
+                  TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Hour := "
+                                & TWdg.Name.all & "_Hour - 24;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Hour_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Hour" & "));");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+
+               elsif Starts_With (TS.Handler.all, "On_Hour_Button_Down_Clicked")
+               then
+                  TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+                  TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                                & " is");
+                  TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+                  TIO.Put_Line (Sp (3) & "begin");
+                  TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Hour := "
+                                & TWdg.Name.all & "_Hour - 1;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Hour < 0 then");
+                  TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Hour := "
+                                & TWdg.Name.all & "_Hour + 24;");
+                  TIO.Put_Line (Sp (6) & "end if;");
+                  TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                                & "_Hour_Entry.Set_Text (Img ("
+                                & TWdg.Name.all & "_Hour" & "));");
+                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  TIO.Put_Line (Sp (6) & "null;");
+                  TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+               end if;
+               TIO.New_Line;
+
+               TS := TS.Next;
+            end loop;
+         end if;
+         return;
+      end if;
+
       while TS /= null loop
          if TS.GAda then
             if TS.Name.all = "leave" then
@@ -254,7 +1013,7 @@ package body W2Gtk2Ada is
                              & "));");
                TIO.Put_Line (Sp (6) & "return True;  --  signal processed");
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
-            else
+            elsif TS.Proc then
                TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
                TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
                              & " is");
@@ -262,6 +1021,15 @@ package body W2Gtk2Ada is
                TIO.Put_Line (Sp (3) & "begin");
                TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
                TIO.Put_Line (Sp (6) & "null;");
+               TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
+            else  --  TS.Proc is false
+               TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+               TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
+                             & " return Boolean is");
+               TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
+               TIO.Put_Line (Sp (3) & "begin");
+               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               TIO.Put_Line (Sp (6) & "return False; --  signal not processed");
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             end if;
             TIO.New_Line;
@@ -302,9 +1070,69 @@ package body W2Gtk2Ada is
          TIO.Put_Line ("with " & Filename & "_Pkg.Object_Collection;");
          TIO.Put_Line ("use " & Filename & "_Pkg.Object_Collection;");
          Emit_With_Use ("Gtk.Widget");
+         if Have.Radio_Buttons > 0 then
+            Emit_With_Use ("Gtk.Radio_Button");
+         end if;
+         if Have.Date_Pickers > 0 then
+            Emit_With_Use ("Gtk.Calendar");
+            Emit_With_Use ("Glib");
+            Emit_With_Use ("Gtk.GEntry");
+            Emit_With_Use ("Ada.Calendar");
+            if Have.Time_Pickers > 0 then
+               Emit_With_Use ("Glib.Error");
+               Emit_With_Use ("Gtk.Container");
+               Emit_With_Use ("GNAT.Calendar");
+               Emit_With_Use ("Gtk.Css_Provider");
+               Emit_With_Use ("Gtk.Style_Provider");
+               Emit_With_Use ("Gtk.Style_Context");
+            end if;
+         elsif Have.Time_Pickers > 0 then
+            Emit_With_Use ("Glib");
+            Emit_With_Use ("Gtk.GEntry");
+            Emit_With_Use ("Ada.Calendar");
+            Emit_With_Use ("Glib.Error");
+            Emit_With_Use ("Gtk.Container");
+            Emit_With_Use ("GNAT.Calendar");
+            Emit_With_Use ("Gtk.Css_Provider");
+            Emit_With_Use ("Gtk.Style_Provider");
+            Emit_With_Use ("Gtk.Style_Context");
+         end if;
       end if;
       TIO.New_Line;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Signals is");
+      if Have.Date_Pickers > 0 then
+         TIO.Put_Line (Sp (3) &
+                         "function Img (Value : Guint) return String;");
+         TIO.Put_Line (Sp (3) &
+                         "function Img (Value : Guint) return String is");
+         TIO.Put_Line (Sp (6) & "Str : constant String := Value'Image;");
+         TIO.Put_Line (Sp (3) & "begin");
+         TIO.Put_Line (Sp (6) & "return Str (Str'First + 1 .. Str'Last);");
+         TIO.Put_Line (Sp (3) & "end Img;");
+         TIO.New_Line;
+      end if;
+      if Have.Time_Pickers > 0 then
+         TIO.Put_Line (Sp (3) &
+                         "function Img (Value : Duration) return String;");
+         TIO.Put_Line (Sp (3) &
+                         "function Img (Value : Duration) return String is");
+         TIO.Put_Line (Sp (6) & "Str : constant String := Value'Image;");
+         TIO.Put_Line (Sp (3) & "begin");
+         TIO.Put_Line (Sp (6) & "return Str (Str'First + 1 .. Str'Last);");
+         TIO.Put_Line (Sp (3) & "end Img;");
+         TIO.New_Line;
+         TIO.Put_Line (Sp (3) &
+                         "function Img (Value : Integer) return String;");
+         TIO.Put_Line (Sp (3) &
+                         "function Img (Value : Integer) return String is");
+         TIO.Put_Line (Sp (6) & "Str : constant String := Value'Image;");
+         TIO.Put_Line (Sp (3) & "begin");
+         TIO.Put_Line (Sp (6) & "return Str (Str'First + 1 .. Str'Last);");
+         TIO.Put_Line (Sp (3) & "end Img;");
+         TIO.New_Line;
+      end if;
+      For_Each_Widget (Win_List, Emit_Declare_Set_Date_Time_Pickers'Access);
+
       Temp_Win := Win_List;
       while Temp_Win /= null loop
          Emit_Signal_Bodies (Temp_Win);
@@ -465,11 +1293,60 @@ package body W2Gtk2Ada is
                when others => null;
             end case;
 
-            TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & " :=");
-            TIO.Put_Line (Sp (8)
+            if TWdg.Widget_Type = GtkCalendar then
+               if TWdg.Is_DatePicker then
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Year_Entry :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Entry (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Year_Entry") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Month_Entry :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Entry (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Month_Entry") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Day_Entry :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Entry (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Day_Entry") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Button :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Button (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Button") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Calendar :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Calendar (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Calendar") & "));");
+               else
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Hour_Entry :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Entry (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Hour_Entry") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Min_Entry :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Entry (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Min_Entry") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Sec_Entry :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Entry (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Sec_Entry") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Hour_Button :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Button (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Hour_Button") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Min_Button :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Button (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Min_Button") & "));");
+
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & "_Sec_Button :=");
+                  TIO.Put_Line (Sp (8) & "Gtk_Button (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all & "_Sec_Button") & "));");
+
+               end if;
+            else
+               TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & " :=");
+               TIO.Put_Line (Sp (8)
                           & To_Gtk (TWdg, True)
                           & " (Builder.Get_Object (");
-            TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all) & "));");
+               TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all) & "));");
+            end if;
 
             case TWdg.Widget_Type is
                when GtkDataGridView | GtkTreeGridView =>
@@ -537,8 +1414,36 @@ package body W2Gtk2Ada is
 
          when others => null;
       end case;
-      TIO.Put_Line (Sp (6) & TWdg.Name.all & " : "
-                    & To_Gtk (TWdg, True) & ";");
+      if TWdg.Widget_Type = GtkCalendar then
+         if TWdg.Is_DatePicker then
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Year_Entry : "
+                          & "Gtk_Entry" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Month_Entry : "
+                          & "Gtk_Entry" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Day_Entry : "
+                          & "Gtk_Entry" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Button : "
+                          & "Gtk_Button" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Calendar : "
+                          & "Gtk_Calendar" & ";");
+         else
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Hour_Entry : "
+                          & "Gtk_Entry" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min_Entry : "
+                          & "Gtk_Entry" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec_Entry : "
+                          & "Gtk_Entry" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Hour_Button : "
+                          & "Gtk_Button" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min_Button : "
+                          & "Gtk_Button" & ";");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec_Button : "
+                          & "Gtk_Button" & ";");
+         end if;
+      else
+         TIO.Put_Line (Sp (6) & TWdg.Name.all & " : "
+                       & To_Gtk (TWdg, True) & ";");
+      end if;
       case TWdg.Widget_Type is
          when GtkDataGridView | GtkTreeGridView =>
             TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Selection : "
@@ -652,6 +1557,15 @@ package body W2Gtk2Ada is
       end if;
       if Have.TreeViewToggles > 0 then
          Emit_With_Use ("Gtk.Cell_Renderer_Toggle");
+      end if;
+      if Have.Date_Pickers > 0 then
+         Emit_With_Use ("Gtk.Calendar");
+      end if;
+      if Have.Radio_Buttons > 0 then
+         Emit_With_Use ("Gtk.Radio_Button");
+      end if;
+      if Have.Tooltips > 0 then
+         Emit_With_Use ("Gtk.Tooltip");
       end if;
       TIO.Put_Line ("with Glib;");
       Emit_With_Use ("Glib.Object");
@@ -1195,7 +2109,8 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (3) & "Glade_Filename : constant String :=");
       TIO.Put_Line (Sp (6)
                     & Quoted (Glade_Path & "/"
-                      & To_Lower (TWin.Name.all)  & ".glade")
+                      --  & To_Lower (TWin.Name.all) & ".glade")
+                      & TWin.Name.all & ".glade")
                     & ";");
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "procedure Report_Glade_Error (Err : GError);");
@@ -1477,17 +2392,20 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "/*entry {");
       TIO.Put_Line (CSSFile, "    min-height: 0px;");
       TIO.Put_Line (CSSFile, "}*/");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "/* Scrollbar */");
       TIO.Put_Line (CSSFile, ".scrollbar {");
       TIO.Put_Line (CSSFile, "background-clip: padding-box;");
       TIO.Put_Line (CSSFile, "-GtkScrollbar-has-backward-stepper: 1;");
       TIO.Put_Line (CSSFile, "-GtkScrollbar-has-forward-stepper: 1;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "/* Tooltip */");
       TIO.Put_Line (CSSFile, "tooltip, .tooltip {");
       TIO.Put_Line (CSSFile, "    background-color: black;");
       TIO.Put_Line (CSSFile, "    color: white;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "/* Menubar and Toolbar */");
       TIO.Put_Line (CSSFile, "menubar, toolbar {");
       TIO.Put_Line (CSSFile, "    border-style: solid;");
@@ -1502,12 +2420,14 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "    padding-top: 2px;");
       TIO.Put_Line (CSSFile, "    padding-bottom: 2px;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "/* GtkNotebook */");
       TIO.Put_Line (CSSFile, "GtkNotebook {");
       TIO.Put_Line (CSSFile, "    background-image: -gtk-gradient(linear,");
       TIO.Put_Line (CSSFile, "               left top, left bottom,");
       TIO.Put_Line (CSSFile, "               from (@bg_tab), to (@bg_tab));");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkNotebook tab {");
       TIO.Put_Line (CSSFile, "    border-style: solid;");
       TIO.Put_Line (CSSFile, "    border-left-width: 0.4px;");
@@ -1518,11 +2438,13 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "               left top, left bottom,");
       TIO.Put_Line (CSSFile, "               from (@bg_tab), to (@bg_tab));");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkNotebook tab:active {");
       TIO.Put_Line (CSSFile, "    background-image: -gtk-gradient(linear,");
       TIO.Put_Line (CSSFile, "        left top, left bottom,");
       TIO.Put_Line (CSSFile, "        from (@bg_sel_tab), to (@bg_sel_tab));");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkNotebook tab .button{");
       TIO.Put_Line (CSSFile, "    border-style: solid;");
       TIO.Put_Line (CSSFile, "    border-color: black;");
@@ -1531,10 +2453,12 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "               left top, left bottom,");
       TIO.Put_Line (CSSFile, "               from (@bg_tab), to (@bg_tab));");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "/* GtkTreeView */");
       TIO.Put_Line (CSSFile, "GtkTreeView {");
       TIO.Put_Line (CSSFile, "    -GtkTreeView-vertical-separator: 0px;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkTreeView column-header .button {");
       TIO.Put_Line (CSSFile, "    background-image: -gtk-gradient(linear,");
       TIO.Put_Line (CSSFile, "               left top, left bottom,");
@@ -1546,21 +2470,26 @@ package body W2Gtk2Ada is
       TIO.Put_Line (CSSFile, "    border-bottom-width: 0.4px;");
       TIO.Put_Line (CSSFile, "    padding: 0px 0px 0px 0px;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkTreeView column-header .button:hover {");
       TIO.Put_Line (CSSFile, "     background-image: -gtk-gradient(linear,");
       TIO.Put_Line (CSSFile, "      left top, left bottom,");
       TIO.Put_Line (CSSFile, "      from (@bg_hover_hd), to (@bg_hover_hd));");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkTreeView row:nth-child(even) {");
       TIO.Put_Line (CSSFile, "    background-color: @bg_even_row;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkTreeView row:nth-child(odd) {");
       TIO.Put_Line (CSSFile, "    background-color: white;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "* {");
       TIO.Put_Line (CSSFile, "    -GtkTreeView-grid-line-pattern: ""\0\0"";");
       TIO.Put_Line (CSSFile, "    -GtkTreeView-grid-line-width: 1;");
       TIO.Put_Line (CSSFile, "}");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "GtkTreeView row:selected {");
       TIO.Put_Line (CSSFile, "    background-color: @bg_sel_row;");
       TIO.Put_Line (CSSFile, "}");

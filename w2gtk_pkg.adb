@@ -318,6 +318,19 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: Set Have Widgets");
+      TWin := Win_List;
+      while TWin /= null loop
+         Set_Have (TWin);
+         TWdg := TWin.Widget_List;
+         while TWdg /= null loop
+            Set_Have (TWdg);
+            TWdg := TWdg.Next;
+         end loop;
+         TWin := TWin.Next;
+      end loop;
+
       --  generate auxiliary elements
       Debug (0, "");
       Debug (0, "Adjusting to GTK: generate auxiliary windows");
@@ -372,7 +385,7 @@ package body W2gtk_Pkg is
                   then
                      Num_Aux_Widgets := Num_Aux_Widgets + 1;
                      NWin1 := new Window_Properties (GtkEntryBuffer);
-                     NWin1.Name := new String'("Fntrybuffer"
+                     NWin1.Name := new String'("Entrybuffer"
                                                & "_" & TWdg.Name.all
                                               );
                      NWin1.Associated_Widget := TWdg;
@@ -384,19 +397,19 @@ package body W2gtk_Pkg is
                             & " (" & TWdg.Widget_Type'Image & ")");
                   end if;
 
-               when GtkCalendar =>
-                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
-                  NWin1 := new Window_Properties (GtkEntryBuffer);
-                  NWin1.Name := new String'("Fntrybuffer"
-                                            & "_" & TWdg.Name.all
-                                           );
-                  NWin1.Associated_Widget := TWdg;
-                  TWdg.Buffer := NWin1;
-                  Insert_Window_By_Front (NWin1);
-                  Debug (0, "Generated entrybuffer for "
-                         & NWin1.Name.all
-                         & " for " & TWdg.Name.all
-                         & " (" & TWdg.Widget_Type'Image & ")");
+               --  when GtkCalendar =>
+               --     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+               --     NWin1 := new Window_Properties (GtkEntryBuffer);
+               --     NWin1.Name := new String'("Entrybuffer"
+               --                               & "_" & TWdg.Name.all
+               --                              );
+               --     NWin1.Associated_Widget := TWdg;
+               --     TWdg.Buffer := NWin1;
+               --     Insert_Window_By_Front (NWin1);
+               --     Debug (0, "Generated entrybuffer for "
+               --            & NWin1.Name.all
+               --            & " for " & TWdg.Name.all
+               --            & " (" & TWdg.Widget_Type'Image & ")");
 
                when GtkListBox =>
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
@@ -1778,13 +1791,13 @@ package body W2gtk_Pkg is
 
                   when GtkCalendar =>
                      Put_Property ("StartDate");
-                     TIO.Put_Line (Image (TWdgP.Start_Date, ISO_Date));
+                     TIO.Put_Line (LFile, Image (TWdgP.Start_Date, ISO_Date));
 
                      Put_Property ("MinDate");
-                     TIO.Put_Line (Image (TWdgP.MinDate, ISO_Date));
+                     TIO.Put_Line (LFile, Image (TWdgP.MinDate, ISO_Date));
 
                      Put_Property ("MaxDate");
-                     TIO.Put_Line (Image (TWdgP.MaxDate, ISO_Date));
+                     TIO.Put_Line (LFile, Image (TWdgP.MaxDate, ISO_Date));
 
                      Put_Property ("Format Date");
                      Put_String_Access (TWdgP.Format_Date);
@@ -3387,15 +3400,18 @@ package body W2gtk_Pkg is
                   elsif WT.Widget_Type = GtkCalendar then
                      WT.Start_Date := Get_Date (Idx1);
                      Debug (NLin, "Set Widget Property "
-                            & WT.Name.all & ".Start_Date"
+                            & WT.Name.all & ".Start_Date "
                             & Image (WT.Start_Date, ISO_Date));
                   end if;
 
                when Attr_Format =>
                   if WT.Widget_Type = GtkCalendar then
                      WT.Format_Date := new String'(Line (Idx1 .. Len));
+                     if Index (Line (Idx1 .. Len), "Format.Time") > 0 then
+                        WT.Is_DatePicker := False;
+                     end if;
                      Debug (NLin, "Set Widget Property "
-                            & WT.Name.all & ".Format_Date"
+                            & WT.Name.all & ".Format_Date "
                             & WT.Format_Date.all);
                   end if;
 
@@ -3403,7 +3419,7 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkCalendar then
                      WT.MinDate := Get_Date (Idx1);
                      Debug (NLin, "Set Widget Property "
-                            & WT.Name.all & ".Start_Date"
+                            & WT.Name.all & ".Min_Date "
                             & Image (WT.MinDate, ISO_Date));
                   end if;
 
@@ -3411,7 +3427,7 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkCalendar then
                      WT.MaxDate := Get_Date (Idx1);
                      Debug (NLin, "Set Widget Property "
-                            & WT.Name.all & ".Start_Date"
+                            & WT.Name.all & ".Max_Date "
                             & Image (WT.MaxDate, ISO_Date));
                   end if;
 
@@ -3419,7 +3435,7 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkCalendar then
                      WT.MaxDate := Get_Date (Idx1);
                      Debug (NLin, "Set Widget Property "
-                            & WT.Name.all & ".Start_Date"
+                            & WT.Name.all & ".Limit_Date "
                             & Image (WT.MaxDate, ISO_Date));
                   end if;
 
@@ -4422,7 +4438,7 @@ package body W2gtk_Pkg is
 
    function Parse_VB_File (Resx_Path      : String;
                            Resx_File_Name : String) return Integer is
-      WT : Widget_Pointer;
+      WT    : Widget_Pointer;
       Line0 : String (1 .. 1024); --  prev line
       Len0  : Integer := 0;
       Line1 : String (1 .. 1024); --  prev prev line
@@ -4719,6 +4735,241 @@ package body W2gtk_Pkg is
             end;
          end if;
       end loop;
+
+      Debug (0, "Creating synthetic signals");
+      declare
+         TWin : Window_Pointer;
+         WS   : Signal_Pointer;
+      begin
+         TWin := Win_List;
+         while TWin /= null loop
+            WT := TWin.Widget_List;
+            while WT /= null loop
+               if WT.Widget_Type = GtkCalendar then
+                  if WT.Is_DatePicker then
+                     WS := new Signal_Block;
+                     WS.Name := new String'("NextMonth");
+                     WS.Handler := new String'("On_Next_Month_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all & ".NextMonth");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("PrevMonth");
+                     WS.Handler := new String'("On_Prev_Month_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all & ".PrevMonth");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("NextYear");
+                     WS.Handler := new String'("On_Next_Year_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all & ".NextYear");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("PrevYear");
+                     WS.Handler := new String'("On_Prev_Year_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all & ".PrevYear");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("DaySelectedDoubleClick");
+                     WS.Handler := new String'("On_Day_Selected_Double_Click_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all & ".day_selected_double_click");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("DaySelected");
+                     WS.Handler := new String'("On_Day_Selected_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all & ".day_selected");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Click");
+                     WS.Handler := new String'("On_Button_Clicked_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal " & WT.Name.all & ".clicked");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Activate");
+                     WS.Handler := new String'("On_Entry_Year_Activate_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Year_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("LeaveFocus");
+                     WS.Handler := new String'("On_Entry_Year_Leavefocus_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Year_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Activate");
+                     WS.Handler := new String'("On_Entry_Month_Activate_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Month_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("LeaveFocus");
+                     WS.Handler := new String'("On_Entry_Month_Leavefocus_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Month_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Activate");
+                     WS.Handler := new String'("On_Entry_Day_Activate_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Day_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("LeaveFocus");
+                     WS.Handler := new String'("On_Entry_Day_Leavefocus_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Day_Activate");
+
+                  else
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Click");
+                     WS.Handler := new String'("On_Sec_Button_Up_Clicked_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Sec_Clicked");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Click");
+                     WS.Handler := new String'("On_Sec_Button_Down_Clicked_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Sec_Clicked");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Click");
+                     WS.Handler := new String'("On_Min_Button_Up_Clicked_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Min_Clicked");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Click");
+                     WS.Handler := new String'("On_Min_Button_Down_Clicked_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Min_Clicked");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Click");
+                     WS.Handler := new String'("On_Hour_Button_Up_Clicked_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Hour_Clicked");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Click");
+                     WS.Handler := new String'("On_Hour_Button_Down_Clicked_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Hour_Clicked");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Activate");
+                     WS.Handler := new String'("On_Entry_Hour_Activate_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Hour_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("LeaveFocus");
+                     WS.Handler := new String'("On_Entry_Hour_Leavefocus_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Hour_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Activate");
+                     WS.Handler := new String'("On_Entry_Min_Activate_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Min_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("LeaveFocus");
+                     WS.Handler := new String'("On_Entry_Min_Leavefocus_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Min_Activate");
+
+                     WS := new Signal_Block;
+                     WS.Name := new String'("Activate");
+                     WS.Handler := new String'("On_Entry_Sec_Activate_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Sec_Activate");
+                     WS := new Signal_Block;
+                     WS.Name := new String'("LeaveFocus");
+                     WS.Handler := new String'("On_Entry_Sec_Leavefocus_"
+                                               & WT.Name.all);
+                     Insert_Signal (WT, WS);
+                     Debug (NLin, "Created Signal "
+                            & WT.Name.all
+                            & ".Sec_Activate");
+                  end if;
+               end if;
+               WT := WT.Next;
+            end loop;
+            TWin := TWin.Next;
+         end loop;
+      end;
 
       Debug (0, "End of Parsing vb file");
       TIO.Close (VFile);

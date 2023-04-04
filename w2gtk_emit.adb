@@ -61,7 +61,8 @@ package body W2gtk_Emit is
                             Id      : Integer;
                             Packing : Boolean);
 
-   procedure Emit_GtkCalendar (TWdg : Widget_Pointer; Id : Integer);
+   procedure Emit_DatePicker (TWdg : Widget_Pointer; Id : Integer);
+   procedure Emit_TimePicker (TWdg : Widget_Pointer; Id : Integer);
    procedure Emit_GtkImage (TWdg : Widget_Pointer; Id : Integer);
    procedure Emit_GtkFrame (TWdg : Widget_Pointer; Id : Integer);
    procedure Emit_GtkListBox (TWdg : Widget_Pointer; Id : Integer);
@@ -152,6 +153,7 @@ package body W2gtk_Emit is
       procedure Emit_Margin (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_Margin (TWin : Window_Pointer; Id : Integer);
       procedure Emit_Name (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_Name (Name : String; Id : Integer);
       procedure Emit_Name (TWin : Window_Pointer; Id : Integer);
       procedure Emit_Object (TWdg   : Widget_Pointer;
                              Id     : Integer; --  identation
@@ -169,7 +171,8 @@ package body W2gtk_Emit is
       procedure Emit_Visible_And_Focus (TWin  : Window_Pointer;
                                         Id    : Integer;
                                         Focus : Boolean);
-      procedure Emit_WH_Request (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_WH_Request (TWdg : Widget_Pointer;
+                                 Id   : Integer);
    end Emit_Tools;
 
    ------------------
@@ -386,12 +389,18 @@ package body W2gtk_Emit is
          Emit_Property (Id, "name", TWin.Name.all);
       end Emit_Name;
 
+      procedure Emit_Name (Name : String; Id : Integer) is
+      begin
+         Emit_Property (Id, "name", Name);
+      end Emit_Name;
+
       procedure Emit_Name (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Property (Id, "name", TWdg.Name.all);
       end Emit_Name;
 
-      procedure Emit_WH_Request (TWdg : Widget_Pointer; Id : Integer) is
+      procedure Emit_WH_Request (TWdg : Widget_Pointer;
+                                 Id   : Integer) is
       begin
          if TWdg.Size.Horiz > 0 then
             Emit_Property (Id, "width-request", TWdg.Size.Horiz);
@@ -1305,12 +1314,12 @@ package body W2gtk_Emit is
          Emit_Object (TWdg, Id + 6, "GtkLabel", TWdg.Name.all);
          Emit_Name (TWdg, Id + 8);
          Emit_Visible_And_Focus (TWdg, Id + 8, False);
-         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
+         Emit_Property (Id + 8, "has-focus", TWdg.Has_Focus);
          Emit_Label (TWdg, Id + 8, UnderLine => False, Selectable => True);
          Emit_Align (TWdg, Id + 8, Numeric => False);
          if TWdg.MaxLength > 0 then
-            Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);
-            Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
+            Emit_Property (Id + 8, "width-chars", TWdg.MaxLength);
+            Emit_Property (Id + 8, "max-width-chars", TWdg.MaxLength);
          end if;
          Emit_Attributes (TWdg, Id + 8);
          Emit_GtkSignal (TWdg, Id + 8);
@@ -1536,9 +1545,9 @@ package body W2gtk_Emit is
       Emit_GtkSignal (TWdg, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing_Child (TWdg, Id,
-                                     Packing => True,
-                                     XY => True,
-                                     Homog => False);
+                          Packing => True,
+                          XY => True,
+                          Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
@@ -1800,9 +1809,9 @@ package body W2gtk_Emit is
       Emit_GtkSignal (TWdg, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing_Child (TWdg, Id,
-                                     Packing => True,
-                                     XY => True,
-                                     Homog => False);
+                          Packing => True,
+                          XY => True,
+                          Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
@@ -1810,154 +1819,490 @@ package body W2gtk_Emit is
          raise;
    end Emit_GtkFileChooserButton;
 
-   ----------------------
-   -- Emit_GtkCalendar --
-   ----------------------
-
-   procedure Emit_GtkCalendar (TWdg : Widget_Pointer; Id : Integer) is
-      procedure Emit_WH (Id : Integer; W, H : Integer);
-      procedure Emit_Image (TWdg : Widget_Pointer; Id : Integer);
-      procedure Emit_Button (TWdg : Widget_Pointer; Id : Integer);
+   ---------------------
+   -- Emit_TimePicker --
+   ---------------------
+   procedure Emit_TimePicker (TWdg : Widget_Pointer; Id : Integer) is
       procedure Emit_Packing (Id : Integer; Pos : Integer);
-      procedure Emit_Entry (TWdg : Widget_Pointer; Id : Integer);
-      procedure Emit_Box (TWdg : Widget_Pointer; Id : Integer);
-      procedure Emit_AspectFrame (TWdg : Widget_Pointer; Id : Integer);
-
-      procedure Emit_WH (Id : Integer; W, H : Integer) is
-      begin
-         Emit_Line (Sp (Id) & "<property name=""width-request"">" &
-                      Img (W) & "</property>");
-         Emit_Line (Sp (Id) & "<property name=""height-request"">" &
-                      Img (H) & "</property>");
-      end Emit_WH;
-
       procedure Emit_Packing (Id : Integer; Pos : Integer) is
       begin
          Emit_Line (Sp (Id) & "<packing>");
-         Emit_Line (Sp (Id + 2) & "<property name=""expand"">"
-                    & "False</property>");
-         Emit_Line (Sp (Id + 2) & "<property name=""fill"">True</property>");
-         Emit_Line (Sp (Id + 2) & "<property name=""position"">"
-                      & Img (Pos) & "</property>");
+         Emit_Property (Id + 2, "expand", False);
+         Emit_Property (Id + 2, "fill", False);
+         Emit_Property (Id + 2, "position", Pos);
          Emit_Line (Sp (Id) & "</packing>");
       end Emit_Packing;
 
-      procedure Emit_Image (TWdg : Widget_Pointer; Id : Integer) is
+      procedure Emit_Image (TWdg : Widget_Pointer;
+                            Id   : Integer;
+                            Name : String;
+                            Up   : Boolean);
+      procedure Emit_Image (TWdg : Widget_Pointer;
+                            Id   : Integer;
+                            Name : String;
+                            Up   : Boolean) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id + 2, "GtkImage", "Img_" & TWdg.Name.all);
-         Emit_Name (TWdg, Id + 4);
+         Emit_Object (TWdg, Id + 2, "GtkImage",
+                      TWdg.Name.all & Name & "_Img");
+         Emit_Name (TWdg.Name.all & Name & "_Img", Id + 4);
          Emit_Visible_And_Focus (TWdg, Id + 4, False);
-         Emit_Line (Sp (Id + 4) & "<property name=""icon-name"">"
-                    & "object-flip-vertical-symbolic</property>");
+         Emit_ToolTip (TWdg, Id + 4);
+         if Up then
+            Emit_Line (Sp (Id + 4) & "<property name=""stock"">"
+                       & "gtk-go-up"
+                       & "</property>");
+         else
+            Emit_Line (Sp (Id + 4) & "<property name=""stock"">"
+                       & "gtk-go-down"
+                       & "</property>");
+         end if;
+         Emit_Property (Id + 4, "icon_size", 1);
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing_Child (TWdg, Id,
-                                        Packing => False,
-                                        XY => True,
-                                        Homog => False);
          Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit TimePicker.Image: " & TWdg.Name.all);
+            raise;
       end Emit_Image;
 
-      procedure Emit_Button (TWdg : Widget_Pointer; Id : Integer) is
+      procedure Emit_Button (TWdg : Widget_Pointer;
+                             Id   : Integer;
+                             Pos  : Integer;
+                             Name : String);
+      procedure Emit_Button (TWdg : Widget_Pointer;
+                             Id   : Integer;
+                             Pos  : Integer;
+                             Name : String) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id + 2, "GtkButton", "Button_" & TWdg.Name.all);
-         Emit_Name (TWdg, Id + 4);
+         if Pos = 0 then
+            Emit_Object (TWdg, Id + 2, "GtkButton",
+                         TWdg.Name.all & Name & "_Button_Up");
+            Emit_Name (TWdg.Name.all & Name & "_Button_Up", Id + 4);
+         else
+            Emit_Object (TWdg, Id + 2, "GtkButton",
+                         TWdg.Name.all & Name & "_Button_Down");
+            Emit_Name (TWdg.Name.all & Name & "_Button_Down", Id + 4);
+         end if;
+         Emit_Property (Id + 4, "width-request", 11);
+         Emit_Property (Id + 4, "height-request", 11);
          Emit_Visible_And_Focus (TWdg, Id + 4, True);
-         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
+         Emit_Property (Id + 4, "receives-default", True);
          Emit_ToolTip (TWdg, Id + 4);
-         Emit_Line (Sp (Id + 4) & "<signal name=""clicked"" handler="""
-                    & "on_button_clicked_" & TWdg.Name.all
-                    & """ swapped=""no""/>");
-         Emit_Image (TWdg, Id + 4);
+         if Pos = 0 then
+            Emit_Line (Sp (Id + 4) & "<signal name=""clicked"" handler="""
+                       & "On" & Name & "_Button_Up_Clicked_" & TWdg.Name.all
+                       & """ object=""" & TWdg.Name.all & Name & "_Entry"
+                       & """ swapped=""no""/>");
+            Emit_Image (TWdg, Id + 4, Name & "_Up", True);
+         else
+            Emit_Line (Sp (Id + 4) & "<signal name=""clicked"" handler="""
+                       & "On" & Name & "_Button_Down_Clicked_" & TWdg.Name.all
+                       & """ object=""" & TWdg.Name.all & Name & "_Entry"
+                       & """ swapped=""no""/>");
+            Emit_Image (TWdg, Id + 4, Name & "_Down", False);
+         end if;
+
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, 1);
+         Emit_Packing (Id + 2, Pos);
          Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit TimePicker.Button: " & TWdg.Name.all);
+            raise;
       end Emit_Button;
 
-      procedure Emit_Entry (TWdg : Widget_Pointer; Id : Integer) is
-         S : constant Integer := Integer'Min (TWdg.Size.Horiz, TWdg.Size.Vert);
-         use GNAT.Calendar.Time_IO;
+      procedure Emit_Entry (TWdg   : Widget_Pointer;
+                            Id     : Integer;
+                            Horiz  : Integer;
+                            Pos    : Integer;
+                            Len    : Integer;
+                            PlaceH : String;
+                            Name   : String);
+      procedure Emit_Entry (TWdg   : Widget_Pointer;
+                            Id     : Integer;
+                            Horiz  : Integer;
+                            Pos    : Integer;
+                            Len    : Integer;
+                            PlaceH : String;
+                            Name   : String) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id + 2, "GtkEntry", "Entry_" & TWdg.Name.all);
-         Emit_Name (TWdg, Id + 4);
-         if TWdg.ShowUpDown then
-            Emit_WH (Id + 4, TWdg.Size.Horiz - S, TWdg.Size.Vert);
-         else
-            Emit_WH (Id + 4, TWdg.Size.Horiz, TWdg.Size.Vert);
-         end if;
+         Emit_Object (TWdg, Id + 2, "GtkEntry",
+                      TWdg.Name.all & Name & "_Entry");
+         Emit_Name (TWdg.Name.all & Name & "_Entry", Id + 4);
+         Emit_Property (Id + 4, "width-request", Horiz);
+         Emit_Property (Id + 4, "height-request", 11);
          Emit_Visible_And_Focus (TWdg, Id + 4, True);
-         Emit_ToolTip (TWdg, Id + 4);
-         Emit_Line (Sp (Id + 4) & "<property name=""buffer"">"
-                    & TWdg.Buffer.Name.all
-                    & "</property>");
-         Emit_Line (Sp (Id + 4) & "<property name=""max-length"">"
-                    & "10" & "</property>");
-         Emit_Line (Sp (Id + 4) & "<property name=""text"" "
-                    & "translatable=""yes"">"
-                    & Image (TWdg.Start_Date, "%d/%m/%Y")
-                    & "</property>");
+         Emit_Property (Id + 4, "hexpand", True);
+         Emit_Property (Id + 4, "max-length", Len);
+         Emit_Property (Id + 4, "width-chars", Len);
+         Emit_Property (Id + 4, "max-width-chars", Len);
          Emit_Line (Sp (Id + 4) & "<property name=""xalign"">0.5</property>");
-         Emit_Line (Sp (Id + 4) & "<signal name=""delete-text"" handler="""
-                    & "on_entry_delete_text_" & TWdg.Name.all
+         Emit_Property (Id + 4,  "overwrite-mode", True);
+         Emit_Line (Sp (Id + 4) & "<property name=""placeholder-text"" "
+                    & "translatable=""yes"">"
+                    & PlaceH
+                    & "</property>");
+         Emit_Line (Sp (Id + 4) & "<signal name=""activate"" handler="""
+                    & "On_Entry" & Name & "_Activate_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & Name & "_Button_Up"
                     & """ swapped=""no""/>");
-         Emit_Line (Sp (Id + 4) & "<signal name=""insert-text"" handler="""
-                    & "on_entry_insert_text_" & TWdg.Name.all
+         Emit_Line (Sp (Id + 4) & "<signal name=""focus-out-event"" handler="""
+                    & "On_Entry" & Name & "_Leavefocus_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & Name & "_Button_Up"
                     & """ swapped=""no""/>");
-         Emit_Attributes (TWdg, Id + 4);
+         Emit_ToolTip (TWdg, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, 0);
+         Emit_Packing (Id + 2, Pos);
          Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit TimePicker.Entry: " & TWdg.Name.all);
+            raise;
       end Emit_Entry;
 
-      procedure Emit_Box (TWdg : Widget_Pointer; Id : Integer) is
+      procedure Emit_VBox (TWdg : Widget_Pointer;
+                           Id   : Integer;
+                           Pos  : Integer;
+                           Name : String);
+      procedure Emit_VBox (TWdg : Widget_Pointer;
+                           Id   : Integer;
+                           Pos  : Integer;
+                           Name : String) is
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id + 2, "GtkBox", "Box_" & TWdg.Name.all);
-         Emit_Name (TWdg, Id + 4);
+         Emit_Object (TWdg, Id + 2, "GtkBox",
+                      TWdg.Name.all & Name & "_Vbox");
+         Emit_Name (TWdg.Name.all & Name & "_Vbox", Id + 4);
          Emit_Visible_And_Focus (TWdg, Id + 4, False);
-         Emit_Entry (TWdg, Id + 4);
-         if TWdg.ShowUpDown then
-            Emit_Button (TWdg, Id + 4);
-         end if;
-         Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing_Child (TWdg, Id,
-                                        Packing => False,
-                                        XY => True,
-                                        Homog => False);
-         Emit_Line (Sp (Id) & "</child>");
-      end Emit_Box;
+         Emit_Property (Id + 4, "orientation", "vertical");
 
-      procedure Emit_AspectFrame (TWdg : Widget_Pointer; Id : Integer) is
+         Emit_Button (TWdg, Id + 4, 0, Name);
+         Emit_Button (TWdg, Id + 4, 1, Name);
+
+         Emit_Line (Sp (Id + 2) & "</object>");
+         Emit_Packing (Id + 2, Pos);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit TimePicker.VBox: " & TWdg.Name.all);
+            raise;
+      end Emit_VBox;
+
+      procedure Emit_HBox (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_HBox (TWdg : Widget_Pointer; Id : Integer) is
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all & "_Hbox");
+         Emit_Name (TWdg.Name.all & "_Hbox", Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         Emit_Property (Id + 4, "orientation", "horizontal");
+
+         Emit_Entry (TWdg, Id + 4, 20, 0, 2, "00", "_Hour");
+         Emit_VBox (TWdg, Id + 4, 1, "_Hour");
+         Emit_Entry (TWdg, Id + 4, 20, 2, 2, "00", "_Min");
+         Emit_VBox (TWdg, Id + 4, 3, "_Min");
+         Emit_Entry (TWdg, Id + 4, 63, 4, 6, "00.000", "_Sec");
+         Emit_VBox (TWdg, Id + 4, 5, "_Sec");
+
+         Emit_Line (Sp (Id + 2) & "</object>");
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit TimePicker.HBox: " & TWdg.Name.all);
+            raise;
+      end Emit_HBox;
+
+      procedure Emit_Aspectframe (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_Aspectframe (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, False);
          Emit_Object (TWdg, Id + 2, "GtkAspectFrame",
-                      "AspectFrame_" & TWdg.Name.all);
-         Emit_Name (TWdg, Id + 4);
-         Emit_WH_Request (TWdg, Id + 4);
+                      TWdg.Name.all & "_Aspectframe");
+         Emit_Name (TWdg.Name.all & "_Aspectframe", Id + 4);
          Emit_Visible_And_Focus (TWdg, Id + 4, False);
          Emit_Line (Sp (Id + 4) & "<property name=""label-xalign"">0"
                     & "</property>");
          Emit_Line (Sp (Id + 4) & "<property name=""shadow-type"">in"
                     & "</property>");
+         Emit_HBox (TWdg, Id + 4);
+         Emit_Line (Sp (Id + 2) & "</object>");
+         Emit_Packing_Child (TWdg, Id,
+                             Packing => True,
+                             XY      => True,
+                             Homog   => False);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit TimePicker.Aspectframe: " & TWdg.Name.all);
+            raise;
+      end Emit_Aspectframe;
 
-         Emit_Box (TWdg, Id + 4);
+   begin
+      Emit_Aspectframe (TWdg, Id);
+   exception
+      when others =>
+         TIO.Put_Line ("Emit TimePicker: " & TWdg.Name.all);
+         raise;
+   end Emit_TimePicker;
+
+   ---------------------
+   -- Emit_DatePicker --
+   ---------------------
+   procedure Emit_DatePicker (TWdg : Widget_Pointer; Id : Integer) is
+      procedure Emit_Packing (Id     : Integer;
+                              Expand : Boolean;
+                              Fill   : Boolean;
+                              Pos    : Integer);
+      procedure Emit_Packing (Id     : Integer;
+                              Expand : Boolean;
+                              Fill   : Boolean;
+                              Pos    : Integer) is
+      begin
+         Emit_Line (Sp (Id) & "<packing>");
+         Emit_Property (Id + 2, "expand", Expand);
+         Emit_Property (Id + 2, "fill", Fill);
+         Emit_Property (Id + 2, "position", Pos);
+         Emit_Line (Sp (Id) & "</packing>");
+      end Emit_Packing;
+
+      procedure Emit_Entry (TWdg   : Widget_Pointer;
+                            Id     : Integer;
+                            Pos    : Integer;
+                            WR     : Integer;
+                            MaxC   : Integer;
+                            PlaceH : String;
+                            Name   : String);
+      procedure Emit_Entry (TWdg   : Widget_Pointer;
+                            Id     : Integer;
+                            Pos    : Integer;
+                            WR     : Integer;
+                            MaxC   : Integer;
+                            PlaceH : String;
+                            Name   : String) is
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkEntry", TWdg.Name.all
+                      & Name & "_Entry");
+         Emit_Name (TWdg.Name.all & Name & "_Entry", Id + 4);
+         Emit_Line (Sp (Id + 4) & "<property name=""width-request"">"
+                    & Img (WR) & "</property>");
+         Emit_Visible_And_Focus (TWdg, Id + 4, True);
+         Emit_ToolTip (TWdg, Id + 4);
+         Emit_Line (Sp (Id + 4) & "<property name=""max-length"">"
+                    & Img (MaxC) & "</property>");
+         Emit_Line (Sp (Id + 4) & "<property name=""width-chars"">"
+                    & Img (MaxC) & "</property>");
+         Emit_Line (Sp (Id + 4) & "<property name=""max-width-chars"">"
+                    & Img (MaxC) & "</property>");
+         Emit_Line (Sp (Id + 4) & "<property name=""xalign"">0.5</property>");
+         Emit_Property (Id + 4,  "overwrite-mode", True);
+         Emit_Line (Sp (Id + 4) & "<property name=""placeholder-text"" "
+                    & "translatable=""yes"">"
+                    & PlaceH
+                    & "</property>");
+         Emit_Line (Sp (Id + 4)
+                    & "<property name=""input-purpose"">digits</property>");
+         Emit_Line (Sp (Id + 4) & "<signal name=""activate"" handler="""
+                    & "On_Entry" & Name & "_Activate_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Calendar"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 4) & "<signal name=""focus-out-event"" handler="""
+                    & "On_Entry" & Name & "_Leavefocus_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Calendar"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 2) & "</object>");
+         Emit_Packing (Id + 2, False, False, Pos);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit DatePicker.Entry: " & TWdg.Name.all);
+            raise;
+      end Emit_Entry;
+
+      procedure Emit_Image (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_Image (TWdg : Widget_Pointer; Id : Integer) is
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkImage", TWdg.Name.all & "_Img");
+         Emit_Name (TWdg.Name.all & "_Img", Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         Emit_ToolTip (TWdg, Id + 4);
+         Emit_Line (Sp (Id + 4) & "<property name=""icon-name"">"
+                    & "office-calendar"
+                    & "</property>");
+         Emit_Line (Sp (Id + 2) & "</object>");
+         --  Emit_Packing_Child (TWdg, Id,
+         --                      Packing => False,
+         --                      XY => True,
+         --                      Homog => False);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit DatePicker.Image: " & TWdg.Name.all);
+            raise;
+      end Emit_Image;
+
+      procedure Emit_Button (TWdg : Widget_Pointer;
+                             Id   : Integer;
+                             Pos  : Integer);
+      procedure Emit_Button (TWdg : Widget_Pointer;
+                             Id   : Integer;
+                             Pos  : Integer) is
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkButton", TWdg.Name.all & "_Button");
+         Emit_Name (TWdg.Name.all & "_Button", Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, True);
+         Emit_Property (Id + 4, "receives-default", True);
+         Emit_ToolTip (TWdg, Id + 4);
+         Emit_Line (Sp (Id + 4) & "<signal name=""clicked"" handler="""
+                    & "On_Button_Clicked_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Calendar"
+                    & """ swapped=""no""/>");
+
+         Emit_Image (TWdg, Id + 4);
+
+         Emit_Line (Sp (Id + 2) & "</object>");
+         Emit_Packing (Id + 2, True, True, Pos);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit DatePicker.Button: " & TWdg.Name.all);
+            raise;
+      end Emit_Button;
+
+      procedure Emit_Calendar (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_Calendar (TWdg : Widget_Pointer; Id : Integer) is
+         Temp : constant Boolean := TWdg.Visible;
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkCalendar", TWdg.Name.all & "_Calendar");
+         Emit_Name (TWdg.Name.all & "_Calendar", Id + 4);
+         TWdg.Visible := False;
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         TWdg.Visible := Temp;
+         Emit_ToolTip (TWdg, Id + 4);
+         Emit_Line (Sp (Id + 4) & "<signal name=""day-selected"" handler="""
+                    & "On_Day_Selected_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Button"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 4)
+                    & "<signal name=""day-selected-double-click"" handler="""
+                    & "On_Day_Selected_Double_Click_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Button"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 4)
+                    & "<signal name=""next-month"" handler="""
+                    & "On_Next_Month_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Button"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 4)
+                    & "<signal name=""prev-month"" handler="""
+                    & "On_Prev_Month_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Button"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 4)
+                    & "<signal name=""next-year"" handler="""
+                    & "On_Next_Year_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Button"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 4)
+                    & "<signal name=""prev-year"" handler="""
+                    & "On_Prev_Year_" & TWdg.Name.all
+                    & """ object=""" & TWdg.Name.all & "_Button"
+                    & """ swapped=""no""/>");
+         Emit_Line (Sp (Id + 2) & "</object>");
+         Emit_Packing (Id => Id + 2, Expand => False, Fill => True, Pos => 1);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit DatePicker.Calendar: " & TWdg.Name.all);
+            raise;
+      end Emit_Calendar;
+
+      procedure Emit_HBox (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_HBox (TWdg : Widget_Pointer; Id : Integer) is
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all & "_Hbox");
+         Emit_Name (TWdg.Name.all & "_Hbox", Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         Emit_Property (Id + 4, "orientation", "horizontal");
+
+         Emit_Entry (TWdg, Id + 4, 0, 50, 4, "2020", "_Year");
+         Emit_Entry (TWdg, Id + 4, 1, 20, 2, "01", "_Month");
+         Emit_Entry (TWdg, Id + 4, 2, 20, 2, "01", "_Day");
+         if TWdg.ShowUpDown then
+            Emit_Button (TWdg, Id + 3, Pos => 4);
+         end if;
+
+         Emit_Line (Sp (Id + 2) & "</object>");
+         --  Emit_Packing (Id + 2, 0);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit DatePicker.HBox: " & TWdg.Name.all);
+            raise;
+      end Emit_HBox;
+
+      procedure Emit_Aspectframe (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_Aspectframe (TWdg : Widget_Pointer; Id : Integer) is
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkAspectFrame",
+                      TWdg.Name.all & "_Aspectframe");
+         Emit_Name (TWdg.Name.all & "_Aspectframe", Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         Emit_Line (Sp (Id + 4) & "<property name=""label-xalign"">0"
+                    & "</property>");
+         Emit_Line (Sp (Id + 4) & "<property name=""shadow-type"">in"
+                    & "</property>");
+         Emit_Property (Id + 4, "xalign", 0.0);
+         Emit_HBox (TWdg, Id + 4);
+         Emit_Line (Sp (Id + 2) & "</object>");
+         --  Emit_Packing (Id + 2, False, False, 0);
+         Emit_Line (Sp (Id) & "</child>");
+      exception
+         when others =>
+            TIO.Put_Line ("Emit DatePicker.Aspectframe: " & TWdg.Name.all);
+            raise;
+      end Emit_Aspectframe;
+
+      procedure Emit_VBox (TWdg : Widget_Pointer; Id : Integer);
+      procedure Emit_VBox (TWdg : Widget_Pointer; Id : Integer) is
+      begin
+         Emit_Child (TWdg, Id, False);
+         Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all & "_Vbox");
+         Emit_Name (TWdg.Name.all & "_Vbox", Id + 4);
+         Emit_Visible_And_Focus (TWdg, Id + 4, False);
+         Emit_Property (Id + 4, "orientation", "vertical");
+
+         Emit_Aspectframe (TWdg, Id + 4);
+         Emit_Calendar (TWdg, Id + 4);
 
          Emit_Line (Sp (Id + 2) & "</object>");
          Emit_Packing_Child (TWdg, Id,
-                                        Packing => True,
-                                        XY => True,
-                                        Homog => False);
+                             Packing => True,
+                             XY      => True,
+                             Homog   => False);
          Emit_Line (Sp (Id) & "</child>");
-      end Emit_AspectFrame;
+      exception
+         when others =>
+            TIO.Put_Line ("Emit DatePicker.VBox: " & TWdg.Name.all);
+            raise;
+      end Emit_VBox;
+
    begin
-      Emit_AspectFrame (TWdg, Id);
+      Emit_VBox (TWdg, Id);
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkAspectFrame: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit DatePicker: " & TWdg.Name.all);
          raise;
-   end Emit_GtkCalendar;
+   end Emit_DatePicker;
+
 
    ---------------------
    -- Emit_GtkListBox --
@@ -2126,7 +2471,11 @@ package body W2gtk_Emit is
             when GtkListBox =>
                Emit_GtkListBox (Child, Id + 12);
             when GtkCalendar =>
-               Emit_GtkCalendar (Child, Id + 12);
+               if Child.Is_DatePicker then
+                  Emit_DatePicker (Child, Id + 12);
+               else
+                  Emit_TimePicker (Child, Id + 12);
+               end if;
             when GtkFrame =>
                Emit_GtkFrame (Child, Id + 12);
             when GtkStatusBar =>
@@ -2278,7 +2627,11 @@ package body W2gtk_Emit is
                                      Packing => True,
                                      Activate_Default => False);
             when GtkCalendar =>
-               Emit_GtkCalendar (Child, Id + 4);
+               if Child.Is_DatePicker then
+                  Emit_DatePicker (Child, Id + 4);
+               else
+                  Emit_TimePicker (Child, Id + 4);
+               end if;
             when GtkSpinButton =>
                Emit_GtkSpinButton (Child, Id + 4);
             when GtkFileChooserButton =>
@@ -3005,7 +3358,11 @@ package body W2gtk_Emit is
                                      Packing => True,
                                      Activate_Default => Activate_Default);
             when GtkCalendar =>
-               Emit_GtkCalendar (TWdg, Id + 4);
+               if TWdg.Is_DatePicker then
+                  Emit_DatePicker (TWdg, Id + 4);
+               else
+                  Emit_TimePicker (TWdg, Id + 4);
+               end if;
             when GtkSpinButton =>
                Emit_GtkSpinButton (TWdg, Id + 4);
             when GtkFileChooserButton =>
@@ -3155,17 +3512,24 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id + 4) & "</object>");
       Emit_Line (Sp (Id + 2) & "</child>");
 
-      if Spacing > 0 then
+      if Spacing > 0
+        and then TWin.Cancel_Button /= null
+        and then TWin.Accept_Button /= null
+      then
          Emit_Line (Sp (Id + 2) & "<action-widgets>");
          if TWin.Cancel_Button /= null then
             Emit_Line (Sp (Id + 4) & "<action-widget response="""
                        & To_Gtk (TWin.Cancel_Button.Dialog_Result)
-                       & """>bt_cancel</action-widget>");
+                       & """>"
+                       & TWin.Cancel_Button.Name.all
+                       & "</action-widget>");
          end if;
          if TWin.Accept_Button /= null then
             Emit_Line (Sp (Id + 4) & "<action-widget response="""
                        & To_Gtk (TWin.Accept_Button.Dialog_Result)
-                       & """>bt_OK</action-widget>");
+                       & """>"
+                       & TWin.Accept_Button.Name.all
+                       & "</action-widget>");
          end if;
          Emit_Line (Sp (Id + 2) & "</action-widgets>");
       end if;
@@ -3225,7 +3589,11 @@ package body W2gtk_Emit is
                                      Packing => True,
                                      Activate_Default => False);
             when GtkCalendar =>
-               Emit_GtkCalendar (TWdg, Id);
+               if TWdg.Is_DatePicker then
+                  Emit_DatePicker (TWdg, Id);
+               else
+                  Emit_TimePicker (TWdg, Id);
+               end if;
             when GtkSpinButton =>
                Emit_GtkSpinButton (TWdg, Id);
             when GtkFileChooserButton =>

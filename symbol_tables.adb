@@ -63,7 +63,6 @@ package body Symbol_Tables is
       Wst.Insert ("BeginPrint", "begin-print");
       Wst.Insert ("PrintPage", "print-page");
       Wst.Insert ("MouseClick", "clicked");
-      --  Wst.Insert ("Leave", "leave-notify-event");
       Wst.Insert ("FileOk", "file-set");
       Wst.Insert ("MouseDoubleClick", "clicked");
       Wst.Insert ("CloseButtonClick", "clicked");     --  not used
@@ -72,7 +71,16 @@ package body Symbol_Tables is
       Wst.Insert ("CellMouseLeave", "clicked");
       Wst.Insert ("CellMouseClick", "row-activated");
       Wst.Insert ("Toggled", "toggled");              --  gtkcheckboxcolum
-      Wst.Insert ("LeaveFocus", "focus");
+      Wst.Insert ("LeaveFocus", "focus-out-event");
+      Wst.Insert ("Leave", "focus-out-event");
+      Wst.Insert ("DaySelected", "day-selected");
+      Wst.Insert ("NextMonth", "next-month");
+      Wst.Insert ("PrevMonth", "prev-month");
+      Wst.Insert ("NextYear", "next-year");
+      Wst.Insert ("PrevYear", "prev-year");
+      Wst.Insert ("DaySelectedDoubleClick", "day-selected-double-click");
+      Wst.Insert ("EditingDone", "editing-done");
+      Wst.Insert ("Activate", "activate");
       Wst.Insert ("DoWork", "DoWork");
       Wst.Insert ("ProgressChanged", "ProgressChanged");
       Wst.Insert ("RunWorkerCompleted", "RunWorkerCompleted");
@@ -111,6 +119,9 @@ package body Symbol_Tables is
       if Gtk_Signal = "" then
          raise Unknown_Signal;
       end if;
+      if WSignal = "LeaveFocus" or else WSignal = "Leave" then
+         TS.Proc  := False;
+      end if;
       case TWdg.Widget_Type is
          when GtkDataGridView | GtkTreeGridView =>
             if WSignal = "CellMouseClick" then
@@ -138,6 +149,10 @@ package body Symbol_Tables is
             if WSignal = "Click" then
                return "activate-current";
             end if;
+         --  when GtkComboTextBox | GtkEntry | GtkRadioButton | GtkButton =>
+         --     if WSignal = "LeaveFocus" or else WSignal = "Leave" then
+         --        TS.Proc  := False;
+         --     end if;
          when GtkMenuItem | GtkSeparatorMenuItem
             | GtkMenuNormalItem | GtkMenuImageItem
             | GtkMenuRadioItem | GtkMenuCheckItem =>
