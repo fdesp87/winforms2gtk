@@ -318,19 +318,6 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: Set Have Widgets");
-      TWin := Win_List;
-      while TWin /= null loop
-         Set_Have (TWin);
-         TWdg := TWin.Widget_List;
-         while TWdg /= null loop
-            Set_Have (TWdg);
-            TWdg := TWdg.Next;
-         end loop;
-         TWin := TWin.Next;
-      end loop;
-
       --  generate auxiliary elements
       Debug (0, "");
       Debug (0, "Adjusting to GTK: generate auxiliary windows");
@@ -573,6 +560,51 @@ package body W2gtk_Pkg is
          end loop;
          TWin := TWin.Next;
       end loop;
+
+      Debug (0, "");
+      Debug (0, "Adjusting to GTK: Set Have Widgets");
+      TWin := Win_List;
+      while TWin /= null loop
+         Set_Have (TWin);
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               Set_Have (TWdg);
+               TWdg := TWdg.Next;
+            end loop;
+         end if;
+         TWin := TWin.Next;
+      end loop;
+
+      Debug (0, "ListStores" & Have.ListStores'Image);
+      Debug (0, "TreeStores" & Have.TreeStores'Image);
+      Debug (0, "FileFilters" & Have.FileFilters'Image);
+      Debug (0, "Filechooserdialogs" & Have.Filechooserdialogs'Image);
+      Debug (0, "Entrybuffers" & Have.Entrybuffers'Image);
+      Debug (0, "Date_Pickers" & Have.Date_Pickers'Image);
+      Debug (0, "Time_Pickers" & Have.Time_Pickers'Image);
+      Debug (0, "Radio_Buttons" & Have.Radio_Buttons'Image);
+      Debug (0, "Tooltips" & Have.Tooltips'Image);
+      Debug (0, "Font_Underline" & Have.Font_Underline'Image);
+      Debug (0, "Font_Weight" & Have.Font_Weight'Image);
+      Debug (0, "Buttons" & Have.Buttons'Image);
+      Debug (0, "Labels" & Have.Labels'Image);
+      Debug (0, "Menus" & Have.Menus'Image);
+      Debug (0, "MenuImageItems" & Have.MenuImageItems'Image);
+      Debug (0, "MenuNormalItems" & Have.MenuNormalItems'Image);
+      Debug (0, "MenuSeparators" & Have.MenuSeparators'Image);
+      Debug (0, "Toolbars" & Have.Toolbars'Image);
+      Debug (0, "ToolSeparators" & Have.ToolSeparators'Image);
+      Debug (0, "Images" & Have.Images'Image);
+      Debug (0, "Notebooks" & Have.Notebooks'Image);
+      Debug (0, "TreeViews" & Have.TreeViews'Image);
+      Debug (0, "TreeViewColumns" & Have.TreeViewColumns'Image);
+      Debug (0, "TreeViewToggles" & Have.TreeViewToggles'Image);
+      Debug (0, "HDR_CellRenderers" & Have.HDR_CellRenderers'Image);
+      Debug (0, "Entries" & Have.Entries'Image);
+      Debug (0, "ComboTextBoxes" & Have.ComboTextBoxes'Image);
+      Debug (0, "Boxes" & Have.Boxes'Image);
+      Debug (0, "FileChooserButtons" & Have.FileChooserButtons'Image);
 
       --  set correct parent from parent name and set Gparent
       Debug (0, "");
@@ -4745,7 +4777,8 @@ package body W2gtk_Pkg is
          while TWin /= null loop
             WT := TWin.Widget_List;
             while WT /= null loop
-               if WT.Widget_Type = GtkCalendar then
+               case WT.Widget_Type is
+               when GtkCalendar =>
                   if WT.Is_DatePicker then
                      WS := new Signal_Block;
                      WS.Name := new String'("NextMonth");
@@ -4964,7 +4997,9 @@ package body W2gtk_Pkg is
                             & WT.Name.all
                             & ".Sec_Activate");
                   end if;
-               end if;
+
+               when others => null;
+               end case;
                WT := WT.Next;
             end loop;
             TWin := TWin.Next;

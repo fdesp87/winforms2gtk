@@ -70,6 +70,8 @@ package body Symbol_Tables is
       Wst.Insert ("CellMouseEnter", "clicked");
       Wst.Insert ("CellMouseLeave", "clicked");
       Wst.Insert ("CellMouseClick", "row-activated");
+      Wst.Insert ("RowCollapsed", "row-collapsed");
+      Wst.Insert ("RowExpanded", "row-expanded");
       Wst.Insert ("Toggled", "toggled");              --  gtkcheckboxcolum
       Wst.Insert ("LeaveFocus", "focus-out-event");
       Wst.Insert ("Leave", "focus-out-event");

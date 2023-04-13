@@ -1486,7 +1486,7 @@ package body W2gtk_Emit is
       Emit_Visible_And_Focus (TWdg, Id + 4, TWdg.Editable);
       Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
       Emit_Password (TWdg, Id + 4);
-      Emit_Align (TWdg, Id + 4, Numeric => False);
+      Emit_Align (TWdg, Id + 4, Numeric => True);
       if not TWdg.Editable then
          Emit_Property (Id + 4, "editable", False);
       end if;
@@ -2004,7 +2004,7 @@ package body W2gtk_Emit is
          Emit_VBox (TWdg, Id + 4, 1, "_Hour");
          Emit_Entry (TWdg, Id + 4, 20, 2, 2, "00", "_Min");
          Emit_VBox (TWdg, Id + 4, 3, "_Min");
-         Emit_Entry (TWdg, Id + 4, 63, 4, 6, "00.000", "_Sec");
+         Emit_Entry (TWdg, Id + 4, 20, 4, 2, "00", "_Sec");
          Emit_VBox (TWdg, Id + 4, 5, "_Sec");
 
          Emit_Line (Sp (Id + 2) & "</object>");

@@ -633,6 +633,12 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
+                  TIO.Put_Line (Sp (6) & "Me."
+                                & TWdg.Name.all & "_Calendar"
+                                & ".Set_Visible");
+                  TIO.Put_Line (Sp (9) & "(not Me."
+                                & TWdg.Name.all & "_Calendar"
+                                & ".Get_Visible);");
                   TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
                   TIO.Put_Line (Sp (6) & "null;");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
@@ -706,11 +712,11 @@ package body W2Gtk2Ada is
 
          else  --  time_picker
             TIO.Put_Line (Sp (3)
-                          & TWdg.Name.all & "_Hour : Integer  := 0;");
+                          & TWdg.Name.all & "_Hour : Integer := 0;");
             TIO.Put_Line (Sp (3)
-                          & TWdg.Name.all & "_Min  : Integer  := 0;");
+                          & TWdg.Name.all & "_Min  : Integer := 0;");
             TIO.Put_Line (Sp (3)
-                          & TWdg.Name.all & "_Sec  : Duration := 0.0;");
+                          & TWdg.Name.all & "_Sec  : Integer := 0;");
             TIO.New_Line;
             TIO.Put_Line (Sp (3) & "procedure " & TWdg.Name.all
                           & "_Reset_Entries is");
@@ -722,8 +728,7 @@ package body W2Gtk2Ada is
             TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min  := "
                           & "GNAT.Calendar.Minute (Now);");
             TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec  :=");
-            TIO.Put_Line (Sp (8) & "GNAT.Calendar.Second (Now) * "
-                          & "GNAT.Calendar.Sub_Second (Now);");
+            TIO.Put_Line (Sp (8) & "Integer (GNAT.Calendar.Second (Now));");
             TIO.New_Line;
             TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                           & "_Hour_Entry.Set_Text (Img ("
@@ -746,10 +751,10 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (6) & "Sec_String : constant String := "
                                 & "Me." & TWdg.Name.all & "_Sec_Entry.Get_Text;");
-                  TIO.Put_Line (Sp (6) & "Sec        : Duration;");
+                  TIO.Put_Line (Sp (6) & "Sec        : Integer;");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & "begin");
-                  TIO.Put_Line (Sp (9) & "Sec := Duration'Value (Sec_String);");
+                  TIO.Put_Line (Sp (9) & "Sec := Integer'Value (Sec_String);");
                   TIO.Put_Line (Sp (6) & "exception");
                   TIO.Put_Line (Sp (9) & "when Constraint_Error =>");
                   TIO.Put_Line (Sp (12) & "Me." & TWdg.Name.all
@@ -757,7 +762,7 @@ package body W2Gtk2Ada is
                                 & TWdg.Name.all & "_Sec));");
                   TIO.Put_Line (Sp (12) & "return False;");
                   TIO.Put_Line (Sp (6) & "end;");
-                  TIO.Put_Line (Sp (6) & "if Sec not in 0.0 .. 59.999999 then");
+                  TIO.Put_Line (Sp (6) & "if Sec not in 0 .. 59 then");
                   TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
                                 & "_Sec_Entry.Set_Text (Img ("
                                 & TWdg.Name.all & "_Sec));");
@@ -878,10 +883,10 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec := "
-                                & TWdg.Name.all & "_Sec + 1.0;");
-                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Sec >= 60.0 then");
+                                & TWdg.Name.all & "_Sec + 1;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Sec >= 60 then");
                   TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Sec := "
-                                & TWdg.Name.all & "_Sec - 60.0;");
+                                & TWdg.Name.all & "_Sec - 60;");
                   TIO.Put_Line (Sp (6) & "end if;");
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Sec_Entry.Set_Text (Img ("
@@ -898,10 +903,10 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec := "
-                                & TWdg.Name.all & "_Sec - 1.0;");
-                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Sec < 0.0 then");
+                                & TWdg.Name.all & "_Sec - 1;");
+                  TIO.Put_Line (Sp (6) & "if " & TWdg.Name.all & "_Sec < 0 then");
                   TIO.Put_Line (Sp (9) & TWdg.Name.all & "_Sec := "
-                                & TWdg.Name.all & "_Sec + 60.0;");
+                                & TWdg.Name.all & "_Sec + 60;");
                   TIO.Put_Line (Sp (6) & "end if;");
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Sec_Entry.Set_Text (Img ("
@@ -1042,10 +1047,13 @@ package body W2Gtk2Ada is
    --  Emit Signals  --
    --------------------
 
-   procedure Emit_Signals (Filename : String);
-   procedure Emit_Signals (Filename : String) is
+   procedure Emit_Signals (Debug : Boolean; Filename : String);
+   procedure Emit_Signals (Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer;
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Signals...");
+      end if;
       Emit_With_Use ("Gtkada.Builder");
       Emit_With_Use ("Glib.Object");
       TIO.New_Line;
@@ -1113,15 +1121,6 @@ package body W2Gtk2Ada is
       end if;
       if Have.Time_Pickers > 0 then
          TIO.Put_Line (Sp (3) &
-                         "function Img (Value : Duration) return String;");
-         TIO.Put_Line (Sp (3) &
-                         "function Img (Value : Duration) return String is");
-         TIO.Put_Line (Sp (6) & "Str : constant String := Value'Image;");
-         TIO.Put_Line (Sp (3) & "begin");
-         TIO.Put_Line (Sp (6) & "return Str (Str'First + 1 .. Str'Last);");
-         TIO.Put_Line (Sp (3) & "end Img;");
-         TIO.New_Line;
-         TIO.Put_Line (Sp (3) &
                          "function Img (Value : Integer) return String;");
          TIO.Put_Line (Sp (3) &
                          "function Img (Value : Integer) return String is");
@@ -1188,10 +1187,13 @@ package body W2Gtk2Ada is
    --  Emit Register Signals  --
    ----------------------------
 
-   procedure Emit_Register_Signals (Filename : String);
-   procedure Emit_Register_Signals (Filename : String) is
+   procedure Emit_Register_Signals (Debug : Boolean; Filename : String);
+   procedure Emit_Register_Signals (Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer;
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Register of Signals...");
+      end if;
       Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg.Register_Signals is");
@@ -1471,10 +1473,176 @@ package body W2Gtk2Ada is
       end case;
    end Emit_Object;
 
-   procedure Emit_Object_Collection (Filename : String);
-   procedure Emit_Object_Collection (Filename : String) is
+   procedure Emit_Date_Picker_Methods_Spec (TWdg : Widget_Pointer);
+   procedure Emit_Date_Picker_Methods_Spec (TWdg : Widget_Pointer) is
+   begin
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Get_Date return String;");
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Set_Date (Some_Date : String) return Boolean;");
+   end Emit_Date_Picker_Methods_Spec;
+
+   procedure Emit_Date_Picker_Methods_Body (TWdg : Widget_Pointer);
+   procedure Emit_Date_Picker_Methods_Body (TWdg : Widget_Pointer) is
+   begin
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Get_Date return String is");
+      TIO.Put_Line (Sp (6) & "TDate : String (1 .. 10) := ""0001-01-01"";");
+      TIO.Put_Line (Sp (3) & "begin");
+      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                    & "_Year_Entry.Get_Text'Length = 1 then");
+      TIO.Put_Line (Sp (9) & "TDate (4 .. 4) := Me." & TWdg.Name.all
+                    & "_Year_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "elsif Me." & TWdg.Name.all
+                    & "_Year_Entry.Get_Text'Length = 2 then");
+      TIO.Put_Line (Sp (9) & "TDate (3 .. 4) := Me." & TWdg.Name.all
+                    & "_Year_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "elsif Me." & TWdg.Name.all
+                    & "_Year_Entry.Get_Text'Length = 3 then");
+      TIO.Put_Line (Sp (9) & "TDate (2 .. 4) := Me." & TWdg.Name.all
+                    & "_Year_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "else");
+      TIO.Put_Line (Sp (9) & "TDate (1 .. 4)  := Me." & TWdg.Name.all
+                    & "_Year_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                    & "_Month_Entry.Get_Text'Length = 1 then");
+      TIO.Put_Line (Sp (9) & "TDate (7 .. 7) := Me." & TWdg.Name.all
+                    & "_Month_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "else");
+      TIO.Put_Line (Sp (9) & "TDate (6 .. 7) := Me." & TWdg.Name.all
+                    & "_Month_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                    & "_Day_Entry.Get_Text'Length = 1 then");
+      TIO.Put_Line (Sp (9) & "TDate (10 .. 10) := Me." & TWdg.Name.all
+                    & "_Day_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "else");
+      TIO.Put_Line (Sp (9) & "TDate (9 .. 10) := Me." & TWdg.Name.all
+                    & "_Day_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "return TDate;");
+      TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Get_Date;");
+
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Set_Date (Some_Date : String) return Boolean is");
+      TIO.Put_Line (Sp (6) & "S : constant Integer := Some_Date'First;");
+      TIO.Put_Line (Sp (3) & "begin");
+      TIO.Put_Line (Sp (6) & "if Some_Date'Length /= 10 then");
+      TIO.Put_Line (Sp (9) & "return False;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                    & "_Month_Entry.Set_Text (Some_Date (S + 5 .. S + 6));");
+      TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                    & "_Year_Entry.Set_Text (Some_Date (S .. S + 3));");
+      TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                    & "_Day_Entry.Set_Text (Some_Date (S + 8 .. S + 9));");
+      TIO.Put_Line (Sp (6) & "return True;");
+      TIO.Put_Line (Sp (3) & "exception");
+      TIO.Put_Line (Sp (9) & "when others =>");
+      TIO.Put_Line (Sp (12) & "return False;");
+      TIO.Put_Line (Sp (6) & "end " & TWdg.Name.all & "_Set_Date;");
+   end Emit_Date_Picker_Methods_Body;
+
+   procedure Emit_Time_Picker_Methods_Spec (TWdg : Widget_Pointer);
+   procedure Emit_Time_Picker_Methods_Spec (TWdg : Widget_Pointer) is
+   begin
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Get_Time return String;");
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Set_Time (Some_Time : String) return Boolean;");
+   end Emit_Time_Picker_Methods_Spec;
+
+   procedure Emit_Time_Picker_Methods_Body (TWdg : Widget_Pointer);
+   procedure Emit_Time_Picker_Methods_Body (TWdg : Widget_Pointer) is
+   begin
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Get_Time return String is");
+      TIO.Put_Line (Sp (6) & "TTime : String (1 .. 8) := ""00:00:00"";");
+      TIO.Put_Line (Sp (3) & "begin");
+      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                    & "_Hour_Entry.Get_Text'Length = 1 then");
+      TIO.Put_Line (Sp (9) & "TTime (2 .. 2) := Me." & TWdg.Name.all
+                    & "_Hour_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "else");
+      TIO.Put_Line (Sp (9) & "TTime (1 .. 2) := Me." & TWdg.Name.all
+                    & "_Hour_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                    & "_Min_Entry.Get_Text'Length = 1 then");
+      TIO.Put_Line (Sp (9) & "TTime (5 .. 5) := Me." & TWdg.Name.all
+                    & "_Min_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "else");
+      TIO.Put_Line (Sp (9) & "TTime (4 .. 5) := Me." & TWdg.Name.all
+                    & "_Min_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                    & "_Sec_Entry.Get_Text'Length = 1 then");
+      TIO.Put_Line (Sp (9) & "TTime (8 .. 8) := Me." & TWdg.Name.all
+                    & "_Sec_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "else");
+      TIO.Put_Line (Sp (9) & "TTime (7 .. 8) := Me." & TWdg.Name.all
+                    & "_Sec_Entry.Get_Text;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "return TTime;");
+      TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Get_Time;");
+
+      TIO.New_Line;
+      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                    & "_Set_Time (Some_Time : String) return Boolean is");
+      TIO.Put_Line (Sp (6) & "T : constant Integer := Some_Time'First;");
+      TIO.Put_Line (Sp (6) & "H, M, S : Integer;");
+      TIO.Put_Line (Sp (3) & "begin");
+      TIO.Put_Line (Sp (6) & "if Some_Time'Length /= 8 then");
+      TIO.Put_Line (Sp (9) & "return False;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "if Some_Time (T + 2) /= ':' then");
+      TIO.Put_Line (Sp (9) & "return False;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "if Some_Time (T + 5) /= ':' then");
+      TIO.Put_Line (Sp (9) & "return False;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "begin");
+      TIO.Put_Line (Sp (9) & "H := Integer'Value (Some_Time (T .. T + 1));");
+      TIO.Put_Line (Sp (6) & "exception");
+      TIO.Put_Line (Sp (9) & "when others =>");
+      TIO.Put_Line (Sp (12) & "return False;");
+      TIO.Put_Line (Sp (6) & "end;");
+      TIO.Put_Line (Sp (6) & "begin");
+      TIO.Put_Line (Sp (9) & "M := Integer'Value (Some_Time (T + 3 .. T + 4));");
+      TIO.Put_Line (Sp (6) & "exception");
+      TIO.Put_Line (Sp (9) & "when others =>");
+      TIO.Put_Line (Sp (12) & "return False;");
+      TIO.Put_Line (Sp (6) & "end;");
+      TIO.Put_Line (Sp (6) & "begin");
+      TIO.Put_Line (Sp (9) & "S := Integer'Value (Some_Time (T + 6 .. T + 7));");
+      TIO.Put_Line (Sp (6) & "exception");
+      TIO.Put_Line (Sp (9) & "when others =>");
+      TIO.Put_Line (Sp (12) & "return False;");
+      TIO.Put_Line (Sp (6) & "end;");
+      TIO.Put_Line (Sp (6) & "if H in 0 .. 23 and then M in 0 .. 59 "
+                    & "and then S in 0 .. 59 then");
+      TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                    & "_Hour_Entry.Set_Text (Some_Time (T .. T + 1));");
+      TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                    & "_Min_Entry.Set_Text (Some_Time (T + 3 .. T + 4));");
+      TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                    & "_Sec_Entry.Set_Text (Some_Time (T + 6 .. T + 7));");
+      TIO.Put_Line (Sp (9) & "return True;");
+      TIO.Put_Line (Sp (6) & "end if;");
+      TIO.Put_Line (Sp (6) & "return False;");
+      TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Set_Time;");
+   end Emit_Time_Picker_Methods_Body;
+
+   procedure Emit_Object_Collection (Debug : Boolean; Filename : String);
+   procedure Emit_Object_Collection (Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer := Win_List;
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Object Collection...");
+      end if;
       if Main_Window then
          Emit_With_Use ("Gtk.Window");
       else
@@ -1613,6 +1781,15 @@ package body W2Gtk2Ada is
       end if;
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "Me : Widget_Collection;");
+
+      if Have.Date_Pickers > 0 then
+         For_Each_Widget (Win_List, Emit_Date_Picker_Methods_Spec'Access);
+      end if;
+      if Have.Time_Pickers > 0 then
+         For_Each_Widget (Win_List, Emit_Time_Picker_Methods_Spec'Access);
+      end if;
+
+      TIO.New_Line;
       TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
 
       ------------------ body --------------------
@@ -1767,18 +1944,29 @@ package body W2Gtk2Ada is
       TIO.New_Line;
       TIO.Put_Line (Sp (6) & "return OC;");
       TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
+
+      if Have.Date_Pickers > 0 then
+         For_Each_Widget (Win_List, Emit_Date_Picker_Methods_Body'Access);
+      end if;
+      if Have.Time_Pickers > 0 then
+         For_Each_Widget (Win_List, Emit_Time_Picker_Methods_Body'Access);
+      end if;
+
       TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
    end Emit_Object_Collection;
 
    ---------------------------
    --  Emit Stores_Enum  --
    ---------------------------
-   procedure Emit_Stores_Enum (Filename : String);
-   procedure Emit_Stores_Enum (Filename : String) is
+   procedure Emit_Stores_Enum (Debug : Boolean; Filename : String);
+   procedure Emit_Stores_Enum (Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer := Win_List;
       Col      : Widget_Pointer;
       TWdg     : Widget_Pointer;
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Stores Enum...");
+      end if;
       Emit_With_Use ("Glib");
       TIO.Put_Line ("package " & Filename & "_Pkg.Stores_Enum is");
       while Temp_Win /= null loop
@@ -1844,9 +2032,12 @@ package body W2Gtk2Ada is
       ------------------------
    --  Emit Cell_Renderers  --
    ---------------------------
-   procedure Emit_Cell_Renderers (Filename : String);
-   procedure Emit_Cell_Renderers (Filename : String) is
+   procedure Emit_Cell_Renderers (Debug : Boolean; Filename : String);
+   procedure Emit_Cell_Renderers (Debug : Boolean; Filename : String) is
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Cell Renderers...");
+      end if;
       TIO.Put_Line ("package " & Filename & "_Pkg.Cell_Renderers is");
       TIO.Put_Line (Sp (3) & "procedure Initialize;");
       TIO.Put_Line ("end " & Filename & "_Pkg.Cell_Renderers;");
@@ -2064,13 +2255,18 @@ package body W2Gtk2Ada is
    --  Emit Main Window  --
    ------------------------
 
-   procedure Emit_Main_Window (Filename   : String;
+   procedure Emit_Main_Window (Debug      : Boolean;
+                               Filename   : String;
                                Ada_Path   : String;
                                Glade_Path : String);
-   procedure Emit_Main_Window (Filename   : String;
+   procedure Emit_Main_Window (Debug      : Boolean;
+                               Filename   : String;
                                Ada_Path   : String;
                                Glade_Path : String) is
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Main Window...");
+      end if;
       if Main_Window then
          TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
          TIO.Put_Line (Sp (3) & "procedure Initialize;");
@@ -2218,9 +2414,12 @@ package body W2Gtk2Ada is
    --  Emit Main Program  --
    -------------------------
 
-   procedure Emit_Main_Package (Filename : String);
-   procedure Emit_Main_Package (Filename : String) is
+   procedure Emit_Main_Package (Debug : Boolean; Filename : String);
+   procedure Emit_Main_Package (Debug : Boolean; Filename : String) is
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Main Package...");
+      end if;
       Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg is");
@@ -2232,9 +2431,12 @@ package body W2Gtk2Ada is
    --  Emit Main Program  --
    -------------------------
 
-   procedure Emit_Main_Program (Filename : String);
-   procedure Emit_Main_Program (Filename : String) is
+   procedure Emit_Main_Program (Debug : Boolean; Filename : String);
+   procedure Emit_Main_Program (Debug : Boolean; Filename : String) is
    begin
+      if Debug then
+         TIO.Put_Line (TIO.Standard_Output, "Generating Main Program...");
+      end if;
       TIO.Put_Line ("with Gtk.Main;");
       TIO.Put_Line ("with " & Filename & "_Pkg.Main_Windows;");
       TIO.Put_Line ("procedure " & Filename & " is");
@@ -2788,18 +2990,18 @@ package body W2Gtk2Ada is
 
       TIO.Set_Output (AdaFile);
       if Main_Window then
-         Emit_Main_Program (Capitalize (Filename));
+         Emit_Main_Program (Debug, Capitalize (Filename));
       end if;
-      Emit_Main_Package (Capitalize (Filename));
-      Emit_Main_Window (Capitalize (Filename), Ada_Path, Glade_Path);
-      Emit_Object_Collection (Capitalize (Filename));
+      Emit_Main_Package (Debug, Capitalize (Filename));
+      Emit_Main_Window (Debug, Capitalize (Filename), Ada_Path, Glade_Path);
+      Emit_Object_Collection (Debug, Capitalize (Filename));
       if Signals then
-         Emit_Signals (Capitalize (Filename));
-         Emit_Register_Signals (Capitalize (Filename));
+         Emit_Signals (Debug, Capitalize (Filename));
+         Emit_Register_Signals (Debug, Capitalize (Filename));
       end if;
       if Have.TreeStores > 0 or Have.ListStores > 0 then
-         Emit_Stores_Enum (Capitalize (Filename));
-         Emit_Cell_Renderers (Capitalize (Filename));
+         Emit_Stores_Enum (Debug, Capitalize (Filename));
+         Emit_Cell_Renderers (Debug, Capitalize (Filename));
       end if;
       TIO.Set_Output (TIO.Standard_Output);
 
