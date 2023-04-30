@@ -121,7 +121,7 @@ package body W2gtk_Pkg is
                   | GtkNoteBook | BindingNavigator
                   =>
                   if Child.TextAlign /= Right then
-                     Debug (0, Parent.Name.all
+                     Debug (0, Sp (3) & Parent.Name.all
                             & ": replaced by "
                             & Child.Name.all);
                      Replace_Parent_By_Child (Parent, Child);
@@ -153,14 +153,14 @@ package body W2gtk_Pkg is
                   case Temp.Widget_Type is
                      when DataGridViewCheckBoxColumn =>
                         Temp.CheckBox_Col_Properties.Active_Column := Num;
-                        Debug (0, Temp.Name.all
+                        Debug (0, Sp (3) & Temp.Name.all
                                & ": active Column => "
                                & Img (Num));
                         Num := Num + 1;
                         if not Temp.ReadOnly then
                            Temp.CheckBox_Col_Properties.Activatable_Column
                              := Num;
-                           Debug (0, Temp.Name.all
+                           Debug (0, Sp (3) & Temp.Name.all
                                   & ": activatable Column => "
                                   & Img (Num));
                            Num := Num + 1;
@@ -174,7 +174,7 @@ package body W2gtk_Pkg is
                                             & "_Toggled");
                               TS.Line    := -1;
                               Insert_Signal (Temp, TS); --  Toggled
-                              Debug (0, Temp.Name.all
+                              Debug (0, Sp (3) & Temp.Name.all
                                      & ": generated "
                                      & TS.Handler.all);
                            end if;
@@ -184,7 +184,7 @@ package body W2gtk_Pkg is
                           DGVS (Temp.DefaultCellStyle).Format = Format_Currency
                         then
                            Temp.Text_Col_Properties.Fg_Color_Name_Column := Num;
-                           Debug (0, Temp.Name.all
+                           Debug (0, Sp (3) & Temp.Name.all
                                   & ": Fg Color Column => "
                                   & Img (Num));
                            Num := Num + 1;
@@ -212,8 +212,8 @@ package body W2gtk_Pkg is
          Release (TWdg);
          TWdg := Temp;
          Have.MenuNormalItems := Have.MenuNormalItems + 1;
-         Debug (0, "GtkMenuItemImage " & TWdg.Name.all
-                & " GtkMenuNormalItem");
+         Debug (0, Sp (3) & "GtkMenuItemImage " & TWdg.Name.all
+                & " => GtkMenuNormalItem");
       end Recast_To_GtkNormalMenuItem;
 
       procedure Visit_GtkMenuImageItem_Widget (TWdg : in out Widget_Pointer);
@@ -256,7 +256,7 @@ package body W2gtk_Pkg is
                                             & TWdg.Name.all
                                             & "_Clicked");
                   Insert_Signal (TWdg, TS); --  Click
-                  Debug (0, "Created Signal "
+                  Debug (0, Sp (3) & "Created Signal "
                          & TWdg.Name.all
                          & ".clicked");
                end if;
@@ -295,7 +295,7 @@ package body W2gtk_Pkg is
                        Integer'Max (0, TWdg.Location.From_Left) +
                        Temp.Location.From_Left;
                      Debug (0,
-                            "ToolStripStatusLabel "
+                            Sp (3) & "ToolStripStatusLabel "
                             & TWdg.Name.all
                             & ": Location adjusted");
                   end if;
@@ -355,13 +355,13 @@ package body W2gtk_Pkg is
                      TWdg.OpenFileDialog := NWin0.Name;
                   end if;
                   Insert_Window_By_Front (NWin0);
-                  Debug (0, "Generated filechooserdialog for "
+                  Debug (0, Sp (3) & "Generated filechooserdialog for "
                          & NWin0.Name.all
                          & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
 
                   Insert_Window_By_Front (NWin1);
-                  Debug (0, "Generated filefilter "
+                  Debug (0, Sp (3) & "Generated filefilter "
                          & NWin1.Name.all
                          & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
@@ -378,25 +378,11 @@ package body W2gtk_Pkg is
                      NWin1.Associated_Widget := TWdg;
                      TWdg.Buffer := NWin1;
                      Insert_Window_By_Front (NWin1);
-                     Debug (0, "Generated entrybuffer for "
+                     Debug (0, Sp (3) & "Generated entrybuffer for "
                             & NWin1.Name.all
                             & " for " & TWdg.Name.all
                             & " (" & TWdg.Widget_Type'Image & ")");
                   end if;
-
-               --  when GtkCalendar =>
-               --     Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               --     NWin1 := new Window_Properties (GtkEntryBuffer);
-               --     NWin1.Name := new String'("Entrybuffer"
-               --                               & "_" & TWdg.Name.all
-               --                              );
-               --     NWin1.Associated_Widget := TWdg;
-               --     TWdg.Buffer := NWin1;
-               --     Insert_Window_By_Front (NWin1);
-               --     Debug (0, "Generated entrybuffer for "
-               --            & NWin1.Name.all
-               --            & " for " & TWdg.Name.all
-               --            & " (" & TWdg.Widget_Type'Image & ")");
 
                when GtkListBox =>
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
@@ -407,7 +393,7 @@ package body W2gtk_Pkg is
                   NWin1.Associated_Widget := TWdg;
                   TWdg.ListStore := NWin1;
                   Insert_Window_By_Front (NWin1);
-                  Debug (0, "Generated liststore for "
+                  Debug (0, Sp (3) & "Generated liststore for "
                          & NWin1.Name.all
                          & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
@@ -423,7 +409,7 @@ package body W2gtk_Pkg is
                      NWin1.Associated_Widget := TWdg;
                      TWdg.Win_Image := NWin1;
                      Insert_Window_By_Front (NWin1);
-                     Debug (0, "Generated gtkimage for "
+                     Debug (0, Sp (3) & "Generated gtkimage for "
                             & NWin1.Name.all
                             & " for " & TWdg.Name.all
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -439,7 +425,7 @@ package body W2gtk_Pkg is
                      NWin1.Associated_Widget := TWdg;
                      TWdg.ImageMenuWin := NWin1;
                      Insert_Window_By_Front (NWin1);
-                     Debug (0, "Generated gtkimage for "
+                     Debug (0, Sp (3) & "Generated gtkimage for "
                             & NWin1.Name.all
                             & " for " & TWdg.Name.all
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -457,7 +443,7 @@ package body W2gtk_Pkg is
                                                & Normalize_Name (TWdg)
                                               );
                      NWin0.Associated_Widget := TWdg;
-                     Debug (0, "Generated gtkliststore for "
+                     Debug (0, Sp (3) & "Generated gtkliststore for "
                             & NWin0.Name.all
                             & " for " & Normalize_Name (TWdg)
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -469,7 +455,7 @@ package body W2gtk_Pkg is
                                                & Normalize_Name (TWdg)
                                               );
                      NWin0.Associated_Widget := TWdg;
-                     Debug (0, "Generated gtktreestore for "
+                     Debug (0, Sp (3) & "Generated gtktreestore for "
                             & NWin0.Name.all
                             & " for " & Normalize_Name (TWdg)
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -483,7 +469,7 @@ package body W2gtk_Pkg is
                                            );
                   NWin1.Associated_Widget := TWdg;
                   NWin1.Underlying_Model  := NWin0;
-                  Debug (0, "Generated gtkmodelfilter for "
+                  Debug (0, Sp (3) & "Generated gtkmodelfilter for "
                          & NWin1.Name.all
                          & " for " & NWin0.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
@@ -496,7 +482,7 @@ package body W2gtk_Pkg is
                                            );
                   NWin2.Associated_Widget := TWdg;
                   NWin2.Underlying_Model  := NWin1;
-                  Debug (0, "Generated gtkmodelsort for "
+                  Debug (0, Sp (3) & "Generated gtkmodelsort for "
                          & NWin2.Name.all
                          & " for " & NWin1.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
@@ -522,7 +508,7 @@ package body W2gtk_Pkg is
                      Insert_Widget_By_Tail (TWin, Wdg0);
                      TWdg.Num_Children := TWdg.Num_Children + 1;
                      Wdg0.Child_Num := TWdg.Num_Children;
-                     Debug (0, "Generated tab box "
+                     Debug (0, Sp (3) & "Generated tab box "
                             & Wdg0.Name.all
                             & " for " & TWdg.Name.all);
 
@@ -537,7 +523,7 @@ package body W2gtk_Pkg is
                      Wdg0.Num_Children := Wdg0.Num_Children + 1;
                      Wdg1.Child_Num := Wdg0.Num_Children;
                      TWdg.The_Label := Wdg1;
-                     Debug (0, "Generated gtklabel for "
+                     Debug (0, Sp (3) & "Generated gtklabel for "
                             & Wdg1.Name.all & " from "
                             & TWdg.Name.all);
 
@@ -549,7 +535,7 @@ package body W2gtk_Pkg is
                      Wdg0.Num_Children := Wdg0.Num_Children + 1;
                      Wdg1.Child_Num := Wdg0.Num_Children;
                      TWdg.The_Button := Wdg1;
-                     Debug (0, "Generated gtkbutton for "
+                     Debug (0, Sp (3) & "Generated gtkbutton for "
                             & Wdg1.Name.all & " from "
                             & TWdg.Name.all);
                   end;
@@ -576,35 +562,37 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "ListStores" & Have.ListStores'Image);
-      Debug (0, "TreeStores" & Have.TreeStores'Image);
-      Debug (0, "FileFilters" & Have.FileFilters'Image);
-      Debug (0, "Filechooserdialogs" & Have.Filechooserdialogs'Image);
-      Debug (0, "Entrybuffers" & Have.Entrybuffers'Image);
-      Debug (0, "Date_Pickers" & Have.Date_Pickers'Image);
-      Debug (0, "Time_Pickers" & Have.Time_Pickers'Image);
-      Debug (0, "Radio_Buttons" & Have.Radio_Buttons'Image);
-      Debug (0, "Tooltips" & Have.Tooltips'Image);
-      Debug (0, "Font_Underline" & Have.Font_Underline'Image);
-      Debug (0, "Font_Weight" & Have.Font_Weight'Image);
-      Debug (0, "Buttons" & Have.Buttons'Image);
-      Debug (0, "Labels" & Have.Labels'Image);
-      Debug (0, "Menus" & Have.Menus'Image);
-      Debug (0, "MenuImageItems" & Have.MenuImageItems'Image);
-      Debug (0, "MenuNormalItems" & Have.MenuNormalItems'Image);
-      Debug (0, "MenuSeparators" & Have.MenuSeparators'Image);
-      Debug (0, "Toolbars" & Have.Toolbars'Image);
-      Debug (0, "ToolSeparators" & Have.ToolSeparators'Image);
-      Debug (0, "Images" & Have.Images'Image);
-      Debug (0, "Notebooks" & Have.Notebooks'Image);
-      Debug (0, "TreeViews" & Have.TreeViews'Image);
-      Debug (0, "TreeViewColumns" & Have.TreeViewColumns'Image);
-      Debug (0, "TreeViewToggles" & Have.TreeViewToggles'Image);
-      Debug (0, "HDR_CellRenderers" & Have.HDR_CellRenderers'Image);
-      Debug (0, "Entries" & Have.Entries'Image);
-      Debug (0, "ComboTextBoxes" & Have.ComboTextBoxes'Image);
-      Debug (0, "Boxes" & Have.Boxes'Image);
-      Debug (0, "FileChooserButtons" & Have.FileChooserButtons'Image);
+      Debug (0, Sp (3) & "ListStores" & Have.ListStores'Image);
+      Debug (0, Sp (3) & "TreeStores" & Have.TreeStores'Image);
+      Debug (0, Sp (3) & "FileFilters" & Have.FileFilters'Image);
+      Debug (0, Sp (3) & "Filechooserdialogs" & Have.Filechooserdialogs'Image);
+      Debug (0, Sp (3) & "Entrybuffers" & Have.Entrybuffers'Image);
+      Debug (0, Sp (3) & "Date_Pickers" & Have.Date_Pickers'Image);
+      Debug (0, Sp (3) & "Time_Pickers" & Have.Time_Pickers'Image);
+      Debug (0, Sp (3) & "Radio_Buttons" & Have.Radio_Buttons'Image);
+      Debug (0, Sp (3) & "Check_Buttons" & Have.Check_Buttons'Image);
+      Debug (0, Sp (3) & "Frames" & Have.Frames'Image);
+      Debug (0, Sp (3) & "Tooltips" & Have.Tooltips'Image);
+      Debug (0, Sp (3) & "Font_Underline" & Have.Font_Underline'Image);
+      Debug (0, Sp (3) & "Font_Weight" & Have.Font_Weight'Image);
+      Debug (0, Sp (3) & "Buttons" & Have.Buttons'Image);
+      Debug (0, Sp (3) & "Labels" & Have.Labels'Image);
+      Debug (0, Sp (3) & "Menus" & Have.Menus'Image);
+      Debug (0, Sp (3) & "MenuImageItems" & Have.MenuImageItems'Image);
+      Debug (0, Sp (3) & "MenuNormalItems" & Have.MenuNormalItems'Image);
+      Debug (0, Sp (3) & "MenuSeparators" & Have.MenuSeparators'Image);
+      Debug (0, Sp (3) & "Toolbars" & Have.Toolbars'Image);
+      Debug (0, Sp (3) & "ToolSeparators" & Have.ToolSeparators'Image);
+      Debug (0, Sp (3) & "Images" & Have.Images'Image);
+      Debug (0, Sp (3) & "Notebooks" & Have.Notebooks'Image);
+      Debug (0, Sp (3) & "TreeViews" & Have.TreeViews'Image);
+      Debug (0, Sp (3) & "TreeViewColumns" & Have.TreeViewColumns'Image);
+      Debug (0, Sp (3) & "TreeViewToggles" & Have.TreeViewToggles'Image);
+      Debug (0, Sp (3) & "HDR_CellRenderers" & Have.HDR_CellRenderers'Image);
+      Debug (0, Sp (3) & "Entries" & Have.Entries'Image);
+      Debug (0, Sp (3) & "ComboTextBoxes" & Have.ComboTextBoxes'Image);
+      Debug (0, Sp (3) & "Boxes" & Have.Boxes'Image);
+      Debug (0, Sp (3) & "FileChooserButtons" & Have.FileChooserButtons'Image);
 
       --  set correct parent from parent name and set Gparent
       Debug (0, "");
@@ -619,7 +607,7 @@ package body W2gtk_Pkg is
                      TWdg.WParent := TWin;
                      Free (TWdg.Parent_Name);
                      TWdg.Parent_Name := new String'(TWdg.WParent.Name.all);
-                     Debug (0, "Reparenting Widget " & TWdg.Name.all
+                     Debug (0, Sp (3) & "Reparenting Widget " & TWdg.Name.all
                             & " to Window " & TWdg.WParent.Name.all);
                   else
                      TWdgP := Find_Widget (TWin.Widget_List,
@@ -631,7 +619,7 @@ package body W2gtk_Pkg is
                         return -1;
                      end if;
                      TWdg.GParent := TWdgP;
-                     Debug (0, "Reparenting Widget "
+                     Debug (0, Sp (3) & "Reparenting Widget "
                             & TWdg.Name.all
                             & " to "
                             & TWdg.GParent.Name.all);
@@ -639,7 +627,7 @@ package body W2gtk_Pkg is
                else
                   TWdg.WParent := TWin;
                   TWdg.Parent_Name := new String'(TWin.Name.all);
-                  Debug (0, "Reparenting Widget " & TWdg.Name.all
+                  Debug (0, Sp (3) & "Reparenting Widget " & TWdg.Name.all
                          & " to Window " & TWdg.WParent.Name.all);
                end if;
                TWdg := TWdg.Next;
@@ -664,7 +652,7 @@ package body W2gtk_Pkg is
                              and then TWdg.Text /= null
                            then
                               TWdg.MaxLength := TWdg.Text.all'Length;
-                              Debug (0, TWdg.Name.all
+                              Debug (0, Sp (3) & TWdg.Name.all
                                      & ".Maxlength = "
                                      & Img (TWdg.MaxLength));
                            end if;
@@ -673,12 +661,15 @@ package body W2gtk_Pkg is
                         end if;
                      when GtkComboTextBox =>
                         TWdg.MaxLength := TWdg.Size.Horiz / 10;
+                        Debug (0, Sp (3) & TWdg.Name.all
+                               & ".Maxlength = "
+                               & Img (TWdg.MaxLength));
                      when GtkLabel =>
                         if TWdg.MaxLength < 1
                           and then TWdg.Text /= null
                         then
                            TWdg.MaxLength := TWdg.Text.all'Length;
-                           Debug (0, TWdg.Name.all
+                           Debug (0, Sp (3) & TWdg.Name.all
                                   & ".Maxlength = "
                                   & Img (TWdg.MaxLength));
                         end if;
@@ -711,7 +702,7 @@ package body W2gtk_Pkg is
                      TWdg := Temp;
                      Have.MenuSeparators := Have.MenuSeparators + 1;
                      Have.ToolSeparators := Have.ToolSeparators - 1;
-                     Debug (0, "GtkSeparatorToolItem " & TWdg.Name.all
+                     Debug (0, Sp (3) & "GtkSeparatorToolItem " & TWdg.Name.all
                             & " => GtkSeparatorMenuItem");
                   end if;
                end if;
@@ -733,7 +724,7 @@ package body W2gtk_Pkg is
                end if;
                TWdg := TWdg.Next;
             end loop;
-            Debug (0, "Set Window Property " & TWin.Name.all
+            Debug (0, Sp (3) & "Set Window Property " & TWin.Name.all
                    & ".MaxTabIndex " & Image (TWin.MaxTabIndex, 0));
             TWin.MinTabIndex := TWin.MaxTabIndex;
          end if;
@@ -751,7 +742,7 @@ package body W2gtk_Pkg is
                   case TWdg.Widget_Type is
                      when GtkLabel =>
                         TWdg.TabStop := False;
-                        Debug (0, "Set Widget Property "
+                        Debug (0, Sp (3) & "Set Widget Property "
                                & TWdg.Name.all
                                & ".TabStop False");
                      when
@@ -765,14 +756,14 @@ package body W2gtk_Pkg is
                            TWdg.TabStop := True;
                         end if;
                         if To_Boolean (TWdg.TabStop) then
-                           Debug (0, "Set Widget Property "
+                           Debug (0, Sp (3) & "Set Widget Property "
                                   & TWdg.Name.all
                                   & ".TabStop True");
                         end if;
                         if TWdg.TabIndex < 0 then
                            TWin.MaxTabIndex := @ + 1;
                            TWdg.TabIndex := TWin.MaxTabIndex;
-                           Debug (0, "Set Widget Property "
+                           Debug (0, Sp (3) & "Set Widget Property "
                                   & TWdg.Name.all
                                   & ".TabIndex "
                                   & Image (TWdg.TabIndex, 0));
@@ -801,16 +792,15 @@ package body W2gtk_Pkg is
                            | GtkButton | GtkRadioButton
                            | GtkCheckButton | GtkToggleButton
                            =>
-                           --  search for a signal named "leave"
-                           Found := Signal_Exists (TWdg, "LeaveFocus");
+                           Found := Signal_Exists (TWdg, "Leave");
                            if not Found then
                               TS := new Signal_Block;
-                              TS.Name := new String'("LeaveFocus");
+                              TS.Name := new String'("Leave");
                               TS.Handler := new String'("On_"
                                                         & TWdg.Name.all
-                                                        & "_Focus");
-                              Insert_Signal (TWdg, TS); --  LeaveFocus
-                              Debug (0, "Created Signal "
+                                                        & "_Leave");
+                              Insert_Signal (TWdg, TS);
+                              Debug (0, Sp (3) & "Created Signal "
                                      & TWdg.Name.all
                                      & ".leave");
                            end if;
@@ -850,7 +840,7 @@ package body W2gtk_Pkg is
             end loop;
             if TWin.Has_Focus_Widget /= null then
                TWin.Has_Focus_Widget.Has_Focus := True;
-               Debug (0, "Set Widget Property "
+               Debug (0, Sp (3) & "Set Widget Property "
                       & TWin.Has_Focus_Widget.Name.all
                       & ".Has_Focus True");
             end if;
@@ -875,6 +865,7 @@ package body W2gtk_Pkg is
             end loop;
             TWdg := TWin.TabFocusList;
             if TWdg /= null then
+               Debug (0, "");
                Debug (0, "Focus chain for " & TWin.Name.all);
                loop
                   Debug (0, Sp (3) & TWdg.Name.all
@@ -2096,14 +2087,14 @@ package body W2gtk_Pkg is
                         P0 := Get_Pair (Get_String (RFile));
                         TWin.Client_Size.Horiz := P0.One;
                         TWin.Client_Size.Vert  := P0.Two;
-                        Debug (NLin, "Set Window Property ClientSize H=" &
+                        Debug (NLin, Sp (3) & "Set Window Property ClientSize H=" &
                                  Img (P0.One) & ", V=" & Img (P0.Two));
 
                      when Str_AutoScaleDimensions =>
                         P0 := Get_Pair (Get_String (RFile));
                         TWin.AutoScaleDim.Horiz := P0.One;
                         TWin.AutoScaleDim.Vert  := P0.Two;
-                        Debug (NLin, "Set Window Property AutoScaleDim H=" &
+                        Debug (NLin, Sp (3) & "Set Window Property AutoScaleDim H=" &
                                  Img (P0.One) & ", V=" & Img (P0.Two));
 
                      when Str_Icon =>
@@ -2118,13 +2109,13 @@ package body W2gtk_Pkg is
                         begin
                            if Temp = "CenterParent" then
                               TWin.Start_Position := CenterParent;
-                              Debug (NLin, "Set Window Property CenterParent");
+                              Debug (NLin, Sp (3) & "Set Window Property CenterParent");
                            end if;
                         end;
 
                      when Str_Margin =>
                         TWin.Margins := Get_Margin_Array (RFile);
-                        Debug (NLin, "Set Window Property Margins " &
+                        Debug (NLin, Sp (3) & "Set Window Property Margins " &
                                  Img (TWin.Margins (1)) & ", " &
                                  Img (TWin.Margins (2)) & ", " &
                                  Img (TWin.Margins (3)) & ", " &
@@ -2140,14 +2131,14 @@ package body W2gtk_Pkg is
                            Have.Font_Weight := Have.Font_Weight + 1;
                         end if;
                         if TWin.Font_Weight = null then
-                           Debug (NLin, "Set Window Property "
+                           Debug (NLin, Sp (3) & "Set Window Property "
                                   & TWin.Name.all & ".Font "
                                   & TWin.Font_Name.all & " "
                                   & Img (TWin.Font_Size)
                                   & (if TWin.Font_Underline then
                                      " underline" else ""));
                         else
-                           Debug (NLin, "Set Window Property "
+                           Debug (NLin, Sp (3) & "Set Window Property "
                                   & TWin.Font_Name.all & " "
                                   & TWin.Name.all & ".Font "
                                   & " " & Img (TWin.Font_Size)
@@ -2161,7 +2152,7 @@ package body W2gtk_Pkg is
 
                      when Str_ToolTip =>
                         TWin.ToolTip := new String'(Get_String (RFile));
-                        Debug (NLin, "Set Window Property Tooltip " &
+                        Debug (NLin, Sp (3) & "Set Window Property Tooltip " &
                                  TWin.ToolTip.all);
 
                      when Str_TrayHeight =>
@@ -2171,13 +2162,13 @@ package body W2gtk_Pkg is
 
                      when Str_Text =>
                         TWin.Title := new String'(Get_String (RFile));
-                        Debug (NLin, "Set Window Property Title " &
+                        Debug (NLin, Sp (3) & "Set Window Property Title " &
                                  TWin.Title.all);
 
                      when Str_Name =>
                         if TWin.Name = null then
                            TWin.Name := new String'(+Get_String (RFile));
-                           Debug (NLin, "Set Window Property Name "
+                           Debug (NLin, Sp (3) & "Set Window Property Name "
                                   & TWin.Name.all);
                         end if;
 
@@ -2352,19 +2343,19 @@ package body W2gtk_Pkg is
                   case Attr is
                      when Attr_Anchor =>
                         WT.Anchor := new String'(Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Anchor "
                                & WT.Anchor.all);
 
                      when Attr_ZOrder =>
                         WT.Zorder := Get_Integer (Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".ZOrder "
                                & Img (WT.Zorder));
 
                      when Attr_Margin | Attr_Padding =>
                         WT.Margins := Get_Margin_Array (RFile);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                & ". Margins "
                                & Img (WT.Margins (1)) & ", " &
@@ -2374,7 +2365,7 @@ package body W2gtk_Pkg is
 
                      when Attr_TabIndex =>
                         WT.TabIndex := Get_Integer (Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".TabIndex "
                                & Img (WT.TabIndex));
 
@@ -2386,50 +2377,50 @@ package body W2gtk_Pkg is
                            WT.Text := new String'(Trim (Get_String (RFile),
                                                   Ada.Strings.Both));
                         end if;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Text "
                                & WT.Text.all);
 
                      when Attr_MaxLength =>
                         WT.MaxLength := Get_Integer (Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".MaxLength "
                                & Img (WT.MaxLength));
 
                      when Attr_ToolTip | Attr_ToolTipText =>
                         WT.ToolTip := new String'(Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".ToolTip "
                                & WT.ToolTip.all);
 
                      when Attr_AutoToolTip =>
                         WT.AutoToolTip := Get_Boolean (RFile);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".AutoToolTip "
                                & WT.AutoToolTip'Image);
 
 
                      when Attr_AutoSize =>
                         WT.AutoSize := Get_Boolean (RFile);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Autosize "
                                & WT.AutoSize'Image);
 
                      when Attr_Enabled =>
                         WT.Enabled := Get_Boolean (RFile);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Enabled "
                                & WT.Enabled'Image);
 
                      when Attr_UserAddedColumn =>
                         WT.UserAddedColumn := Get_Boolean (RFile);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".UserAddedColumn "
                                & WT.UserAddedColumn'Image);
 
                      when Attr_Visible =>
                         WT.Visible := Get_Boolean (RFile);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Visible "
                                & WT.Visible'Image);
 
@@ -2439,14 +2430,14 @@ package body W2gtk_Pkg is
                            Temp : String (1 .. 12);
                         begin
                            TAIO.Put (Temp, WT.TextAlign);
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & PName & ".TextAlign "
                                   & Temp);
                         end;
 
                      when Attr_CheckAlign =>
                         WT.CheckAlign := new String'(Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".CheckAlign "
                                & WT.CheckAlign.all);
 
@@ -2457,7 +2448,7 @@ package body W2gtk_Pkg is
                            TIO.Close (RFile);
                            return -1;
                         end if;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Name "
                                & WT.Name.all);
 
@@ -2465,7 +2456,7 @@ package body W2gtk_Pkg is
                         P0 := Get_Pair (Get_String (RFile));
                         WT.Size.Horiz := P0.One;
                         WT.Size.Vert  := P0.Two;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Size H=" &
                                  Img (P0.One) & ", V=" & Img (P0.Two));
 
@@ -2473,7 +2464,7 @@ package body W2gtk_Pkg is
                         P0 := Get_Pair (Get_String (RFile));
                         WT.Location.From_Top := P0.Two;
                         WT.Location.From_Left := P0.One;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                &  ".Location H="
                                & Img (P0.One) & ", V=" & Img (P0.Two));
@@ -2482,7 +2473,7 @@ package body W2gtk_Pkg is
                         if WT.Windows_Type = null then
                            WT.Windows_Type :=
                              new String'(Get_Widget_Name (RFile));
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & PName & ".Type "
                                   & WT.Windows_Type.all);
                         else
@@ -2505,7 +2496,7 @@ package body W2gtk_Pkg is
                         if WT.Parent_Name.all = "_This" then
                            WT.Parent_Name.all := "$this";
                         end if;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                & ".Parent Name "
                                & WT.Parent_Name.all);
@@ -2520,7 +2511,7 @@ package body W2gtk_Pkg is
                            Have.Font_Weight := Have.Font_Weight + 1;
                         end if;
                         if WT.Font_Weight /= null then
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & PName & ".Font "
                                   & WT.Font_Name.all
                                   & " " & Img (WT.Font_Size)
@@ -2528,7 +2519,7 @@ package body W2gtk_Pkg is
                                   & (if WT.Font_Underline then
                                    " underline" else ""));
                         else
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & PName & ".Font "
                                   & WT.Font_Name.all
                                   & " " & Img (WT.Font_Size)
@@ -2539,14 +2530,14 @@ package body W2gtk_Pkg is
                      when Attr_PasswordChar =>
                         WT.PasswordChar :=
                           new String'(Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                & ".PasswordChar" & WT.PasswordChar.all);
 
                      when Attr_OpenFile =>
                         WT.OpenFileDialog :=
                           new String'(Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                & ".OpenFile " & WT.OpenFileDialog.all);
 
@@ -2554,7 +2545,7 @@ package body W2gtk_Pkg is
                         P0 := Get_Pair (Get_String (RFile));
                         WT.TrayLocation.From_Top  := P0.Two;
                         WT.TrayLocation.From_Left := P0.One;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                & ".TrayLocation H="
                                & Img (P0.One)
@@ -2563,7 +2554,7 @@ package body W2gtk_Pkg is
                      when Attr_Filter =>
                         WT.OpenFileFilter :=
                           new String'(Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                & ".OpenFileFilter "
                                & WT.OpenFileFilter.all);
@@ -2571,42 +2562,42 @@ package body W2gtk_Pkg is
                      when Attr_Title =>
                         WT.OpenFileTitle :=
                           new String'(Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
                                & ".OpenFileTitle "
                                & WT.OpenFileTitle.all);
 
                      when Attr_ImageAlign =>
                         WT.ImageAlign := Convert (Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".ImageAlign "
                                & WT.ImageAlign'Image);
 
                      when Attr_FixedWidth =>
                         WT.Fixed_Width :=
                           Get_Integer (Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Fixed_Width "
                                & Img (WT.Fixed_Width));
 
                      when Attr_MinimumWidth =>
                         WT.Min_Width :=
                           Get_Integer (Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Min_Width "
                                & Img (WT.Min_Width));
 
                      when Attr_MaximumWidth =>
                         WT.Max_Width :=
                           Get_Integer (Get_String (RFile));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Max_Width "
                                & Img (WT.Max_Width));
 
                      when Attr_HeaderText =>
                         WT.Text := new String'(Trim (Get_String (RFile),
                                                Ada.Strings.Both));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Text "
                                & WT.Text.all);
 
@@ -2614,7 +2605,7 @@ package body W2gtk_Pkg is
                         P0 := Get_Pair (Get_String (RFile));
                         WT.Size.Horiz := P0.One;
                         WT.Size.Vert  := P0.Two;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".Size H="
                                & Img (P0.One) & ", V=" & Img (P0.Two));
 
@@ -2736,7 +2727,7 @@ package body W2gtk_Pkg is
             then
                Parent.Has_Expander := True;
             end if;
-            Debug (NLin, "Set Widget Property "
+            Debug (NLin, Sp (3) & "Set Widget Property "
                    & Child.Name.all
                    & ".Parent_Name "
                    & Parent.Name.all
@@ -2820,7 +2811,7 @@ package body W2gtk_Pkg is
             Child.Parent_Name := new String'(Parent.Name.all);
             Parent.Num_Children := Parent.Num_Children + 1;
             Child.Child_Num := Parent.Num_Children;
-            Debug (NLin, "Set Widget Property "
+            Debug (NLin, Sp (3) & "Set Widget Property "
                    & Child.Name.all
                    & ".Parent_Name "
                    & WT.Name.all);
@@ -2860,7 +2851,7 @@ package body W2gtk_Pkg is
                   DGVS (DGVS_Num).Alignment :=
                     new String'(Line (Idx3 + 10 .. Len));
                   DGVS (DGVS_Num).Emit := True;
-                  Debug (NLin, "Set DGVS property "
+                  Debug (NLin, Sp (3) & "Set DGVS property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ".Alignment "
                          & DGVS (DGVS_Num).Alignment.all);
@@ -2869,7 +2860,7 @@ package body W2gtk_Pkg is
                   DGVS (DGVS_Num).BgColor :=
                     new String'(To_Color (Line (Idx2 .. Len)));
                   DGVS (DGVS_Num).Emit := True;
-                  Debug (NLin, "Set DGVS Property "
+                  Debug (NLin, Sp (3) & "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ".BgColor "
                          & DGVS (DGVS_Num).BgColor.all);
@@ -2878,7 +2869,7 @@ package body W2gtk_Pkg is
                   DGVS (DGVS_Num).FgColor :=
                     new String'(To_Color (Line (Idx2 .. Len)));
                   DGVS (DGVS_Num).Emit := True;
-                  Debug (NLin, "Set DGVS Property "
+                  Debug (NLin, Sp (3) & "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ".FgColor "
                          & DGVS (DGVS_Num).FgColor.all);
@@ -2887,7 +2878,7 @@ package body W2gtk_Pkg is
                   DGVS (DGVS_Num).SelBgColor :=
                     new String'(To_Color (Line (Idx2 .. Len)));
                   DGVS (DGVS_Num).Emit := True;
-                  Debug (NLin, "Set DGVS Property "
+                  Debug (NLin, Sp (3) & "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ".SelBgColor "
                          & DGVS (DGVS_Num).SelBgColor.all);
@@ -2896,7 +2887,7 @@ package body W2gtk_Pkg is
                   DGVS (DGVS_Num).SelFgColor :=
                     new String'(To_Color (Line (Idx2 .. Len)));
                   DGVS (DGVS_Num).Emit := True;
-                  Debug (NLin, "Set DGVS Property "
+                  Debug (NLin, Sp (3) & "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ".SelFgColor "
                          & DGVS (DGVS_Num).FgColor.all);
@@ -2915,7 +2906,7 @@ package body W2gtk_Pkg is
                      Have.Font_Weight := Have.Font_Weight + 1;
                   end if;
                   if DGVS (DGVS_Num).Font_Weight /= null then
-                     Debug (NLin, "Set DGVS Property "
+                     Debug (NLin, Sp (3) & "Set DGVS Property "
                             & "DataGridViewStyle" & Img (DGVS_Num)
                             & ".Font " & DGVS (DGVS_Num).Font_Name.all
                             & " " & Img (DGVS (DGVS_Num).Font_Size)
@@ -2923,7 +2914,7 @@ package body W2gtk_Pkg is
                             & (if DGVS (Num).Font_Underline then
                              " underline" else ""));
                   else
-                     Debug (NLin, "Set DGVS Property "
+                     Debug (NLin, Sp (3) & "Set DGVS Property "
                             & "DataGridViewStyle" & Img (DGVS_Num)
                             & ".Font " & DGVS (DGVS_Num).Font_Name.all
                             & " " & Img (DGVS (DGVS_Num).Font_Size)
@@ -2935,7 +2926,7 @@ package body W2gtk_Pkg is
                   DGVS (DGVS_Num).Format :=
                     To_Cell_Format_Enum (Line (Idx2 .. Len));
                   DGVS (DGVS_Num).Emit := True;
-                  Debug (NLin, "Set DGVS Property "
+                  Debug (NLin, Sp (3) & "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ".Format "
                          & DGVS (DGVS_Num).Format'Image);
@@ -2945,7 +2936,7 @@ package body W2gtk_Pkg is
                   DGVS (DGVS_Num).Padding :=
                     Get_Margin_Array (Line (Idx3 + 1 .. Len - 1));
                   DGVS (DGVS_Num).Emit := True;
-                  Debug (NLin, "Set DGVS Property "
+                  Debug (NLin, Sp (3) & "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ". Margins "
                          & "Start " & Img (DGVS (DGVS_Num).Padding (1)) & ", "
@@ -2956,7 +2947,7 @@ package body W2gtk_Pkg is
                when DGVS_Attr_WrapMode =>
                   if Index (Line (Idx2 .. Len), "True") in Idx2 .. Len then
                      DGVS (DGVS_Num).WrapMode := True;
-                     Debug (NLin, "Set DGVS Property "
+                     Debug (NLin, Sp (3) & "Set DGVS Property "
                             & "DataGridViewStyle" & Img (DGVS_Num)
                             & ".WrapMode "
                             & "True");
@@ -2970,7 +2961,7 @@ package body W2gtk_Pkg is
 
                when DGVS_Attr_NullValue =>
                   DGVS (DGVS_Num).NullValue := new String'(Line (Idx2 .. Len));
-                  Debug (NLin, "Set DGVS Property "
+                  Debug (NLin, Sp (3) & "Set DGVS Property "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & ".NullValue "
                          & DGVS (DGVS_Num).NullValue.all);
@@ -3113,7 +3104,7 @@ package body W2gtk_Pkg is
                                    & "Designer and Resource");
                      raise Constraint_Error;
                   end if;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all & ".Name "
                          & Line (Idx1 + 1 .. Len - 1));
 
@@ -3122,7 +3113,7 @@ package body W2gtk_Pkg is
                   P0 := Get_Pair (Line (Idx2 + 1 .. Len));
                   WT.Location.From_Top  := P0.Two;
                   WT.Location.From_Left := P0.One;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".Location H="
                          & Img (P0.One) & ", V=" & Img (P0.Two));
@@ -3132,7 +3123,7 @@ package body W2gtk_Pkg is
                   P0 := Get_Pair (Line (Idx2 + 1 .. Len));
                   WT.Size.Horiz := P0.Two;
                   WT.Size.Vert  := P0.One;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".Size H="
                          & Img (P0.One) & ", V=" & Img (P0.Two));
@@ -3147,14 +3138,14 @@ package body W2gtk_Pkg is
                   elsif Contains (Line (Idx1 .. Len), "BottomUp") then
                      WT.FlowDirection := BottomUp;
                   end if;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".Horizontal "
                          & WT.FlowDirection'Image);
 
                when Attr_TabIndex =>
                   WT.TabIndex := Get_Integer (Line (Idx1 .. Len));
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".TabIndex "
                          & Img (WT.TabIndex));
@@ -3187,33 +3178,33 @@ package body W2gtk_Pkg is
 
                when Attr_DisplayStyle =>
                   WT.DStyle := Convert (Line (Idx1 .. Len));
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all & ".DStyle "
                          & Line (Idx1 .. Len));
 
                when Attr_TabStop =>
                   if Line (Idx1 .. Len) = "False" then
                      WT.TabStop := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".TabStop False");
                   elsif Line (Idx1 .. Len) = "True" then
                      WT.TabStop := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".TabStop True");
                   end if;
 
                when Attr_AutoToolTip =>
                   if Line (Idx1 .. Len) = "False" then
                      WT.AutoToolTip := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AutoToolTip False");
                   elsif Line (Idx1 .. Len) = "True" then
                      WT.AutoToolTip := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AutoToolTip True");
                      if WT.ToolTip = null then
                         WT.ToolTip := new String'(WT.Name.all);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".ToolTip "
                                & WT.Name.all);
                      end if;
@@ -3225,7 +3216,7 @@ package body W2gtk_Pkg is
                                     "BorderStyle.None");
                      if Idx2 in Idx1 .. Len then
                         WT.Has_Frame := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Has_Frame False");
                      end if;
 
@@ -3236,18 +3227,18 @@ package body W2gtk_Pkg is
                      end if;
                      if Contains (Line (Idx2 + 12 .. Len), "None") then
                         WT.BorderStyle := None;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".BorderStyle "
                                & "None");
                      elsif Contains (Line (Idx2 + 12 .. Len), "FixedSingle")
                      then
                         WT.BorderStyle := FixedSingle;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".BorderStyle "
                                & "FixedSingle");
                      elsif Contains (Line (Idx2 + 12 .. Len), "Fixed3D") then
                         WT.BorderStyle := Fixed3D;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".BorderStyle "
                                & "Fixed3D");
                      else
@@ -3265,7 +3256,7 @@ package body W2gtk_Pkg is
                      Temp : String (1 .. 12);
                   begin
                      TAIO.Put (Temp, WT.TextAlign);
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".TextAlign "
                             & Temp);
                   end;
@@ -3273,7 +3264,7 @@ package body W2gtk_Pkg is
                when Attr_ImageScalingSize =>
                   Idx2 := Index (Line (Idx1 .. Len), "(");
                   WT.ImageScalingSize := Get_Pair (Line (Idx2 + 1 .. Len - 1));
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all & ".ImageScalingSize "
                          & Img (WT.ImageScalingSize.One)
                          & ", " & Img (WT.ImageScalingSize.Two));
@@ -3282,11 +3273,11 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkToolBar then
                      if Contains (Line (Idx1 .. Len), "Hidden") then
                         WT.Grip_Visible := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Grip_Visible False");
                      elsif Contains (Line (Idx1 .. Len), "Visible") then
                         WT.Grip_Visible := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Grip_Visible True");
                      end if;
                   end if;
@@ -3299,11 +3290,11 @@ package body W2gtk_Pkg is
                   then
                      if Contains (Line (Idx1 .. Len), "False") then
                         WT.Active := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Active False");
                      elsif Contains (Line (Idx1 .. Len), "True") then
                         WT.Active := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Active True");
                      end if;
                   end if;
@@ -3316,11 +3307,11 @@ package body W2gtk_Pkg is
                   then
                      if Contains (Line (Idx1 .. Len), "Checked") then
                         WT.Active := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Active True");
                      else
                         WT.Active := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Active False");
                      end if;
                   end if;
@@ -3329,11 +3320,11 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkColorButton then
                      if Contains (Line (Idx1 .. Len), "False") then
                         WT.AnyColor := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".AnyColor False");
                      elsif Contains (Line (Idx1 .. Len), "True") then
                         WT.AnyColor := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".AnyColor True");
                      end if;
                   end if;
@@ -3342,11 +3333,11 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkColorButton then
                      if Contains (Line (Idx1 .. Len), "False") then
                         WT.FullOpen := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".FullOpen False");
                      elsif Contains (Line (Idx1 .. Len), "True") then
                         WT.FullOpen := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".FullOpen True");
                      end if;
                   end if;
@@ -3355,7 +3346,7 @@ package body W2gtk_Pkg is
                   if  WT.Widget_Type = GtkEntry then
                      if Contains (Line (Idx1 .. Len), "True") then
                         WT.PasswordChar := new String'("");
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".PasswordChar");
                      end if;
                   end if;
@@ -3365,11 +3356,11 @@ package body W2gtk_Pkg is
                      when GtkEntry | GtkComboTextBox =>
                         if Contains (Line (Idx1 .. Len), "False") then
                            WT.Editable := True;
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & WT.Name.all & ".Editable False");
                         elsif Contains (Line (Idx1 .. Len), "True") then
                            WT.Editable := False;
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & WT.Name.all & ".Editable True");
                         end if;
 
@@ -3378,11 +3369,11 @@ package body W2gtk_Pkg is
                         | DataGridViewCheckBoxColumn  =>
                         if Contains (Line (Idx1 .. Len), "False") then
                            WT.ReadOnly := False;
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & WT.Name.all & ".ReadOnly False");
                         elsif Contains (Line (Idx1 .. Len), "True") then
                            WT.ReadOnly := True;
-                           Debug (NLin, "Set Widget Property "
+                           Debug (NLin, Sp (3) & "Set Widget Property "
                                   & WT.Name.all & ".ReadOnly True");
                         end if;
                      when others => null;
@@ -3392,11 +3383,11 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkComboTextBox then
                      if Contains (Line (Idx1 .. Len), "False") then
                         WT.Sorted := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Sorted False");
                      elsif Contains (Line (Idx1 .. Len), "True") then
                         WT.Sorted := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Sorted True");
                      end if;
                   end if;
@@ -3406,7 +3397,7 @@ package body W2gtk_Pkg is
                      Idx2 := Idx1 + Test10'Length;
                      Idx3 := Index (Line (Idx2 .. Len), ",");
                      WT.MaxValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Maximum "
                             & Img (WT.MaxValue));
                   end if;
@@ -3416,7 +3407,7 @@ package body W2gtk_Pkg is
                      Idx2 := Idx1 + Test10'Length;
                      Idx3 := Index (Line (Idx2 .. Len), ",");
                      WT.MinValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Minimum "
                             & Img (WT.MinValue));
                   end if;
@@ -3426,12 +3417,12 @@ package body W2gtk_Pkg is
                      Idx2 := Idx1 + Test10'Length;
                      Idx3 := Index (Line (Idx2 .. Len), ",");
                      WT.StartValue := Get_Integer (Line (Idx2 .. Idx3 - 1));
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".StartValue "
                             & Img (WT.StartValue));
                   elsif WT.Widget_Type = GtkCalendar then
                      WT.Start_Date := Get_Date (Idx1);
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Start_Date "
                             & Image (WT.Start_Date, ISO_Date));
                   end if;
@@ -3442,7 +3433,7 @@ package body W2gtk_Pkg is
                      if Index (Line (Idx1 .. Len), "Format.Time") > 0 then
                         WT.Is_DatePicker := False;
                      end if;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Format_Date "
                             & WT.Format_Date.all);
                   end if;
@@ -3450,7 +3441,7 @@ package body W2gtk_Pkg is
                when Attr_MinDate =>
                   if WT.Widget_Type = GtkCalendar then
                      WT.MinDate := Get_Date (Idx1);
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Min_Date "
                             & Image (WT.MinDate, ISO_Date));
                   end if;
@@ -3458,7 +3449,7 @@ package body W2gtk_Pkg is
                when Attr_MaxDate =>
                   if WT.Widget_Type = GtkCalendar then
                      WT.MaxDate := Get_Date (Idx1);
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Max_Date "
                             & Image (WT.MaxDate, ISO_Date));
                   end if;
@@ -3466,7 +3457,7 @@ package body W2gtk_Pkg is
                when Attr_LimitDatePicket =>
                   if WT.Widget_Type = GtkCalendar then
                      WT.MaxDate := Get_Date (Idx1);
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Limit_Date "
                             & Image (WT.MaxDate, ISO_Date));
                   end if;
@@ -3478,21 +3469,21 @@ package body W2gtk_Pkg is
                         WT.ImagePath :=
                           new String'(Icon_Path & "/"
                                       & Icon_Name (Line (Idx1 .. Len)));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".ImagePath "
                                & WT.ImagePath.all);
                      when GtkImage =>
                         WT.Image :=
                           new String'(Icon_Path & "/"
                                       & Icon_Name (Line (Idx1 .. Len)));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".Image "
                                & WT.Image.all);
                      when GtkMenuImageItem =>
                         WT.ImageMenu :=
                           new String'(Icon_Path & "/"
                                       & Icon_Name (Line (Idx1 .. Len)));
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".ImageMenu "
                                & WT.ImageMenu.all);
 
@@ -3506,7 +3497,7 @@ package body W2gtk_Pkg is
                             WT.Widget_Type = GtkToggleButton)
                   then
                      WT.ImageAlign := Convert (Line (Idx1 .. Len));
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ImageAlign "
                             & Line (Idx1 .. Len));
                   end if;
@@ -3515,11 +3506,11 @@ package body W2gtk_Pkg is
                   if WT.Widget_Type = GtkCalendar then
                      if Contains (Line (Idx1 .. Len), "False") then
                         WT.ShowUpDown := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".ShowUpDown False");
                      elsif Contains (Line (Idx1 .. Len), "True") then
                         WT.ShowUpDown := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".ShowUpDown True");
                      end if;
                   end if;
@@ -3527,28 +3518,28 @@ package body W2gtk_Pkg is
                when Attr_SelectionMode =>
                   if WT.Widget_Type = GtkListBox then
                      WT.MultiSelect := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".MultiSelect True");
                   end if;
 
                when Attr_ForeColor =>
                   WT.FgColor :=
                     new String'(To_Color (Line (Idx1 .. Len)));
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all & "." & "FgColor "
                          & WT.FgColor.all);
 
                when Attr_BackColor =>
                   WT.BgColor :=
                     new String'(To_Color (Line (Idx1 .. Len)));
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all & "." & "BgColor "
                          & WT.BgColor.all);
 
                when Attr_Level =>
                   IIO.Get (Line (Idx1 .. Len), Num, Last);
                   WT.Level := Num;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".Level "
                          & Img (Num));
@@ -3558,22 +3549,22 @@ package body W2gtk_Pkg is
                                  Ada.Strings.Backward);
                   if Contains (Line (Idx2 + 1 .. Len), "None") then
                      WT.ScrollBars := None;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ScrollBars "
                             & "None");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
                      WT.ScrollBars := Both;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ScrollBars "
                             & "Vertical");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
                      WT.ScrollBars := Both;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ScrollBars "
                             & "Horizontal");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
                      WT.ScrollBars := Both;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ScrollBars "
                             & "Both");
                   else
@@ -3585,27 +3576,27 @@ package body W2gtk_Pkg is
                                  Ada.Strings.Backward);
                   if Contains (Line (Idx2 + 1 .. Len), "None") then
                      WT.RowHeadersBorderStyle := None;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowHeadersBorderStyle "
                             & "None");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Sunken") then
                      WT.RowHeadersBorderStyle := Sunken;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowHeadersBorderStyle "
                             & "Sunken");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Raised") then
                      WT.RowHeadersBorderStyle := Raised;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowHeadersBorderStyle "
                             & "Raised");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Single") then
                      WT.RowHeadersBorderStyle := Single;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowHeadersBorderStyle "
                             & "Single");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Custom") then
                      WT.RowHeadersBorderStyle := Custom;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowHeadersBorderStyle "
                             & "Custom");
                   else
@@ -3615,12 +3606,12 @@ package body W2gtk_Pkg is
                when Attr_Frozen =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.Frozen := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".Frozen False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.Frozen := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".Frozen True");
                   end if;
@@ -3628,12 +3619,12 @@ package body W2gtk_Pkg is
                when Attr_WorkerReportsProgress =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.WorkerReportsProgress := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".WorkerReportsProgress False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.WorkerReportsProgress := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".WorkerReportsProgress True");
                   end if;
@@ -3641,12 +3632,12 @@ package body W2gtk_Pkg is
                when Attr_WorkerSupportsCancellation =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.WorkerSupportsCancellation := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".WorkerSupportsCancellation False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.WorkerSupportsCancellation := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".WorkerSupportsCancellation True");
                   end if;
@@ -3654,12 +3645,12 @@ package body W2gtk_Pkg is
                when Attr_EnableMetric =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.EnableMetric := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".EnableMetric False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.EnableMetric := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".EnableMetric True");
                   end if;
@@ -3668,7 +3659,7 @@ package body W2gtk_Pkg is
                   Idx3 := Index (Line (Idx1 .. Len), "(");
                   WT.MinMargins :=
                     Get_Margin_Array (Line (Idx3 + 1 .. Len - 1));
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".MinMargins "
                          & Img (WT.MinMargins (1)) & ", "
@@ -3679,7 +3670,7 @@ package body W2gtk_Pkg is
                when Attr_SelectedIndex =>
                   IIO.Get (Line (Idx1 .. Len), Num, Last);
                   WT.SelectedIndex := Num;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".SelectedIndex "
                          & Img (Num));
@@ -3688,7 +3679,7 @@ package body W2gtk_Pkg is
                   Idx2 := Index (Line (Idx1 .. Len), "(");
                   IIO.Get (Line (Idx2 + 1 .. Len), Num, Last);
                   WT.Padding := Num;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".Padding "
                          & Img (Num));
@@ -3696,7 +3687,7 @@ package body W2gtk_Pkg is
                when Attr_PaddingX =>
                   IIO.Get (Line (Idx1 .. Len), Num, Last);
                   WT.PaddingX := Num;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".PaddingX "
                          & Img (Num));
@@ -3704,7 +3695,7 @@ package body W2gtk_Pkg is
                when Attr_PaddingY =>
                   IIO.Get (Line (Idx1 .. Len), Num, Last);
                   WT.PaddingY := Num;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".PaddingY "
                          & Img (Num));
@@ -3712,30 +3703,30 @@ package body W2gtk_Pkg is
                when Attr_UseVisualStyleBackColor =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.UseVisualStyleBackColor := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".UseVisualStyleBackColor False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.UseVisualStyleBackColor := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".UseVisualStyleBackColor True");
                   end if;
 
                when Attr_EditModeProgramatically =>
                   WT.EditModeProgramatically := True;
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".EditModeProgramatically True");
 
                when Attr_Resizable => null;
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.Resizable := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Resizable False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.Resizable := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Resizable True");
                   end if;
 
@@ -3744,17 +3735,17 @@ package body W2gtk_Pkg is
                                  Ada.Strings.Backward);
                   if Contains (Line (Idx2 + 1 .. Len), "NotSortable") then
                      WT.SortMode := NotSortable;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".SortMode "
                             & "NotSortable");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Automatic") then
                      WT.SortMode := Automatic;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".SortMode "
                             & "Automatic");
                   elsif Contains (Line (Idx2 + 1 .. Len), "Programmatic") then
                      WT.SortMode := Programmatic;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".SortMode "
                             & "Programmatic");
                   else
@@ -3766,12 +3757,12 @@ package body W2gtk_Pkg is
                                  Ada.Strings.Backward);
                   if Contains (Line (Idx2 + 1 .. Len), "GrowAndShrink") then
                      WT.AutoSizeMode := GrowAndShrink;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AutoSizeMode "
                             & "GrowAndShrink");
                   elsif Contains (Line (Idx2 + 1 .. Len), "GrowOnly") then
                      WT.AutoSizeMode := GrowOnly;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AutoSizeMode "
                             & "GrowOnly");
                   else
@@ -3785,7 +3776,7 @@ package body W2gtk_Pkg is
                      Temp : String (1 .. 26);
                   begin
                      ASCMIO.Put (Temp, WT.AutoSizeColumnMode);
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AutoSizeColumnMode "
                             & Temp);
                   end;
@@ -3793,34 +3784,34 @@ package body W2gtk_Pkg is
                when Attr_AllowUserToAddRows =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.AllowUserToAddRows := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToAddRows False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.AllowUserToAddRows := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToAddRows True");
                   end if;
 
                when Attr_AllowUserToDeleteRows =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.AllowUserToDeleteRows := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToDeleteRows False");
                   elsif Contains (Line (Idx1 .. Len), "False") then
                      WT.AllowUserToAddRows := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToDeleteRows True");
                   end if;
 
                when Attr_EnableHeadersVisualStyles =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.EnableHeadersVisualStyles := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".EnableHeadersVisualStyles False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.EnableHeadersVisualStyles := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".EnableHeadersVisualStyles True");
                   end if;
@@ -3831,21 +3822,21 @@ package body W2gtk_Pkg is
                   then
                      if Contains (Line (Idx1 .. Len), "False") then
                         WT.RowMultiSelect := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".RowMultiSelect False");
                      elsif Contains (Line (Idx1 .. Len), "True") then
                         WT.RowMultiSelect := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".RowMultiSelect True");
                      end if;
                   elsif WT.Widget_Type = GtkListBox then
                      if Contains (Line (Idx1 .. Len), "False") then
                         WT.MultiSelect := False;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".MultiSelect False");
                      elsif Contains (Line (Idx1 .. Len), "True") then
                         WT.MultiSelect := True;
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all & ".MultiSelect True");
                      end if;
                   end if;
@@ -3853,44 +3844,44 @@ package body W2gtk_Pkg is
                when Attr_ColumnHeadersVisible =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.ColumnHeadersVisible := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ColumnHeadersVisible False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.ColumnHeadersVisible := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ColumnHeadersVisible True");
                   end if;
 
                when Attr_RowHeadersVisible =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.RowHeadersVisible := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowHeadersVisible False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.RowHeadersVisible := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowHeadersVisible True");
                   end if;
 
                when Attr_AllowUserToResizeRows =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.AllowUserToResizeRows := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToResizeRows False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.AllowUserToAddRows := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToResizeRows True");
                   end if;
 
                when Attr_AllowUserToOrderColumns =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.AllowUserToOrderColumns := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToOrderColumns False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.AllowUserToOrderColumns := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".AllowUserToOrderColumns True");
                   end if;
 
@@ -3932,7 +3923,7 @@ package body W2gtk_Pkg is
                         when others =>
                            null;
                      end case;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".DefaultCellStyle "
                             & Test20 & Img (Num));
@@ -3964,7 +3955,7 @@ package body W2gtk_Pkg is
                      WT.AlternatingRowsDefaultCellStyle := Num;
                      DGVS (Num).Name := new String'("ALT_" & WT.Name.all);
                      DGVS (Num).Style_For := For_TreeGridView;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".AlternatingRowsDefaultCellStyle "
                             & Test20 & Img (Num));
@@ -4001,7 +3992,7 @@ package body W2gtk_Pkg is
                         WT.ColumnHeadersDefaultCellStyle := Num;
                         DGVS (Num).Style_For := For_Column_Header;
                         DGVS (Num).Name := new String'("HDR_" & WT.Name.all);
-                        Debug (NLin, "Set Widget Property "
+                        Debug (NLin, Sp (3) & "Set Widget Property "
                                & WT.Name.all
                                & ".ColumnHeadersDefaultCellStyle "
                                & Test20 & Img (Num));
@@ -4034,7 +4025,7 @@ package body W2gtk_Pkg is
                      WT.RowHeadersDefaultCellStyle := Num;
                      DGVS (Num).Style_For := For_Row_Header;
                      DGVS (Num).Name := new String'("ROW_" & WT.Name.all);
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".RowHeadersDefaultCellStyle "
                             & Test20 & Img (Num));
@@ -4045,12 +4036,12 @@ package body W2gtk_Pkg is
                when Attr_CloseButtonOnTabsInactiveVisible =>
                   if Contains (Line (Idx1 .. Len), "False") then
                      WT.CloseButtonOnTabsInactiveVisible := False;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".CloseButtonOnTabsInactiveVisible False");
                   elsif Contains (Line (Idx1 .. Len), "True") then
                      WT.CloseButtonOnTabsInactiveVisible := True;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all
                             & ".CloseButtonOnTabsInactiveVisible True");
                   end if;
@@ -4060,34 +4051,34 @@ package body W2gtk_Pkg is
                                  Ada.Strings.Backward);
                   if Contains (Line (Idx2 + 1 .. Len), "EnableResizing") then
                      WT.RowHeadersWidthSizeMode := EnableResizing;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowDeadersWidthSizeMode "
                             & "EnableResizing");
                   elsif Contains (Line (Idx2 + 1 .. Len), "DisableResizing")
                   then
                      WT.RowHeadersWidthSizeMode := DisableResizing;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowDeadersWidthSizeMode "
                             & "DisableResizing");
                   elsif Contains (Line (Idx2 + 1 .. Len),
                                   "AutoSizeToAllHeaders")
                   then
                      WT.RowHeadersWidthSizeMode := AutoSizeToAllHeaders;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowDeadersWidthSizeMode "
                             & "AutoSizeToAllHeaders");
                   elsif Contains (Line (Idx2 + 1 .. Len),
                                   "AutoSizeToDisplayedHeaders")
                   then
                      WT.RowHeadersWidthSizeMode := AutoSizeToDisplayedHeaders;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowDeadersWidthSizeMode "
                             & "AutoSizeToDisplayedHeaders");
                   elsif Contains (Line (Idx2 + 1 .. Len),
                                   "AutoSizeToFirstHeader")
                   then
                      WT.RowHeadersWidthSizeMode := AutoSizeToFirstHeader;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".RowDeadersWidthSizeMode "
                             & "AutoSizeToFirstHeader");
                   else
@@ -4095,24 +4086,24 @@ package body W2gtk_Pkg is
                   end if;
 
                when Attr_ImageList | Attr_DefaultNodeImage =>
-                  Debug (NLin, "Set Widget Property "
+                  Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
                          & ".ImageList null");
 
                when Attr_ColumnHeadersHeightSizeMode =>
                   if Contains (Line (Idx1 .. Len), "AutoSize") then
                      WT.ColumnHeadersHeightSizeMode := AutomaticSize;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ColumnHeadersHeightSizeMode"
                             & " AutoSize");
                   elsif Contains (Line (Idx1 .. Len), "EnableResizing") then
                      WT.ColumnHeadersHeightSizeMode := EnableResizing;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ColumnHeadersHeightSizeMode"
                             & " EnableResizing");
                   elsif Contains (Line (Idx1 .. Len), "DisableResizing") then
                      WT.ColumnHeadersHeightSizeMode := DisableResizing;
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".ColumnHeadersHeightSizeMode"
                             & " DisableResizing");
                   else
@@ -4234,8 +4225,8 @@ package body W2gtk_Pkg is
             TWin.Name := new String'(+Trim (Line (Idx0 + 14 .. Len),
                                      Ada.Strings.Both));
             Insert_Window_By_Tail (TWin);
-            Debug (NLin, "Created GtkWindow " & TWin.Name.all);
-            Debug (NLin, "Set Window Property Name " & TWin.Name.all);
+            Debug (NLin, Sp (3) & "Created GtkWindow " & TWin.Name.all);
+            Debug (NLin, Sp (3) & "Set Window Property Name " & TWin.Name.all);
             exit;
          end if;
       end loop;
@@ -4308,7 +4299,7 @@ package body W2gtk_Pkg is
             Idx0 := Idx0 + Test19'Length;
             IIO.Get (Line (Idx0 .. Len), Num, Last);
             DGVS (Num).Num := Num;
-            Debug (NLin, "Created DataGridViewCellStyle"
+            Debug (NLin, Sp (3) & "Created DataGridViewCellStyle"
                    & DGVS (Num).Num'Image);
             exit when TIO.End_Of_File (DFile);
             Get_Line;
@@ -4394,7 +4385,7 @@ package body W2gtk_Pkg is
               new String'("System.Windows.Forms.ToolStrip");
          end if;
          Insert_Widget_By_Tail (TWin, WT);
-         Debug (NLin, "Created "
+         Debug (NLin, Sp (3) & "Created "
                 & WT.Widget_Type'Image & " "
                 & WT.Name.all & " from"
                 & Line (Idx1 + 7 .. Idx3));
@@ -4598,11 +4589,11 @@ package body W2gtk_Pkg is
                WS.Line := NLin;
                Insert_Signal (Win_List, WS);
                if Ret = 1 then
-                  Debug (NLin, "Created Signal "
+                  Debug (NLin, Sp (3) & "Created Signal "
                          & Complete_Signal (Complete_Signal'First ..
                              Complete_Signal'Last - 1));
                else
-                  Debug (NLin, "Created Signal " &
+                  Debug (NLin, Sp (3) & "Created Signal " &
                            Win_List.Name.all & "." & SName);
                end if;
             else
@@ -4648,13 +4639,17 @@ package body W2gtk_Pkg is
                then
                   WS.After := True;
                end if;
-               Insert_Signal (WT, WS);
-               if Ret = 1 then
-                  Debug (NLin, "Created Signal "
-                         & Complete_Signal (Complete_Signal'First ..
-                             Complete_Signal'Last - 1));
+               if WT.Widget_Type = GtkCalendar then
+                  Debug (NLin, "Ignoring Signal " & WS.Name.all);
                else
-                  Debug (NLin, "Created Signal " & Complete_Signal);
+                  Insert_Signal (WT, WS);
+                  if Ret = 1 then
+                     Debug (NLin, Sp (3) & "Created Signal "
+                            & Complete_Signal (Complete_Signal'First ..
+                                Complete_Signal'Last - 1));
+                  else
+                     Debug (NLin, Sp (3) & "Created Signal " & Complete_Signal);
+                  end if;
                end if;
             end if;
          end;
@@ -4785,7 +4780,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Next_Month_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all & ".NextMonth");
 
                      WS := new Signal_Block;
@@ -4793,7 +4788,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Prev_Month_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all & ".PrevMonth");
 
                      WS := new Signal_Block;
@@ -4801,7 +4796,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Next_Year_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all & ".NextYear");
 
                      WS := new Signal_Block;
@@ -4809,7 +4804,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Prev_Year_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all & ".PrevYear");
 
                      WS := new Signal_Block;
@@ -4817,7 +4812,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Day_Selected_Double_Click_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all & ".day_selected_double_click");
 
                      WS := new Signal_Block;
@@ -4825,7 +4820,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Day_Selected_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all & ".day_selected");
 
                      WS := new Signal_Block;
@@ -4833,14 +4828,14 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Button_Clicked_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal " & WT.Name.all & ".clicked");
+                     Debug (NLin, Sp (3) & "Created Signal " & WT.Name.all & ".clicked");
 
                      WS := new Signal_Block;
                      WS.Name := new String'("Activate");
                      WS.Handler := new String'("On_Entry_Year_Activate_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Year_Activate");
 
@@ -4849,7 +4844,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Year_Leavefocus_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Year_Activate");
 
@@ -4858,7 +4853,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Month_Activate_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Month_Activate");
 
@@ -4867,7 +4862,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Month_Leavefocus_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Month_Activate");
 
@@ -4876,7 +4871,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Day_Activate_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Day_Activate");
 
@@ -4885,7 +4880,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Day_Leavefocus_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Day_Activate");
 
@@ -4895,7 +4890,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Sec_Button_Up_Clicked_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Sec_Clicked");
 
@@ -4904,7 +4899,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Sec_Button_Down_Clicked_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Sec_Clicked");
 
@@ -4913,7 +4908,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Min_Button_Up_Clicked_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Min_Clicked");
 
@@ -4922,7 +4917,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Min_Button_Down_Clicked_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Min_Clicked");
 
@@ -4931,7 +4926,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Hour_Button_Up_Clicked_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Hour_Clicked");
 
@@ -4940,7 +4935,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Hour_Button_Down_Clicked_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Hour_Clicked");
 
@@ -4949,7 +4944,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Hour_Activate_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Hour_Activate");
 
@@ -4958,7 +4953,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Hour_Leavefocus_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Hour_Activate");
 
@@ -4967,7 +4962,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Min_Activate_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Min_Activate");
 
@@ -4976,7 +4971,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Min_Leavefocus_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Min_Activate");
 
@@ -4985,7 +4980,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Sec_Activate_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Sec_Activate");
                      WS := new Signal_Block;
@@ -4993,7 +4988,7 @@ package body W2gtk_Pkg is
                      WS.Handler := new String'("On_Entry_Sec_Leavefocus_"
                                                & WT.Name.all);
                      Insert_Signal (WT, WS);
-                     Debug (NLin, "Created Signal "
+                     Debug (NLin, Sp (3) & "Created Signal "
                             & WT.Name.all
                             & ".Sec_Activate");
                   end if;

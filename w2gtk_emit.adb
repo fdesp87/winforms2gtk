@@ -541,7 +541,9 @@ package body W2gtk_Emit is
             when TopLeft =>
                if Numeric then
                   Emit_Property (Id, "xalign", 0.0);
-                  Emit_Property (Id, "yalign", 0.0);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 0.0);
+                  end if;
                else
                   Emit_Property (Id, "halign", "start");
                   Emit_Property (Id, "valign", "start");
@@ -549,15 +551,19 @@ package body W2gtk_Emit is
             when TopCenter =>
                if Numeric then
                   Emit_Property (Id, "xalign", 0.5);
-                  Emit_Property (Id, "yalign", 0.0);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 0.0);
+                  end if;
                else
                   Emit_Property (Id, "halign", "center");
                   Emit_Property (Id, "valign", "start");
                end if;
             when TopRight =>
                if Numeric then
-                  Emit_Property (Id, "halign", 1.0);
-                  Emit_Property (Id, "valign", 0.0);
+                  Emit_Property (Id, "xalign", 1.0);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 0.0);
+                  end if;
                else
                   Emit_Property (Id, "halign", "end");
                   Emit_Property (Id, "valign", "start");
@@ -565,7 +571,9 @@ package body W2gtk_Emit is
             when MiddleLeft =>
                if Numeric then
                   Emit_Property (Id, "xalign", 0.0);
-                  Emit_Property (Id, "yalign", 0.5);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 0.5);
+                  end if;
                else
                   Emit_Property (Id, "halign", "start");
                   Emit_Property (Id, "valign", "center");
@@ -573,7 +581,9 @@ package body W2gtk_Emit is
             when MiddleCenter =>
                if Numeric then
                   Emit_Property (Id, "xalign", 0.5);
-                  Emit_Property (Id, "yalign", 0.5);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 0.5);
+                  end if;
                else
                   Emit_Property (Id, "halign", "center");
                   Emit_Property (Id, "valign", "center");
@@ -581,7 +591,9 @@ package body W2gtk_Emit is
             when MiddleRight =>
                if Numeric then
                   Emit_Property (Id, "xalign", 1.0);
-                  Emit_Property (Id, "yalign", 0.5);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 0.5);
+                  end if;
                else
                   Emit_Property (Id, "halign", "end");
                   Emit_Property (Id, "valign", "center");
@@ -589,7 +601,9 @@ package body W2gtk_Emit is
             when BottomLeft =>
                if Numeric then
                   Emit_Property (Id, "xalign", 0.0);
-                  Emit_Property (Id, "yalign", 1.0);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 1.0);
+                  end if;
                else
                   Emit_Property (Id, "halign", "start");
                   Emit_Property (Id, "valign", "end");
@@ -597,7 +611,9 @@ package body W2gtk_Emit is
             when BottomCenter =>
                if Numeric then
                   Emit_Property (Id, "xalign", 0.5);
-                  Emit_Property (Id, "yalign", 1.0);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 1.0);
+                  end if;
                else
                   Emit_Property (Id, "halign", "center");
                   Emit_Property (Id, "valign", "end");
@@ -605,7 +621,9 @@ package body W2gtk_Emit is
             when BottomRight =>
                if Numeric then
                   Emit_Property (Id, "xalign", 1.0);
-                  Emit_Property (Id, "yalign", 1.0);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 1.0);
+                  end if;
                else
                   Emit_Property (Id, "halign", "end");
                   Emit_Property (Id, "valign", "end");
@@ -637,7 +655,9 @@ package body W2gtk_Emit is
             when Center =>
                if Numeric then
                   Emit_Property (Id, "xalign", 0.5);
-                  Emit_Property (Id, "yalign", 0.5);
+                  if TWdg.Widget_Type /= GtkEntry then
+                     Emit_Property (Id, "yalign", 0.5);
+                  end if;
                else
                   Emit_Property (Id, "halign", "center");
                   Emit_Property (Id, "valign", "center");
@@ -1511,9 +1531,9 @@ package body W2gtk_Emit is
       Emit_GtkSignal (TWdg, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing_Child (TWdg, Id,
-                                     Packing => True,
-                                     XY => True,
-                                     Homog => False);
+                          Packing => True,
+                          XY => True,
+                          Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>

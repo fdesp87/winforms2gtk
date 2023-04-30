@@ -34,6 +34,29 @@ package body Symbol_Tables is
       return Key1 = Key2;
    end Key_Equal;
 
+   ------------------
+   -- GTK Handlers --
+   ------------------
+
+   package Handler_Map is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => String,
+      Element_Type    => Signal_Pointer,
+      Hash            => Hash,
+      Equivalent_Keys => Key_Equal,
+      "="             => "=");
+
+   Handler_Symbol_Table : Handler_Map.Map;
+
+   function Insert_In_Handler_Map (TS : Signal_Pointer) return Boolean is
+      Wst : Handler_Map.Map renames Handler_Symbol_Table;
+   begin
+      Wst.Insert (TS.Handler.all, TS);
+      return True;
+   exception
+      when Constraint_Error =>
+         return False;
+   end Insert_In_Handler_Map;
+
    -----------------
    -- GTK Signals --
    -----------------
@@ -73,8 +96,8 @@ package body Symbol_Tables is
       Wst.Insert ("RowCollapsed", "row-collapsed");
       Wst.Insert ("RowExpanded", "row-expanded");
       Wst.Insert ("Toggled", "toggled");              --  gtkcheckboxcolum
-      Wst.Insert ("LeaveFocus", "focus-out-event");
-      Wst.Insert ("Leave", "focus-out-event");
+      Wst.Insert ("Leave", "focus");
+      Wst.Insert ("LeaveFocus", "focus");
       Wst.Insert ("DaySelected", "day-selected");
       Wst.Insert ("NextMonth", "next-month");
       Wst.Insert ("PrevMonth", "prev-month");
@@ -104,10 +127,10 @@ package body Symbol_Tables is
 
    function Convert_Signal_To_Gtk (TWin    : Window_Pointer;
                                    TS      : Signal_Pointer) return String is
-      pragma Unreferenced (TWin);
       Gtk_Signal : constant String := Get_Gtk_Signal (TS.Name.all);
    begin
       if Gtk_Signal = "" then
+         Debug (0, Sp (3) & TWin.Name.all & ": unknown signal " & TS.Name.all);
          raise Unknown_Signal;
       end if;
       return Gtk_Signal;
@@ -119,9 +142,10 @@ package body Symbol_Tables is
       WSignal    : String renames TS.Name.all;
    begin
       if Gtk_Signal = "" then
+         Debug (0, Sp (3) & TWdg.Name.all & ": unknown signal " & TS.Name.all);
          raise Unknown_Signal;
       end if;
-      if WSignal = "LeaveFocus" or else WSignal = "Leave" then
+      if WSignal = "Leave" or WSignal = "LeaveFocus" then
          TS.Proc  := False;
       end if;
       case TWdg.Widget_Type is

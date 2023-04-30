@@ -245,6 +245,8 @@ package W2gtk_Decls is
       Date_Pickers       : Integer := 0;
       Time_Pickers       : Integer := 0;
       Radio_Buttons      : Integer := 0;
+      Frames             : Integer := 0;
+      Check_Buttons      : Integer := 0;
       Tooltips           : Integer := 0;
    end record;
    Have : Have_Block;

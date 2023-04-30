@@ -15,6 +15,7 @@
 -- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --
 ------------------------------------------------------------------------------
 with W2gtk_Decls;         use W2gtk_Decls;
+
 package Symbol_Tables is
    Unknown_Signal : exception;
 
@@ -28,5 +29,5 @@ package Symbol_Tables is
                                    TS      : Signal_Pointer) return String;
    function Convert_Signal_To_Gtk (TWdg    : Widget_Pointer;
                                    TS      : Signal_Pointer) return String;
-
+   function Insert_In_Handler_Map (TS : Signal_Pointer) return Boolean;
 end Symbol_Tables;

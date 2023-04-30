@@ -19,6 +19,7 @@ with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Integer_Text_IO;
 with Ada.Float_Text_IO;
 with Unchecked_Deallocation;
+with Symbol_Tables;
 
 package body W2gtk_Decls is
    package ITIO renames Ada.Integer_Text_IO;
@@ -817,6 +818,10 @@ package body W2gtk_Decls is
             end if;
          when GtkRadioButton =>
             Have.Radio_Buttons := Have.Radio_Buttons + 1;
+         when GtkCheckButton =>
+            Have.Check_Buttons := Have.Check_Buttons + 1;
+         when GtkFrame =>
+            Have.Frames := Have.Frames + 1;
          when others => null;
       end case;
    end Set_Have;
@@ -894,6 +899,7 @@ package body W2gtk_Decls is
 
    procedure Insert_Signal (TWdg : Widget_Pointer;
                             TS   : Signal_Pointer) is
+      Temp : Boolean;
    begin
       if TWdg.Signal_List = null then
          TS.Next := null;
@@ -901,6 +907,15 @@ package body W2gtk_Decls is
       else
          TS.Next := TWdg.Signal_List;
          TWdg.Signal_List := TS;
+      end if;
+      --  ensure no duplicated Ada signal handlers
+      Temp := Symbol_Tables.Insert_In_Handler_Map (TS);
+      if not Temp then
+         TS.GAda  := False;
+         TS.Glade := False;
+         Debug (0, "Warning"
+                & ": repeated handler " & TS.Handler.all
+                & ": No Glade, No Ada will be generated for this signal");
       end if;
    end Insert_Signal;
 
@@ -1084,7 +1099,7 @@ package body W2gtk_Decls is
             TWdg := TWdg.Next;
             Unlink_Widget (TWin, Temp);
             Insert_Widget_By_Order (Temp.GParent, Temp);
-            Debug (0, "Widget "
+            Debug (0, Sp (3) & "Widget "
                    & Temp.Name.all
                    & " (Child Number " & Img (Temp.Child_Num) & ")"
                    & " linked to Parent " & Temp.GParent.Name.all);
@@ -1122,7 +1137,7 @@ package body W2gtk_Decls is
             TWdg.Font_Underline := True;
          end if;
          if Changed then
-            Debug (0, "Set Inherited Property " & TWdg.Name.all & ".Font="""
+            Debug (0, Sp (3) & "Set Inherited Property " & TWdg.Name.all & ".Font="""
                    & TWdg.Font_Name.all
                    & ", " & Img (TWdg.Font_Size)
                    & (if TWdg.Font_Weight /= null then
@@ -1153,7 +1168,7 @@ package body W2gtk_Decls is
          end if;
          if Changed then
             if DGVS (I).Name /= null then
-               Debug (0, "Set Inherited Property Gtk_Cell_Renderer "
+               Debug (0, Sp (3) & "Set Inherited Property Gtk_Cell_Renderer "
                       & "(" & Img (I) & ") "
                       & DGVS (I).Name.all
                       & ".Font=""" & DGVS (I).Font_Name.all
@@ -1162,7 +1177,7 @@ package body W2gtk_Decls is
                            ", " & DGVS (I).Font_Weight.all else "") & """"
                       & (if DGVS (I).Font_Underline then "underline" else ""));
             else
-               Debug (0, "Set Inherited Property Gtk_Cell_Renderer "
+               Debug (0, Sp (3) & "Set Inherited Property Gtk_Cell_Renderer "
                       & "(" & Img (I) & ")"
                       & ".Font=""" & DGVS (I).Font_Name.all
                       & ", " & Img (DGVS (I).Font_Size)

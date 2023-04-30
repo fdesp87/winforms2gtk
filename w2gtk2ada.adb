@@ -33,7 +33,7 @@ package body W2Gtk2Ada is
    AdaFile      : TIO.File_Type;
    TWin         : Window_Pointer :=  null;
    Main_Window  : Boolean := False;
-   Signals : Boolean := False;
+   Signals      : Boolean := False;
    Form_Closing : Boolean := False;
 
    --------------
@@ -344,9 +344,11 @@ package body W2Gtk2Ada is
                   end if;
                end if;
                TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-               if Form_Closing and then
-                 TS.Handler.all =
-                   "On_" & Capitalize (TWin0.Name.all) & "_Formclosing"
+               if Form_Closing
+                 and then
+                   TS.Handler.all =
+                     "On_" & Capitalize (TWin0.Name.all) & "_Formclosing"
+                 and then Main_Window
                then
                   TIO.Put_Line (Sp (6) & "Gtk.Main.Main_Quit;");
                else
@@ -633,12 +635,6 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
-                  TIO.Put_Line (Sp (6) & "Me."
-                                & TWdg.Name.all & "_Calendar"
-                                & ".Set_Visible");
-                  TIO.Put_Line (Sp (9) & "(not Me."
-                                & TWdg.Name.all & "_Calendar"
-                                & ".Get_Visible);");
                   TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
                   TIO.Put_Line (Sp (6) & "null;");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
@@ -727,8 +723,8 @@ package body W2Gtk2Ada is
                           & "GNAT.Calendar.Hour (Now);");
             TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min  := "
                           & "GNAT.Calendar.Minute (Now);");
-            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec  :=");
-            TIO.Put_Line (Sp (8) & "Integer (GNAT.Calendar.Second (Now));");
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec  :="
+                          & "Integer (GNAT.Calendar.Second (Now));");
             TIO.New_Line;
             TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                           & "_Hour_Entry.Set_Text (Img ("
@@ -1005,7 +1001,7 @@ package body W2Gtk2Ada is
 
       while TS /= null loop
          if TS.GAda then
-            if TS.Name.all = "leave" then
+            if TS.Name.all = "Leave" then
                TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
                TIO.Put_Line (Sp (5) & "(User_Data : access GObject_Record'Class)"
                              & " return Boolean is");
@@ -1066,7 +1062,7 @@ package body W2Gtk2Ada is
       For_Each_Widget (Win_List, Emit_Signal_Specs'Access);
       TIO.Put_Line ("end " & Filename & "_Pkg.Signals;");
 
-      if Form_Closing then
+      if Form_Closing and then Main_Window then
          TIO.Put_Line ("with Gtk.Main;");
       else
          TIO.Put_Line ("--  with Gtk.Main;");
@@ -1476,164 +1472,181 @@ package body W2Gtk2Ada is
    procedure Emit_Date_Picker_Methods_Spec (TWdg : Widget_Pointer);
    procedure Emit_Date_Picker_Methods_Spec (TWdg : Widget_Pointer) is
    begin
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Get_Date return String;");
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Set_Date (Some_Date : String) return Boolean;");
+      if TWdg.Widget_Type = GtkCalendar then
+         if TWdg.Is_DatePicker then
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Get_Date return String;");
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Set_Date (Some_Date : String) return Boolean;");
+         end if;
+      end if;
    end Emit_Date_Picker_Methods_Spec;
 
    procedure Emit_Date_Picker_Methods_Body (TWdg : Widget_Pointer);
    procedure Emit_Date_Picker_Methods_Body (TWdg : Widget_Pointer) is
    begin
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Get_Date return String is");
-      TIO.Put_Line (Sp (6) & "TDate : String (1 .. 10) := ""0001-01-01"";");
-      TIO.Put_Line (Sp (3) & "begin");
-      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
-                    & "_Year_Entry.Get_Text'Length = 1 then");
-      TIO.Put_Line (Sp (9) & "TDate (4 .. 4) := Me." & TWdg.Name.all
-                    & "_Year_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "elsif Me." & TWdg.Name.all
-                    & "_Year_Entry.Get_Text'Length = 2 then");
-      TIO.Put_Line (Sp (9) & "TDate (3 .. 4) := Me." & TWdg.Name.all
-                    & "_Year_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "elsif Me." & TWdg.Name.all
-                    & "_Year_Entry.Get_Text'Length = 3 then");
-      TIO.Put_Line (Sp (9) & "TDate (2 .. 4) := Me." & TWdg.Name.all
-                    & "_Year_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "else");
-      TIO.Put_Line (Sp (9) & "TDate (1 .. 4)  := Me." & TWdg.Name.all
-                    & "_Year_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
-                    & "_Month_Entry.Get_Text'Length = 1 then");
-      TIO.Put_Line (Sp (9) & "TDate (7 .. 7) := Me." & TWdg.Name.all
-                    & "_Month_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "else");
-      TIO.Put_Line (Sp (9) & "TDate (6 .. 7) := Me." & TWdg.Name.all
-                    & "_Month_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
-                    & "_Day_Entry.Get_Text'Length = 1 then");
-      TIO.Put_Line (Sp (9) & "TDate (10 .. 10) := Me." & TWdg.Name.all
-                    & "_Day_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "else");
-      TIO.Put_Line (Sp (9) & "TDate (9 .. 10) := Me." & TWdg.Name.all
-                    & "_Day_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "return TDate;");
-      TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Get_Date;");
+      if TWdg.Widget_Type = GtkCalendar then
+         if TWdg.Is_DatePicker then
+            TIO.New_Line;
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Get_Date return String is");
+            TIO.Put_Line (Sp (6) & "TDate : String (1 .. 10) := ""0001-01-01"";");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                          & "_Year_Entry.Get_Text'Length = 1 then");
+            TIO.Put_Line (Sp (9) & "TDate (4 .. 4) := Me." & TWdg.Name.all
+                          & "_Year_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "elsif Me." & TWdg.Name.all
+                          & "_Year_Entry.Get_Text'Length = 2 then");
+            TIO.Put_Line (Sp (9) & "TDate (3 .. 4) := Me." & TWdg.Name.all
+                          & "_Year_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "elsif Me." & TWdg.Name.all
+                          & "_Year_Entry.Get_Text'Length = 3 then");
+            TIO.Put_Line (Sp (9) & "TDate (2 .. 4) := Me." & TWdg.Name.all
+                          & "_Year_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "else");
+            TIO.Put_Line (Sp (9) & "TDate (1 .. 4)  := Me." & TWdg.Name.all
+                          & "_Year_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                          & "_Month_Entry.Get_Text'Length = 1 then");
+            TIO.Put_Line (Sp (9) & "TDate (7 .. 7) := Me." & TWdg.Name.all
+                          & "_Month_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "else");
+            TIO.Put_Line (Sp (9) & "TDate (6 .. 7) := Me." & TWdg.Name.all
+                          & "_Month_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                          & "_Day_Entry.Get_Text'Length = 1 then");
+            TIO.Put_Line (Sp (9) & "TDate (10 .. 10) := Me." & TWdg.Name.all
+                          & "_Day_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "else");
+            TIO.Put_Line (Sp (9) & "TDate (9 .. 10) := Me." & TWdg.Name.all
+                          & "_Day_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "return TDate;");
+            TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Get_Date;");
 
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Set_Date (Some_Date : String) return Boolean is");
-      TIO.Put_Line (Sp (6) & "S : constant Integer := Some_Date'First;");
-      TIO.Put_Line (Sp (3) & "begin");
-      TIO.Put_Line (Sp (6) & "if Some_Date'Length /= 10 then");
-      TIO.Put_Line (Sp (9) & "return False;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
-                    & "_Month_Entry.Set_Text (Some_Date (S + 5 .. S + 6));");
-      TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
-                    & "_Year_Entry.Set_Text (Some_Date (S .. S + 3));");
-      TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
-                    & "_Day_Entry.Set_Text (Some_Date (S + 8 .. S + 9));");
-      TIO.Put_Line (Sp (6) & "return True;");
-      TIO.Put_Line (Sp (3) & "exception");
-      TIO.Put_Line (Sp (9) & "when others =>");
-      TIO.Put_Line (Sp (12) & "return False;");
-      TIO.Put_Line (Sp (6) & "end " & TWdg.Name.all & "_Set_Date;");
+            TIO.New_Line;
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Set_Date (Some_Date : String) return Boolean is");
+            TIO.Put_Line (Sp (6) & "S : constant Integer := Some_Date'First;");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & "if Some_Date'Length /= 10 then");
+            TIO.Put_Line (Sp (9) & "return False;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Month_Entry.Set_Text (Some_Date (S + 5 .. S + 6));");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Year_Entry.Set_Text (Some_Date (S .. S + 3));");
+            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
+                          & "_Day_Entry.Set_Text (Some_Date (S + 8 .. S + 9));");
+            TIO.Put_Line (Sp (6) & "return True;");
+            TIO.Put_Line (Sp (3) & "exception");
+            TIO.Put_Line (Sp (6) & "when others =>");
+            TIO.Put_Line (Sp (9) & "return False;");
+            TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Set_Date;");
+         end if;
+      end if;
    end Emit_Date_Picker_Methods_Body;
 
    procedure Emit_Time_Picker_Methods_Spec (TWdg : Widget_Pointer);
    procedure Emit_Time_Picker_Methods_Spec (TWdg : Widget_Pointer) is
    begin
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Get_Time return String;");
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Set_Time (Some_Time : String) return Boolean;");
+      if TWdg.Widget_Type = GtkCalendar then
+         if not TWdg.Is_DatePicker then
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Get_Time return String;");
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Set_Time (Some_Time : String) return Boolean;");
+         end if;
+      end if;
    end Emit_Time_Picker_Methods_Spec;
 
    procedure Emit_Time_Picker_Methods_Body (TWdg : Widget_Pointer);
    procedure Emit_Time_Picker_Methods_Body (TWdg : Widget_Pointer) is
    begin
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Get_Time return String is");
-      TIO.Put_Line (Sp (6) & "TTime : String (1 .. 8) := ""00:00:00"";");
-      TIO.Put_Line (Sp (3) & "begin");
-      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
-                    & "_Hour_Entry.Get_Text'Length = 1 then");
-      TIO.Put_Line (Sp (9) & "TTime (2 .. 2) := Me." & TWdg.Name.all
-                    & "_Hour_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "else");
-      TIO.Put_Line (Sp (9) & "TTime (1 .. 2) := Me." & TWdg.Name.all
-                    & "_Hour_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
-                    & "_Min_Entry.Get_Text'Length = 1 then");
-      TIO.Put_Line (Sp (9) & "TTime (5 .. 5) := Me." & TWdg.Name.all
-                    & "_Min_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "else");
-      TIO.Put_Line (Sp (9) & "TTime (4 .. 5) := Me." & TWdg.Name.all
-                    & "_Min_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
-                    & "_Sec_Entry.Get_Text'Length = 1 then");
-      TIO.Put_Line (Sp (9) & "TTime (8 .. 8) := Me." & TWdg.Name.all
-                    & "_Sec_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "else");
-      TIO.Put_Line (Sp (9) & "TTime (7 .. 8) := Me." & TWdg.Name.all
-                    & "_Sec_Entry.Get_Text;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "return TTime;");
-      TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Get_Time;");
+      if TWdg.Widget_Type = GtkCalendar then
+         if not TWdg.Is_DatePicker then
+            TIO.New_Line;
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Get_Time return String is");
+            TIO.Put_Line (Sp (6) & "TTime : String (1 .. 8) := ""00:00:00"";");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                          & "_Hour_Entry.Get_Text'Length = 1 then");
+            TIO.Put_Line (Sp (9) & "TTime (2 .. 2) := Me." & TWdg.Name.all
+                          & "_Hour_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "else");
+            TIO.Put_Line (Sp (9) & "TTime (1 .. 2) := Me." & TWdg.Name.all
+                          & "_Hour_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                          & "_Min_Entry.Get_Text'Length = 1 then");
+            TIO.Put_Line (Sp (9) & "TTime (5 .. 5) := Me." & TWdg.Name.all
+                          & "_Min_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "else");
+            TIO.Put_Line (Sp (9) & "TTime (4 .. 5) := Me." & TWdg.Name.all
+                          & "_Min_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "if Me." & TWdg.Name.all
+                          & "_Sec_Entry.Get_Text'Length = 1 then");
+            TIO.Put_Line (Sp (9) & "TTime (8 .. 8) := Me." & TWdg.Name.all
+                          & "_Sec_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "else");
+            TIO.Put_Line (Sp (9) & "TTime (7 .. 8) := Me." & TWdg.Name.all
+                          & "_Sec_Entry.Get_Text;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "return TTime;");
+            TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Get_Time;");
 
-      TIO.New_Line;
-      TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
-                    & "_Set_Time (Some_Time : String) return Boolean is");
-      TIO.Put_Line (Sp (6) & "T : constant Integer := Some_Time'First;");
-      TIO.Put_Line (Sp (6) & "H, M, S : Integer;");
-      TIO.Put_Line (Sp (3) & "begin");
-      TIO.Put_Line (Sp (6) & "if Some_Time'Length /= 8 then");
-      TIO.Put_Line (Sp (9) & "return False;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "if Some_Time (T + 2) /= ':' then");
-      TIO.Put_Line (Sp (9) & "return False;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "if Some_Time (T + 5) /= ':' then");
-      TIO.Put_Line (Sp (9) & "return False;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "begin");
-      TIO.Put_Line (Sp (9) & "H := Integer'Value (Some_Time (T .. T + 1));");
-      TIO.Put_Line (Sp (6) & "exception");
-      TIO.Put_Line (Sp (9) & "when others =>");
-      TIO.Put_Line (Sp (12) & "return False;");
-      TIO.Put_Line (Sp (6) & "end;");
-      TIO.Put_Line (Sp (6) & "begin");
-      TIO.Put_Line (Sp (9) & "M := Integer'Value (Some_Time (T + 3 .. T + 4));");
-      TIO.Put_Line (Sp (6) & "exception");
-      TIO.Put_Line (Sp (9) & "when others =>");
-      TIO.Put_Line (Sp (12) & "return False;");
-      TIO.Put_Line (Sp (6) & "end;");
-      TIO.Put_Line (Sp (6) & "begin");
-      TIO.Put_Line (Sp (9) & "S := Integer'Value (Some_Time (T + 6 .. T + 7));");
-      TIO.Put_Line (Sp (6) & "exception");
-      TIO.Put_Line (Sp (9) & "when others =>");
-      TIO.Put_Line (Sp (12) & "return False;");
-      TIO.Put_Line (Sp (6) & "end;");
-      TIO.Put_Line (Sp (6) & "if H in 0 .. 23 and then M in 0 .. 59 "
-                    & "and then S in 0 .. 59 then");
-      TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
-                    & "_Hour_Entry.Set_Text (Some_Time (T .. T + 1));");
-      TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
-                    & "_Min_Entry.Set_Text (Some_Time (T + 3 .. T + 4));");
-      TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
-                    & "_Sec_Entry.Set_Text (Some_Time (T + 6 .. T + 7));");
-      TIO.Put_Line (Sp (9) & "return True;");
-      TIO.Put_Line (Sp (6) & "end if;");
-      TIO.Put_Line (Sp (6) & "return False;");
-      TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Set_Time;");
+            TIO.New_Line;
+            TIO.Put_Line (Sp (3) & "function " & TWdg.Name.all
+                          & "_Set_Time (Some_Time : String) return Boolean is");
+            TIO.Put_Line (Sp (6) & "T : constant Integer := Some_Time'First;");
+            TIO.Put_Line (Sp (6) & "H, M, S : Integer;");
+            TIO.Put_Line (Sp (3) & "begin");
+            TIO.Put_Line (Sp (6) & "if Some_Time'Length /= 8 then");
+            TIO.Put_Line (Sp (9) & "return False;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "if Some_Time (T + 2) /= ':' then");
+            TIO.Put_Line (Sp (9) & "return False;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "if Some_Time (T + 5) /= ':' then");
+            TIO.Put_Line (Sp (9) & "return False;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "begin");
+            TIO.Put_Line (Sp (9) & "H := Integer'Value (Some_Time (T .. T + 1));");
+            TIO.Put_Line (Sp (6) & "exception");
+            TIO.Put_Line (Sp (9) & "when others =>");
+            TIO.Put_Line (Sp (12) & "return False;");
+            TIO.Put_Line (Sp (6) & "end;");
+            TIO.Put_Line (Sp (6) & "begin");
+            TIO.Put_Line (Sp (9) & "M := Integer'Value (Some_Time (T + 3 .. T + 4));");
+            TIO.Put_Line (Sp (6) & "exception");
+            TIO.Put_Line (Sp (9) & "when others =>");
+            TIO.Put_Line (Sp (12) & "return False;");
+            TIO.Put_Line (Sp (6) & "end;");
+            TIO.Put_Line (Sp (6) & "begin");
+            TIO.Put_Line (Sp (9) & "S := Integer'Value (Some_Time (T + 6 .. T + 7));");
+            TIO.Put_Line (Sp (6) & "exception");
+            TIO.Put_Line (Sp (9) & "when others =>");
+            TIO.Put_Line (Sp (12) & "return False;");
+            TIO.Put_Line (Sp (6) & "end;");
+            TIO.Put_Line (Sp (6) & "if H in 0 .. 23 and then M in 0 .. 59 "
+                          & "and then S in 0 .. 59 then");
+            TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                          & "_Hour_Entry.Set_Text (Some_Time (T .. T + 1));");
+            TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                          & "_Min_Entry.Set_Text (Some_Time (T + 3 .. T + 4));");
+            TIO.Put_Line (Sp (9) & "Me." & TWdg.Name.all
+                          & "_Sec_Entry.Set_Text (Some_Time (T + 6 .. T + 7));");
+            TIO.Put_Line (Sp (9) & "return True;");
+            TIO.Put_Line (Sp (6) & "end if;");
+            TIO.Put_Line (Sp (6) & "return False;");
+            TIO.Put_Line (Sp (3) & "end " & TWdg.Name.all & "_Set_Time;");
+         end if;
+      end if;
    end Emit_Time_Picker_Methods_Body;
 
    procedure Emit_Object_Collection (Debug : Boolean; Filename : String);
@@ -1720,6 +1733,9 @@ package body W2Gtk2Ada is
       if Have.Boxes > 0 then
          Emit_With_Use ("Gtk.Box");
       end if;
+      if Have.Frames > 0 then
+         Emit_With_Use ("Gtk.Frame");
+      end if;
       if Max_DGVS > 0 then
          Emit_With_Use ("Gtk.Cell_Renderer_Text");
       end if;
@@ -1728,6 +1744,9 @@ package body W2Gtk2Ada is
       end if;
       if Have.Date_Pickers > 0 then
          Emit_With_Use ("Gtk.Calendar");
+      end if;
+      if Have.Check_Buttons > 0 then
+         Emit_With_Use ("Gtk.Check_Button");
       end if;
       if Have.Radio_Buttons > 0 then
          Emit_With_Use ("Gtk.Radio_Button");
@@ -1783,9 +1802,11 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (3) & "Me : Widget_Collection;");
 
       if Have.Date_Pickers > 0 then
+         TIO.New_Line;
          For_Each_Widget (Win_List, Emit_Date_Picker_Methods_Spec'Access);
       end if;
       if Have.Time_Pickers > 0 then
+         TIO.New_Line;
          For_Each_Widget (Win_List, Emit_Time_Picker_Methods_Spec'Access);
       end if;
 
