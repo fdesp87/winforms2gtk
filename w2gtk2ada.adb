@@ -723,7 +723,7 @@ package body W2Gtk2Ada is
                           & "GNAT.Calendar.Hour (Now);");
             TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min  := "
                           & "GNAT.Calendar.Minute (Now);");
-            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec  :="
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec  := "
                           & "Integer (GNAT.Calendar.Second (Now));");
             TIO.New_Line;
             TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
