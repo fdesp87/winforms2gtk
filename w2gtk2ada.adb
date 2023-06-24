@@ -2392,6 +2392,11 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (6) & "Me := "
                     & Filename & "_Pkg.Object_Collection."
                     & "New_Widget_Collection;");
+      if Have.TreeStores > 0 or Have.ListStores > 0 then
+         TIO.New_Line;
+         TIO.Put_Line (Sp (6) & "--  Initialize Cell Renderers");
+         TIO.Put_Line (Sp (6) & Filename & ".Cell_Renderers.Initialize;");
+      end if;
       if Signals then
          TIO.New_Line;
          TIO.Put_Line (Sp (6) & "--  Register signal handlers");
