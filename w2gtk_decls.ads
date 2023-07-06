@@ -248,6 +248,7 @@ package W2gtk_Decls is
       Frames             : Integer := 0;
       Check_Buttons      : Integer := 0;
       Tooltips           : Integer := 0;
+      Column_Tooltips    : Integer := 0;
    end record;
    Have : Have_Block;
 

@@ -1362,6 +1362,16 @@ package body W2Gtk2Ada is
                   TIO.New_Line;
 
                when ExpandableColumn | DataGridViewTextBoxColumn =>
+                  if TWdg.ToolTip /= null then
+                     TIO.Put_Line (Sp (6)
+                                   & "Btn := OC." & TWdg.Name.all
+                                   & ".Get_Button;");
+                     TIO.Put_Line (Sp (6)
+                                   & "Btn.Set_Tooltip_Text ("
+                                   & """"
+                                   & TWdg.ToolTip.all
+                                   & """);");
+                  end if;
                   TIO.Put_Line (Sp (6) & "OC."
                                 & "CRT_"
                                 & TWdg.Name.all & " :=");
@@ -1374,6 +1384,16 @@ package body W2Gtk2Ada is
                                 & """));");
 
                when DataGridViewCheckBoxColumn =>
+                  if TWdg.ToolTip /= null then
+                     TIO.Put_Line (Sp (6)
+                                   & "Btn := OC." & TWdg.Name.all
+                                   & ".Get_Button;");
+                     TIO.Put_Line (Sp (6)
+                                   & "Btn.Set_Tooltip_Text ("
+                                   & """"
+                                   & TWdg.ToolTip.all
+                                   & """);");
+                  end if;
                   TIO.Put_Line (Sp (6) & "OC."
                                 & "CRTG_"
                                 & TWdg.Name.all
@@ -1841,6 +1861,9 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (3) & "procedure Initialize ("
                     & "OC : not null access Widget_Collection_Record'Class)");
       TIO.Put_Line (Sp (3) & " is");
+      if Have.Column_Tooltips > 0 then
+         TIO.Put_Line (Sp (6) & "Btn : Gtk_Widget;");
+      end if;
       TIO.Put_Line (Sp (3) & "begin");
       if Win_List = null then
          TIO.Put_Line (Sp (6) & "null;");
@@ -2395,7 +2418,7 @@ package body W2Gtk2Ada is
       if Have.TreeStores > 0 or Have.ListStores > 0 then
          TIO.New_Line;
          TIO.Put_Line (Sp (6) & "--  Initialize Cell Renderers");
-         TIO.Put_Line (Sp (6) & Filename & ".Cell_Renderers.Initialize;");
+         TIO.Put_Line (Sp (6) & Filename & "_Pkg.Cell_Renderers.Initialize;");
       end if;
       if Signals then
          TIO.New_Line;

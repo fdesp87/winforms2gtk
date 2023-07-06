@@ -573,6 +573,7 @@ package body W2gtk_Pkg is
       Debug (0, Sp (3) & "Check_Buttons" & Have.Check_Buttons'Image);
       Debug (0, Sp (3) & "Frames" & Have.Frames'Image);
       Debug (0, Sp (3) & "Tooltips" & Have.Tooltips'Image);
+      Debug (0, Sp (3) & "Tree Columns Tooltips" & Have.Column_Tooltips'Image);
       Debug (0, Sp (3) & "Font_Underline" & Have.Font_Underline'Image);
       Debug (0, Sp (3) & "Font_Weight" & Have.Font_Weight'Image);
       Debug (0, Sp (3) & "Buttons" & Have.Buttons'Image);
@@ -1442,10 +1443,14 @@ package body W2gtk_Pkg is
                         & Convert_Signal_To_Gtk (TWdgP, TS)
                         & ") ");
                if TS.Handler /= null then
-                  if TS.Proc then
-                     TIO.Put (LFile, " => procedure " & TS.Handler.all);
+                  if TS.GAda then
+                     if TS.Proc then
+                        TIO.Put (LFile, " => procedure " & TS.Handler.all);
+                     else
+                        TIO.Put (LFile, " => function " & TS.Handler.all);
+                     end if;
                   else
-                     TIO.Put (LFile, " => function " & TS.Handler.all);
+                     TIO.Put (LFile, " => No generated code");
                   end if;
                end if;
                TIO.New_Line (LFile);
@@ -2389,6 +2394,7 @@ package body W2gtk_Pkg is
 
                      when Attr_ToolTip | Attr_ToolTipText =>
                         WT.ToolTip := new String'(Get_String (RFile));
+                        Have.Column_Tooltips := Have.Column_Tooltips + 1;
                         Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".ToolTip "
                                & WT.ToolTip.all);
@@ -2398,7 +2404,6 @@ package body W2gtk_Pkg is
                         Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName & ".AutoToolTip "
                                & WT.AutoToolTip'Image);
-
 
                      when Attr_AutoSize =>
                         WT.AutoSize := Get_Boolean (RFile);
@@ -3205,7 +3210,7 @@ package body W2gtk_Pkg is
                      if WT.ToolTip = null then
                         WT.ToolTip := new String'(WT.Name.all);
                         Debug (NLin, Sp (3) & "Set Widget Property "
-                               & WT.Name.all & ".ToolTip "
+                               & WT.Name.all & ".+ "
                                & WT.Name.all);
                      end if;
                   end if;

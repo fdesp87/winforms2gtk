@@ -90,8 +90,8 @@ package body Symbol_Tables is
       Wst.Insert ("MouseDoubleClick", "clicked");
       Wst.Insert ("CloseButtonClick", "clicked");     --  not used
       Wst.Insert ("Selected", "clicked");
-      Wst.Insert ("CellMouseEnter", "clicked");
-      Wst.Insert ("CellMouseLeave", "clicked");
+      Wst.Insert ("CellMouseEnter", "motion-notify-event"); --  no used
+      Wst.Insert ("CellMouseLeave", "motion-notify-event"); --  no used
       Wst.Insert ("CellMouseClick", "row-activated");
       Wst.Insert ("RowCollapsed", "row-collapsed");
       Wst.Insert ("RowExpanded", "row-expanded");
@@ -156,9 +156,15 @@ package body Symbol_Tables is
                TS.GAda  := False;
                return "row-activated";
             elsif WSignal = "CellMouseEnter" then
-               return "cursor-changed";
+               TS.Proc  := False;
+               TS.Glade := False;
+               TS.GAda  := False;
+               return "motion-notify-event"; --  must not be used
             elsif WSignal = "CellMouseLeave" then
-               return "cursor-changed";
+               TS.Proc  := False;
+               TS.Glade := False;
+               TS.GAda  := False;
+               return "motion-notify-event"; --  must not be used
             end if;
          when GtkNoteBook =>
             if WSignal = "Selected" then
