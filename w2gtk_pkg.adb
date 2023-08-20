@@ -181,7 +181,9 @@ package body W2gtk_Pkg is
                         end if;
                      when ExpandableColumn | DataGridViewTextBoxColumn =>
                         if Temp.DefaultCellStyle in DGVS'Range and then
-                          DGVS (Temp.DefaultCellStyle).Format = Format_Currency
+                          (DGVS (Temp.DefaultCellStyle).Format /= Format_String
+                           and DGVS (Temp.DefaultCellStyle).Format /= Format_Boolean
+                           and DGVS (Temp.DefaultCellStyle).Format /= Format_Date)
                         then
                            Temp.Text_Col_Properties.Fg_Color_Name_Column := Num;
                            Debug (0, Sp (3) & Temp.Name.all
@@ -918,7 +920,7 @@ package body W2gtk_Pkg is
 
       --  generating format columns
       Debug (0, "");
-      Debug (0, "Preparing toggle buttons");
+      Debug (0, "Generating Format Columns");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -1107,7 +1109,7 @@ package body W2gtk_Pkg is
             TIO.Put_Line (LFile, DGVS (I).Format'Image);
 
             Put_Property ("Padding");
-            TIO.Put (LFile, "Start" & Img (DGVS (I).Padding (1))
+            TIO.Put (LFile, "Start " & Img (DGVS (I).Padding (1))
                      & ", Top " & Img (DGVS (I).Padding (2))
                      & ", End " & Img (DGVS (I).Padding (3))
                      & ", Bottom " & Img (DGVS (I).Padding (4)));

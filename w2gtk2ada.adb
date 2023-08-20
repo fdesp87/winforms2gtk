@@ -1226,20 +1226,35 @@ package body W2Gtk2Ada is
       then
          HS := DGVS (TWdg.ColumnHeadersDefaultCellStyle);
          TIO.Put_Line (Sp (6) & "Set_Header_Style");
-         TIO.Put_Line (Sp (8) & "(Tree => Me." & TWdg.Name.all & ",");
+         TIO.Put_Line (Sp (8)
+                       & "(Tree      => Me." & TWdg.Name.all & ",");
          if HS.BgColor /= null then
             TIO.Put_Line (Sp (9)
-                          & "Bgcolor => " & Quoted (HS.BgColor.all) & ",");
+                          & "Bgcolor    => " & Quoted (HS.BgColor.all) & ",");
          else
             TIO.Put_Line (Sp (9)
-                          & "Bgcolor => " & Quoted ("white") & ",");
+                          & "Bgcolor    => " & Quoted ("white") & ",");
          end if;
          if HS.FgColor /= null then
             TIO.Put_Line (Sp (9)
-                          & "Fgcolor => " & Quoted (HS.FgColor.all) & ",");
+                          & "Fgcolor    => " & Quoted (HS.FgColor.all) & ",");
          else
             TIO.Put_Line (Sp (9)
-                          & "Fgcolor => " & Quoted ("black") & ",");
+                          & "Fgcolor    => " & Quoted ("black") & ",");
+         end if;
+         if HS.SelBgColor /= null then
+            TIO.Put_Line (Sp (9)
+                          & "SelBgcolor => " & Quoted (HS.SelBgColor.all) & ",");
+         else
+            TIO.Put_Line (Sp (9)
+                          & "SelBgcolor => " & Quoted ("white") & ",");
+         end if;
+         if HS.SelFgColor /= null then
+            TIO.Put_Line (Sp (9)
+                          & "SelFgcolor => " & Quoted (HS.SelFgColor.all) & ",");
+         else
+            TIO.Put_Line (Sp (9)
+                          & "SelFgcolor => " & Quoted ("black") & ",");
          end if;
          if HS.Font_Name /= null then
             TIO.Put_Line (Sp (9)
@@ -1411,6 +1426,24 @@ package body W2Gtk2Ada is
       end case;
    end Initialize_Object;
 
+   procedure Emit_ALT_Color (TWdg : Widget_Pointer);
+   procedure Emit_ALT_Color (TWdg : Widget_Pointer) is
+      HS : DataGridViewStyle;
+   begin
+      case TWdg.Widget_Type is
+         when GtkDataGridView | GtkTreeGridView =>
+            if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+               HS := DGVS (TWdg.AlternatingRowsDefaultCellStyle);
+               TIO.Put_Line (Sp (3) & "ALT_Bg_" & TWdg.Name.all
+                             & "_Color : constant String := "
+                             & """"
+                             & HS.BgColor.all
+                             & """;");
+            end if;
+         when others => null;
+      end case;
+   end Emit_ALT_Color;
+
    procedure Emit_Object (TWdg : Widget_Pointer);
    procedure Emit_Object (TWdg : Widget_Pointer) is
    begin
@@ -1466,7 +1499,6 @@ package body W2Gtk2Ada is
          when GtkDataGridView | GtkTreeGridView =>
             TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Selection : "
                           & "Gtk_Tree_Selection" & ";");
-
          when ExpandableColumn | DataGridViewTextBoxColumn =>
             if TWdg.DefaultCellStyle /= -1 then
                TIO.Put_Line (Sp (6) & "CRT_"
@@ -1790,6 +1822,9 @@ package body W2Gtk2Ada is
       end loop;
       For_Each_Widget (Win_List, Emit_Object'Access);
       TIO.Put_Line (Sp (3) & "end record;");
+      TIO.New_Line;
+      For_Each_Widget (Win_List, Emit_ALT_Color'Access);
+      TIO.New_Line;
       TIO.Put_Line (Sp (3) & "type Widget_Collection is access all "
                     & "Widget_Collection_Record'Class;");
       TIO.New_Line;
@@ -1814,6 +1849,8 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (5) & "(Tree        : Gtk_Tree_View;");
          TIO.Put_Line (Sp (6) & "Bgcolor     : String;");
          TIO.Put_Line (Sp (6) & "Fgcolor     : String;");
+         TIO.Put_Line (Sp (6) & "SelBgcolor  : String;");
+         TIO.Put_Line (Sp (6) & "SelFgcolor  : String;");
          TIO.Put_Line (Sp (6) & "Font_Name   : String;");
          TIO.Put_Line (Sp (6) & "Font_Size   : Integer;");
          TIO.Put_Line (Sp (6) & "Font_Weight : String);");
@@ -1916,6 +1953,8 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (5) & "(Tree        : Gtk_Tree_View;");
          TIO.Put_Line (Sp (6) & "Bgcolor     : String;");
          TIO.Put_Line (Sp (6) & "Fgcolor     : String;");
+         TIO.Put_Line (Sp (6) & "SelBgcolor  : String;");
+         TIO.Put_Line (Sp (6) & "SelFgcolor  : String;");
          TIO.Put_Line (Sp (6) & "Font_Name   : String;");
          TIO.Put_Line (Sp (6) & "Font_Size   : Integer;");
          TIO.Put_Line (Sp (6) & "Font_Weight : String)");
@@ -1942,10 +1981,18 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (6) & "if not OK then");
          TIO.Put_Line (Sp (9) & "return;");
          TIO.Put_Line (Sp (6) & "end if;");
-         TIO.Put_Line (Sp (6) & "RGBA_PLBgColor := "
+         TIO.Put_Line (Sp (6) & "--  RGBA_PLBgColor := "
                        & "Lighten (RGBA_BgColor, 6000);");
-         TIO.Put_Line (Sp (6) & "RGBA_PLFgColor := "
+         TIO.Put_Line (Sp (6) & "--  RGBA_PLFgColor := "
                        & "Lighten (RGBA_FgColor, Gdk_Luminance'First);");
+         TIO.Put_Line (Sp (6) & "Parse (RGBA_PLBgColor, SelBgcolor, OK);");
+         TIO.Put_Line (Sp (6) & "if not OK then");
+         TIO.Put_Line (Sp (9) & "return;");
+         TIO.Put_Line (Sp (6) & "end if;");
+         TIO.Put_Line (Sp (6) & "Parse (RGBA_PLFgColor, SelFgcolor, OK);");
+         TIO.Put_Line (Sp (6) & "if not OK then");
+         TIO.Put_Line (Sp (9) & "return;");
+         TIO.Put_Line (Sp (6) & "end if;");
          TIO.Put_Line (Sp (6) & "NCols := Tree.Get_N_Columns;");
          TIO.Put_Line (Sp (6) & "for J in 0 .. NCols - 1 loop");
          TIO.Put_Line (Sp (9) & "Col := Tree.Get_Column (Glib.Gint (J));");
