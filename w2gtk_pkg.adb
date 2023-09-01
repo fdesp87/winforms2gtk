@@ -2396,11 +2396,18 @@ package body W2gtk_Pkg is
                                & PName & ".MaxLength "
                                & Img (WT.MaxLength));
 
-                     when Attr_ToolTip | Attr_ToolTipText =>
+                     when Attr_ToolTip =>
+                        WT.ToolTip := new String'(Get_String (RFile));
+                        Have.Tooltips := Have.Tooltips + 1;
+                        Debug (NLin, Sp (3) & "Set Widget Property "
+                               & PName & ".ToolTip "
+                               & WT.ToolTip.all);
+
+                     when Attr_ToolTipText =>
                         WT.ToolTip := new String'(Get_String (RFile));
                         Have.Column_Tooltips := Have.Column_Tooltips + 1;
                         Debug (NLin, Sp (3) & "Set Widget Property "
-                               & PName & ".ToolTip "
+                               & PName & ".ToolTipText "
                                & WT.ToolTip.all);
 
                      when Attr_AutoToolTip =>

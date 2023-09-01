@@ -167,9 +167,17 @@ package body W2Gtk2Ada is
       TS : Signal_Pointer := TWin0.Signal_List;
    begin
       while TS /= null loop
-         TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
-         TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class);");
-         TIO.New_Line;
+         if TS.GAda then
+            if TS.Proc then
+               TIO.Put_Line (Sp (3) & "procedure " & TS.Handler.all);
+               TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class);");
+            else
+               TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
+               TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class) "
+                             & "return Boolean;");
+            end if;
+            TIO.New_Line;
+         end if;
          TS := TS.Next;
       end loop;
    end Emit_Signal_Specs;
@@ -1886,6 +1894,9 @@ package body W2Gtk2Ada is
          Emit_With_Use ("Gdk.Color.IHLS");
          Emit_With_Use ("Pango.Font");
          Emit_With_Use ("Pango.Enums");
+      end if;
+      if Have.Column_Tooltips > 0 then
+         Emit_With_Use ("Gtk.Button");
       end if;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Object_Collection is");
       TIO.New_Line;

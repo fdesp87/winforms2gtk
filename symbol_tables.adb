@@ -75,7 +75,7 @@ package body Symbol_Tables is
       Wst : Signal_Map.Map renames Signal_Symbol_Table;
    begin
       Wst.Insert ("Load", "realize");                 --  main window, dialog
-      Wst.Insert ("FormClosing", "destroy");          --  main window, dialog
+      Wst.Insert ("FormClosing", "delete-event");     --  main window, dialog
       Wst.Insert ("TextChanged", "changed");          --  gtkentry gtkcombobox
       Wst.Insert ("SelectedIndexChanged", "changed"); --  combobox
       Wst.Insert ("ValueChanged", "value-changed");   --  spin
@@ -127,19 +127,23 @@ package body Symbol_Tables is
 
    function Convert_Signal_To_Gtk (TWin    : Window_Pointer;
                                    TS      : Signal_Pointer) return String is
-      Gtk_Signal : constant String := Get_Gtk_Signal (TS.Name.all);
+      WSignal    : String renames TS.Name.all;
+      Gtk_Signal : constant String := Get_Gtk_Signal (WSignal);
    begin
       if Gtk_Signal = "" then
          Debug (0, Sp (3) & TWin.Name.all & ": unknown signal " & TS.Name.all);
          raise Unknown_Signal;
+      end if;
+      if WSignal = "FormClosing" then
+         TS.Proc  := False;
       end if;
       return Gtk_Signal;
    end Convert_Signal_To_Gtk;
 
    function Convert_Signal_To_Gtk (TWdg    : Widget_Pointer;
                                    TS      : Signal_Pointer) return String is
-      Gtk_Signal : constant String := Get_Gtk_Signal (TS.Name.all);
       WSignal    : String renames TS.Name.all;
+      Gtk_Signal : constant String := Get_Gtk_Signal (WSignal);
    begin
       if Gtk_Signal = "" then
          Debug (0, Sp (3) & TWdg.Name.all & ": unknown signal " & TS.Name.all);
