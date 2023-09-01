@@ -1008,10 +1008,12 @@ package body W2Gtk2Ada is
                TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                TIO.Put_Line (Sp (3) & "begin");
                TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-               TIO.Put_Line (Sp (6) & "Gtk.Widget.Grab_Focus");
-               TIO.Put_Line (Sp (8) & "(Gtk_Widget (Me."
-                             & TWdg.Next_Focus.Name.all
-                             & "));");
+               if TWdg.Next_Focus /= null then
+                  TIO.Put_Line (Sp (6) & "Gtk.Widget.Grab_Focus");
+                  TIO.Put_Line (Sp (8) & "(Gtk_Widget (Me."
+                                & TWdg.Next_Focus.Name.all
+                                & "));");
+               end if;
                TIO.Put_Line (Sp (6) & "return True;  --  signal processed");
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             elsif TS.Proc then

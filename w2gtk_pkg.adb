@@ -872,7 +872,9 @@ package body W2gtk_Pkg is
                Debug (0, "Focus chain for " & TWin.Name.all);
                loop
                   Debug (0, Sp (3) & TWdg.Name.all
-                         & ".TabIndex " & TWdg.TabIndex'Image);
+                         & ".TabIndex "
+                         & TWdg.TabIndex'Image
+                         & " => " & TWdg.Next_Focus.Name.all);
                   TWdg := TWdg.Next_Focus;
                   exit when TWdg = TWin.TabFocusList;
                end loop;
