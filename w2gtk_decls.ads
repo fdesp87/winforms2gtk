@@ -394,7 +394,7 @@ package W2gtk_Decls is
                                   Attr_Items_AddRange, Attr_Columns_AddRange,
                                   Attr_DropDownItems_AddRange,
                                   Attr_FullOpen, Attr_UseSystemPasswordChar,
-                                  Attr_ReadOnly, Attr_Sorted,
+                                  Attr_ReadOnly, Attr_Sorted, Attr_Locked,
                                   Attr_Maximum, Attr_Minimum,
                                   Attr_Value, Attr_Format,
                                   Attr_MinDate,  Attr_MaxDate,

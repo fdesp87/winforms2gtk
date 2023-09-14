@@ -319,6 +319,7 @@ package body Symbol_Tables is
       Wst.Insert ("SelectionMode", Attr_SelectionMode);
       Wst.Insert ("ForeColor", Attr_ForeColor);
       Wst.Insert ("BackColor", Attr_BackColor);
+      Wst.Insert ("Locked", Attr_Locked);
       Wst.Insert ("UserAddedColumn", Attr_UserAddedColumn);
       Wst.Insert ("AllowUserToAddRows", Attr_AllowUserToAddRows);
       Wst.Insert ("AllowUserToDeleteRows", Attr_AllowUserToDeleteRows);
@@ -495,6 +496,7 @@ package body Symbol_Tables is
       Wst.Insert ("RadioButton", GtkRadioButton);
       Wst.Insert ("ToggleButton", GtkToggleButton);
       Wst.Insert ("ToolStripButton", GtkButton);
+      Wst.Insert ("RichTextBox", GtkEntry);
       Wst.Insert ("ColorDialog", GtkColorButton);
       Wst.Insert ("Button", GtkButton);
       Wst.Insert ("CheckBox", GtkCheckButton);

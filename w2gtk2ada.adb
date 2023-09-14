@@ -34,7 +34,7 @@ package body W2Gtk2Ada is
    TWin         : Window_Pointer :=  null;
    Main_Window  : Boolean := False;
    Signals      : Boolean := False;
-   Form_Closing : Boolean := False;
+   With_Form_Closing : Boolean := False;
 
    --------------
    --  Quoted  --
@@ -141,13 +141,13 @@ package body W2Gtk2Ada is
                if TS.Handler.all =
                  "On_" & Temp_Win.Name.all & "_Formclosing"
                then
-                  Form_Closing := True;
+                  With_Form_Closing := True;
                   exit;
                end if;
                TS := TS.Next;
             end loop;
          end if;
-         if Form_Closing then
+         if With_Form_Closing then
             exit;
          end if;
          Temp_Win := Temp_Win.Next;
@@ -352,7 +352,7 @@ package body W2Gtk2Ada is
                   end if;
                end if;
                TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-               if Form_Closing
+               if With_Form_Closing
                  and then
                    TS.Handler.all =
                      "On_" & Capitalize (TWin0.Name.all) & "_Formclosing"
@@ -365,9 +365,9 @@ package body W2Gtk2Ada is
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             else
                TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
-               TIO.Put_Line (Sp (5)
-                             & "(User_Data : access GObject_Record'Class) "
-                             & "return Boolean is");
+               TIO.Put_Line (Sp (5) & "(B : access Gtkada_Builder_Record'Class)"
+                             & " return Boolean is");
+               TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
                TIO.Put_Line (Sp (3) & "begin");
                TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
                TIO.Put_Line (Sp (6) & "return False; --  signal not processed");
@@ -1072,7 +1072,7 @@ package body W2Gtk2Ada is
       For_Each_Widget (Win_List, Emit_Signal_Specs'Access);
       TIO.Put_Line ("end " & Filename & "_Pkg.Signals;");
 
-      if Form_Closing and then Main_Window then
+      if With_Form_Closing and then Main_Window then
          TIO.Put_Line ("with Gtk.Main;");
       else
          TIO.Put_Line ("--  with Gtk.Main;");

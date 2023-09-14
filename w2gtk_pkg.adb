@@ -87,6 +87,7 @@ package body W2gtk_Pkg is
    procedure Dump (Path : String; File_Name : String);
    --  end of specs
 
+   -------------------------------------------------------------------------
    function Adjust_To_Gtk return Integer is
       TWin  : Window_Pointer;
       TWdg  : Widget_Pointer;
@@ -995,6 +996,7 @@ package body W2gtk_Pkg is
       return 0;
    end Adjust_To_Gtk;
 
+   -------------------------------------------------------------------------
    procedure Dump (Path : String; File_Name : String) is
       TWin  : Window_Pointer;
 
@@ -2049,6 +2051,7 @@ package body W2gtk_Pkg is
       Debug (0, "End of generating Dump");
    end Dump;
 
+   -------------------------------------------------------------------------
    function Parse_Resource_File (TWin           : Window_Pointer;
                                  Resx_Path      : String;
                                  Resx_File_Name : String) return Integer is
@@ -2625,7 +2628,7 @@ package body W2gtk_Pkg is
                                & PName & ".Size H="
                                & Img (P0.One) & ", V=" & Img (P0.Two));
 
-                     when Attr_Ignored | Attr_Image =>
+                     when Attr_Ignored | Attr_Image | Attr_Locked =>
                         Debug (NLin, Resx_File_Name & ".resx"
                                & ": ignored widget property "
                                & PName & " " & PAttrib);
@@ -2673,6 +2676,7 @@ package body W2gtk_Pkg is
       return Result;
    end Parse_Resource_File;
 
+   -------------------------------------------------------------------------
    function Parse2_Designer_File (TWin           : Window_Pointer;
                                   Resx_Path      : String;
                                   Resx_File_Name : String;
@@ -2847,7 +2851,7 @@ package body W2gtk_Pkg is
             Idx1 := Index (Line (Idx0 + Test20'Length .. Len), ".");
             IIO.Get (Line (Idx0 + Test20'Length .. Len), DGVS_Num, Last);
             if DGVS_Num > Max_DGVS then
-               TIO.Put_Line (Img (NLin) & ": "
+               Debug (NLin, Sp (3) & ": "
                              & Line (Idx0 + Test20'Length .. Idx1 - 1)
                              & ": DataGridViewStyle not found");
                return -1;
@@ -4196,6 +4200,7 @@ package body W2gtk_Pkg is
          return -1;
    end Parse2_Designer_File;
 
+   -------------------------------------------------------------------------
    function Parse1_Designer_File (Resx_Path      : String;
                                   Resx_File_Name : String) return Integer is
       Idx0      : Integer;
@@ -4253,12 +4258,13 @@ package body W2gtk_Pkg is
          return -1;
       end if;
 
-      Debug (NLin, "Parsing (1) Designer: " & Test13);
+      Debug (NLin, "Parsing (1) Designer: searching for " & Test13);
       Found := False;
       while not TIO.End_Of_File (DFile) loop
          Get_Line;
          Idx0 := Index (Line (1 .. Len), Test13);
          if Idx0 in 1 .. Len then
+            Debug (NLin, Sp (3) & "Found");
             Found := True;
             exit;
          end if;
@@ -4270,28 +4276,37 @@ package body W2gtk_Pkg is
          return -1;
       end if;
 
-      Debug (NLin, "Parsing (1) Designer: " & Test7);
+      Debug (NLin, "Parsing (1) Designer: searching for " & Test7);
       Get_Line;
       Idx0 := Index (Line (1 .. Len), Test7);
       if Idx0 in 1 .. Len then
-         Debug (NLin, "Parsing (1) Designer: " & Test18);
+         Debug (NLin, Sp (3) & "Found");
          Get_Line;
-         Idx0 := Index (Line (1 .. Len), Test18);
-         if Idx0 in 1 .. Len then
-            Get_Line;
-         end if;
+      else
+         Debug (NLin, Sp (3) & "Not Found");
       end if;
 
-      Debug (NLin, "Parsing (1) Designer: " & Test19);
+      Debug (NLin, "Parsing (1) Designer: searching for " & Test18);
+      Idx0 := Index (Line (1 .. Len), Test18);
+      if Idx0 in 1 .. Len then
+         Debug (NLin, Sp (3) & "Found");
+         Get_Line;
+      else
+         Debug (NLin, Sp (3) & "Not Found");
+      end if;
+
+      Debug (NLin, "Parsing (1) Designer: searching for " & Test19);
       Found := False;
       Mark_Line := NLin;
       loop
          Idx0 := Index (Line (1 .. Len), Test19);
          if Idx0 not in 1 .. Len - 1 then
+            Debug (NLin, Sp (3) & "Not Found");
             exit;
          end if;
          Idx0 := Idx0 + Test19'Length;
          IIO.Get (Line (Idx0 .. Len), Num, Last);
+         Debug (NLin, Sp (3) & "Found " & Test19 & Img (Num));
          Max_DGVS := Integer'Max (Max_DGVS, Num);
          exit when TIO.End_Of_File (DFile);
          Get_Line;
@@ -4367,18 +4382,16 @@ package body W2gtk_Pkg is
          WT := Find_Widget (TWin.Widget_List, +Line (Idx2 .. Idx3));
          if WT /= null then
             TIO.Close (DFile);
-            TIO.Put_Line (Resx_File_Name & ".Designer.vb (1): "
-                          & " Line" & NLin'Image
-                          & ": Repeated Widget " & Line (Idx2 .. Idx3));
+            Debug (NLin, Sp (3) & Resx_File_Name & ".Designer.vb (1): "
+                   & ": Repeated Widget " & Line (Idx2 .. Idx3));
             return -1;
          end if;
          WT := new Widget_Properties
            (Widget_Type => Symbol_Tables.Get_Type (Line (Idx2 .. Idx3)));
          if WT.Widget_Type = No_Widget then
             TIO.Close (DFile);
-            TIO.Put_Line (Resx_File_Name & ".Designer.vb (1): "
-                          & " Line" & NLin'Image
-                          & ": unknown Widget " & Line (Idx2 .. Idx3));
+            Debug (NLin, Sp (3) & Resx_File_Name & ".Designer.vb (1): "
+                   & ": unknown Widget " & Line (Idx2 .. Idx3));
             TIO.Put_Line (Line (1 .. Len));
             return -1;
          end if;
@@ -4475,6 +4488,7 @@ package body W2gtk_Pkg is
          return -1;
    end Parse1_Designer_File;
 
+   -------------------------------------------------------------------------
    function Parse_VB_File (Resx_Path      : String;
                            Resx_File_Name : String) return Integer is
       WT    : Widget_Pointer;
@@ -5022,6 +5036,7 @@ package body W2gtk_Pkg is
       return 0;
    end Parse_VB_File;
 
+   -------------------------------------------------------------------------
    function Parse_VS_File (Use_Debug      : Boolean;
                            Do_Dump        : Boolean;
                            Resx_Path      : String;
@@ -5066,6 +5081,7 @@ package body W2gtk_Pkg is
       return Result;
    end Parse_VS_File;
 
+   -------------------------------------------------------------------------
    function Generate_Glade_File (Glade_Path      : String;
                                  Glade_File_Name : String) return Integer is
       TWin  : Window_Pointer;
