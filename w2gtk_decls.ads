@@ -291,6 +291,9 @@ package W2gtk_Decls is
       case Window_Type is
          when GtkWindow =>
             Resizable         : Boolean       := True;
+            --  In windows forms, modal depends upon how it is called:
+            --  show => modal; showdialog => no modal
+            --  Here we assume that setting resizable to true means modal true
             Modal             : Boolean       := False;
             Is_Dialog         : Boolean       := False;
             Font_Name         : String_Access := null;
@@ -310,8 +313,8 @@ package W2gtk_Decls is
             BgColor           : String_Access := null;
             FgColor           : String_Access := null;
             Widget_List       : Widget_Pointer := null;
-            Accept_Button     : Widget_Pointer := null;
-            Cancel_Button     : Widget_Pointer := null;
+            Accept_Button     : Widget_Pointer := null; --  implies is_dialog true
+            Cancel_Button     : Widget_Pointer := null; --  implies is_dialog true
             TabFocusList      : Widget_Pointer := null;
          when GtkFileChooserDialog =>
             FilterName        : String_Access := null;

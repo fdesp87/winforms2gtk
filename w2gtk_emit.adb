@@ -3322,16 +3322,18 @@ package body W2gtk_Emit is
                                   Activate_Default : Boolean) is
       TWdg : Widget_Pointer;
    begin
-      Emit_Line (Sp (Id) & "<child>");
-      if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Object (null, Id + 2, "GtkFixed", "GtkFixed_" & TWin.Name.all);
-         Emit_Name (TWin, Id + 4);
-      else
-         Emit_Object (null, Id + 2, "GtkFixed", "");
+      if not TWin.Resizable then
+         Emit_Line (Sp (Id) & "<child>");
+         if TWin.Name /= null and then TWin.Name.all /= "" then
+            Emit_Object (null, Id + 2, "GtkFixed", "GtkFixed_" & TWin.Name.all);
+            Emit_Name (TWin, Id + 4);
+         else
+            Emit_Object (null, Id + 2, "GtkFixed", "");
+         end if;
+         Emit_Property (Id + 4, "visible", True);
+         Emit_Property (Id + 4, "can-focus", False);
+         Emit_Margin (TWin, Id + 4);
       end if;
-      Emit_Property (Id + 4, "visible", True);
-      Emit_Property (Id + 4, "can-focus", False);
-      Emit_Margin (TWin, Id + 4);
 
       TWdg := TWin.Widget_List;
       while TWdg /= null loop
@@ -3357,9 +3359,9 @@ package body W2gtk_Emit is
                null;
 
             when GtkDataGridView =>
-               null;
+               Emit_GtkDataGridView (TWdg, Id + 4);
             when GtkTreeGridView =>
-               null;
+               Emit_GtkTreeGridView (TWdg, Id + 4);
             when ExpandableColumn | DataGridViewTextBoxColumn =>
                null; --  handled within GtkData/TreeGridView
             when DataGridViewCheckBoxColumn =>
@@ -3436,9 +3438,11 @@ package body W2gtk_Emit is
          end case;
          TWdg := TWdg.Next;
       end loop;
-      Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing (Id + 2, 0, True, True, 0, True);
-      Emit_Line (Sp (Id) & "</child>");
+      if not TWin.Resizable then
+         Emit_Line (Sp (Id + 2) & "</object>");
+         Emit_Packing (Id + 2, 0, True, True, 0, True);
+         Emit_Line (Sp (Id) & "</child>");
+      end if;
    exception
       when others =>
          if TWin.Name /= null and then TWin.Name.all /= "" then
@@ -3471,8 +3475,8 @@ package body W2gtk_Emit is
                     & " translatable=""yes"">"
                     & TWin.Name.all & "</property>");
       end if;
-      Emit_Property (Id + 2, "resizable", TWin.Resizable); --  false
-      Emit_Property (Id + 2, "modal", TWin.Modal);         --  true
+      Emit_Property (Id + 2, "resizable", TWin.Resizable);
+      Emit_Property (Id + 2, "modal", TWin.Modal);
       if TWin.Client_Size.Horiz /= -1 then
          Emit_Property (Id + 2, "default-width", TWin.Client_Size.Horiz);
       end if;
@@ -3492,6 +3496,7 @@ package body W2gtk_Emit is
       if TWin.Cancel_Button /= null then
          Spacing := Spacing + 1;
       end if;
+
       Emit_Line (Sp (Id + 2) & "<child internal-child=""vbox"">");
       Emit_Object (null, Id + 4, "GtkBox", "");
       Emit_Property (Id + 6, "can-focus", False);
@@ -3524,18 +3529,15 @@ package body W2gtk_Emit is
                        Position => 0, Pack_Start => True);
          Emit_Line (Sp (Id + 6) & "</child>");
 
-         Emit_GtkDialog_Body (TWin, Id + 6, True);
+         Emit_GtkDialog_Body (TWin, Id + 4, True);
 
       else
-         Emit_GtkDialog_Body (TWin, Id + 6, False);
+         Emit_GtkDialog_Body (TWin, Id + 4, False);
       end if;
       Emit_Line (Sp (Id + 4) & "</object>");
       Emit_Line (Sp (Id + 2) & "</child>");
 
-      if Spacing > 0
-        and then TWin.Cancel_Button /= null
-        and then TWin.Accept_Button /= null
-      then
+      if Spacing > 0 then
          Emit_Line (Sp (Id + 2) & "<action-widgets>");
          if TWin.Cancel_Button /= null then
             Emit_Line (Sp (Id + 4) & "<action-widget response="""
@@ -3588,9 +3590,9 @@ package body W2gtk_Emit is
                null;
 
             when GtkDataGridView =>
-               null;
+               Emit_GtkDataGridView (TWdg, Id);
             when GtkTreeGridView =>
-               null;
+               Emit_GtkTreeGridView (TWdg, Id);
             when ExpandableColumn | DataGridViewTextBoxColumn =>
                null;
             when DataGridViewCheckBoxColumn =>
@@ -3690,8 +3692,8 @@ package body W2gtk_Emit is
       if TWin.Name /= null and then TWin.Name.all /= "" then
          Emit_Name (TWin, Id + 2);
       end if;
-      Emit_Property (Id + 2, "resizable", TWin.Resizable); --  true
-      Emit_Property (Id + 2, "modal", TWin.Modal);         --  false
+      Emit_Property (Id + 2, "resizable", TWin.Resizable);
+      Emit_Property (Id + 2, "modal", TWin.Modal);
       if TWin.Client_Size.Horiz /= -1 then
          Emit_Property (Id + 2, "default-width", TWin.Client_Size.Horiz);
       end if;

@@ -309,17 +309,18 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: GtkWindows or GtkDialog");
-      TWin := Win_List;
-      while TWin /= null loop
-         if TWin.Resizable and then not TWin.Modal then
-            TWin.Is_Dialog := False;
-         else
-            TWin.Is_Dialog := True;
-         end if;
-         TWin := TWin.Next;
-      end loop;
+      --  Is_Dialog is sey if there are response buttons
+      --  Debug (0, "");
+      --  Debug (0, "Adjusting to GTK: GtkWindows or GtkDialog");
+      --  TWin := Win_List;
+      --  while TWin /= null loop
+      --     if not TWin.Is_Dialog then
+      --        if TWin.Modal then
+      --           TWin.Is_Dialog := True;
+      --        end if;
+      --     end if;
+      --     TWin := TWin.Next;
+      --  end loop;
 
       --  generate auxiliary elements
       Debug (0, "");
@@ -2973,7 +2974,7 @@ package body W2gtk_Pkg is
                             & "True");
                   elsif Index (Line (Idx2 .. Len), "False") in Idx2 .. Len then
                      DGVS (DGVS_Num).WrapMode := False;
-                     Debug (NLin, "Set DGVS Property "
+                     Debug (NLin, Sp (3) & "Set DGVS Property "
                             & "DataGridViewStyle" & Img (DGVS_Num)
                             & ".WrapMode "
                             & "False");
@@ -4301,7 +4302,7 @@ package body W2gtk_Pkg is
       loop
          Idx0 := Index (Line (1 .. Len), Test19);
          if Idx0 not in 1 .. Len - 1 then
-            Debug (NLin, Sp (3) & "Not Found");
+            Debug (NLin, Sp (3) & "Not More Found");
             exit;
          end if;
          Idx0 := Idx0 + Test19'Length;
@@ -4427,6 +4428,7 @@ package body W2gtk_Pkg is
          NLin := NLin + 1;
       end loop;
 
+      Debug (NLin, "Parsing Designer (1): Resizable and buttons");
       while not TIO.End_Of_File (DFile) loop
          TIO.Get_Line (DFile, Line, Len);
          if Line (Len) = ASCII.CR then
@@ -4437,7 +4439,13 @@ package body W2gtk_Pkg is
          if Contains (Line (1 .. Len), "FormBorderStyle.FixedToolWindow") then
             TWin.Resizable := False;
             TWin.Modal     := True;
-            exit;
+            Debug (NLin, Sp (3) & "Set Resizable False");
+            Debug (NLin, Sp (3) & "Set Modal True");
+            --  exit;
+         elsif Contains (Line (1 .. Len), "FormBorderStyle.SizableToolWindow") then
+            TWin.Resizable := True;
+            Debug (NLin, Sp (3) & "Set Resizable True");
+            Debug (NLin, Sp (3) & "Set Modal True");
          elsif Contains (Line (1 .. Len), "AcceptButton") then
             Idx0 :=  Index (Line (1 .. Len), " = Me.");
             if Idx0 not in 1 .. Len then
@@ -4452,8 +4460,11 @@ package body W2gtk_Pkg is
                raise TIO.Data_Error;
             end if;
             TWin.Accept_Button := WT;
+            TWin.Is_Dialog := True;
             WT.Dialog_Result := OK;
             WT.Text := new String'("Accept");
+            Debug (NLin, Sp (3) & "Set Accept Button");
+            Debug (NLin, Sp (3) & "Set Dialog");
          elsif Contains (Line (1 .. Len), "CancelButton") then
             Idx0 :=  Index (Line (1 .. Len), " = Me.");
             if Idx0 not in 1 .. Len then
@@ -4468,8 +4479,11 @@ package body W2gtk_Pkg is
                raise TIO.Data_Error;
             end if;
             TWin.Cancel_Button := WT;
+            TWin.Is_Dialog := True;
             WT.Dialog_Result := Cancel;
             WT.Text := new String'("Cancel");
+            Debug (NLin, Sp (3) & "Set Cancel Button");
+            Debug (NLin, Sp (3) & "Set Dialog");
          end if;
 
       end loop;
