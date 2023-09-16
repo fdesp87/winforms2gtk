@@ -309,7 +309,7 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      --  Is_Dialog is sey if there are response buttons
+      --  Is_Dialog is set if there are response buttons
       --  Debug (0, "");
       --  Debug (0, "Adjusting to GTK: GtkWindows or GtkDialog");
       --  TWin := Win_List;

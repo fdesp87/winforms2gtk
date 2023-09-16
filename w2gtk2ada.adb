@@ -1896,7 +1896,7 @@ package body W2Gtk2Ada is
          Emit_With_Use ("Pango.Enums");
       end if;
       if Have.Column_Tooltips > 0 then
-         Emit_With_Use ("Gtk.Button");
+         Emit_With_Use ("Gtk.Widget");
       end if;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Object_Collection is");
       TIO.New_Line;
@@ -2154,9 +2154,7 @@ package body W2Gtk2Ada is
       if Have.Font_Underline > 0 then
          Emit_With_Use ("Pango.Enums");
       end if;
-      if Have.Font_Weight > 0 then
-         Emit_With_Use ("Pango.Font");
-      end if;
+      Emit_With_Use ("Pango.Font");
 
       TIO.New_Line;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Cell_Renderers is");
@@ -2485,12 +2483,8 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (6) & "--  Register signal handlers");
          TIO.Put_Line (Sp (6) & "Register_Signals.Register (Builder);");
       end if;
-      TIO.Put_Line (Sp (6) & "Builder.Do_Connect;");
       TIO.New_Line;
-      if Have.TreeStores > 0 or Have.ListStores > 0 then
-         TIO.Put_Line (Sp (6) & "--  Initialize cell renderers");
-         TIO.Put_Line (Sp (6) & Filename & "_Pkg.Cell_Renderers.Initialize;");
-      end if;
+      TIO.Put_Line (Sp (6) & "Builder.Do_Connect;");
       TIO.New_Line;
       TIO.Put_Line (Sp (6) & "--  set initial data");
       TIO.Put_Line (Sp (6) & "--     INSERT YOUR INITIAL DATA");
