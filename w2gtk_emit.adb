@@ -3700,11 +3700,6 @@ package body W2gtk_Emit is
       if TWin.Client_Size.Vert /= -1 then
          Emit_Property (Id + 2, "default-height", TWin.Client_Size.Vert);
       end if;
-      if TWin.Is_Dialog then
-         Emit_Property (Id + 2, "window-position", "center-on-parent");
-         Emit_Property (Id + 2, "type-hint", "dialog");
-         Emit_Property (Id + 2, "gravity", "center");
-      end if;
       Emit_GtkSignal (TWin, Id + 2);
 
       Emit_Main_GtkWindow_Body (TWin, Id + 2);

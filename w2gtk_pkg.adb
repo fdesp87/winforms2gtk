@@ -1683,7 +1683,7 @@ package body W2gtk_Pkg is
                      Put_Property ("AllowUserToDeleteRows");
                      Put_Boolean (TWdgP.AllowUserToDeleteRows);
 
-                     Put_Property ("EnableHeadersVisualStyles");
+                     Put_Property ("EnableHdersVisualStyles");
                      Put_Boolean (TWdgP.EnableHeadersVisualStyles);
 
                      Put_Property ("RowMultiSelect");
