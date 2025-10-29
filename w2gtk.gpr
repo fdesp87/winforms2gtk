@@ -14,7 +14,7 @@
 -- a copy of the GCC Runtime Library Exception along with this program;     --
 -- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --                                         --
 ------------------------------------------------------------------------------
-with "gnatcoll";
+with "gnatcoll_core";
 with "gnatcoll_postgres";
 
 project w2gtk is
@@ -35,6 +35,8 @@ project w2gtk is
    package Binder is
       for Switches ("Ada") use ("-E");
    end Binder;
-
+   package Builder is
+      for Switches ("ada") use ("-j4");
+   end Builder;
 end w2gtk;
 

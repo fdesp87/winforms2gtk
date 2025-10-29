@@ -2567,7 +2567,7 @@ package body W2Gtk2Ada is
                   Mode => TIO.Out_File,
                   Name => Ada_Path & "/" & Filename & ".gpr");
 
-      TIO.Put_Line (GPRFile, "with ""gnatcoll"";");
+      TIO.Put_Line (GPRFile, "with ""gnatcoll_core"";");
       TIO.Put_Line (GPRFile, "with ""gtkada"";");
       TIO.Put_Line (GPRFile, "project "
                     & Filename
@@ -2649,6 +2649,9 @@ package body W2Gtk2Ada is
       TIO.Put_Line (GPRFile, "   package Binder is");
       TIO.Put_Line (GPRFile, "      for Switches (""Ada"") use (""-E"");");
       TIO.Put_Line (GPRFile, "   end Binder;");
+      TIO.Put_Line (GPRFile, "   package Builder is");
+      TIO.Put_Line (GPRFile, "      for Switches (""Ada"") use (""-j4"");");
+      TIO.Put_Line (GPRFile, "   end Builder;");
       TIO.Put_Line (GPRFile, "end "
                     & Filename
                     & ";");
@@ -2827,7 +2830,7 @@ package body W2Gtk2Ada is
       Args (4) := new String'(Ada_Path);
       declare
          Output : constant String := Get_Command_Output
-           (Command    => "/opt/GNAT/2021/bin/gnatchop",
+           (Command    => "/opt/GNAT/15.1.0-2/bin/gnatchop",
             Arguments  => Args,
             Input      => "",
             Status     => Status'Access,
