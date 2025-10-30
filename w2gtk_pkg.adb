@@ -959,8 +959,10 @@ package body W2gtk_Pkg is
                   end case;
                   NCol := NCol.Next;
                end loop;
-               if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
-                  TWin.Num_Elements := TWin.Num_Elements + 1;
+               if DGVS /= null then
+                  if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+                     TWin.Num_Elements := TWin.Num_Elements + 1;
+                  end if;
                end if;
             when GtkModelFilter =>
                TWin.Num_Elements := TWin.Underlying_Model.Num_Elements;
@@ -2700,8 +2702,10 @@ package body W2gtk_Pkg is
       begin
          TIO.Get_Line (DFile, Line, Len);
          NLin := NLin + 1;
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
+         if Len > 0 then
+            if Line (Len) = ASCII.CR then
+               Len := Len - 1;
+            end if;
          end if;
       end Get_Line;
 
@@ -4220,8 +4224,10 @@ package body W2gtk_Pkg is
       procedure Get_Line is
       begin
          TIO.Get_Line (DFile, Line, Len);
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
+         if Len > 0 then
+            if Line (Len) = ASCII.CR then
+               Len := Len - 1;
+            end if;
          end if;
          NLin := NLin + 1;
       end Get_Line;
@@ -4421,21 +4427,12 @@ package body W2gtk_Pkg is
                 & Line (Idx1 + 7 .. Idx3));
 
          exit when TIO.End_Of_File (DFile);
-         TIO.Get_Line (DFile, Line, Len);
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
-         end if;
-         NLin := NLin + 1;
+         Get_Line;
       end loop;
 
       Debug (NLin, "Parsing Designer (1): Resizable and buttons");
       while not TIO.End_Of_File (DFile) loop
-         TIO.Get_Line (DFile, Line, Len);
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
-         end if;
-         NLin := NLin + 1;
-
+         Get_Line;
          if Contains (Line (1 .. Len), "FormBorderStyle.FixedToolWindow") then
             TWin.Resizable := False;
             TWin.Modal     := True;
@@ -4493,6 +4490,13 @@ package body W2gtk_Pkg is
 
       return 0;
    exception
+      when TIO.Data_Error =>
+         TIO.Close (DFile);
+         TIO.Put_Line ("Data Error");
+         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
+                       & ": Line" & NLin'Image
+                       & " " & Line (1 .. Len));
+         return -1;
       when Constraint_Error =>
          TIO.Close (DFile);
          TIO.Put_Line ("Constraint Error");
@@ -4535,8 +4539,10 @@ package body W2gtk_Pkg is
 
          TIO.Get_Line (VFile, Line, Len);
          NLin := NLin + 1;
-         if Line (Len) = ASCII.CR then
-            Len := Len - 1;
+         if Len > 0 then
+            if Line (Len) = ASCII.CR then
+               Len := Len - 1;
+            end if;
          end if;
       end Get_Line;
 

@@ -844,7 +844,7 @@ package body W2gtk_Decls is
          return;
       end if;
 
-      --  set Temp0 to the last widget and set Temp1 to the last date_picker
+      --  set Temp0 to the last widget and set Temp1 to the first date_picker
       Temp0 := Parent.Widget_List;
       Temp1 := null;
       loop
@@ -869,6 +869,7 @@ package body W2gtk_Decls is
       if Temp1 = Parent.Widget_List then  --  temp1 is the first widget
          WT.Next := Temp1;                --  insert WT by the front
          WT.Prev := null;
+         Temp1.Prev := WT;
          Parent.Widget_List := WT;
          return;
       end if;

@@ -3077,11 +3077,13 @@ package body W2gtk_Emit is
          Col := Col.Next;
       end loop;
 
-      if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
-         Emit_Line (Sp (Id + 2) & "<!-- column-name "
-                    & "ALT_Bg_" & TWdg.Name.all
-                    & " -->");
-         Emit_Line (Sp (Id + 2) & "<column type=""gchararray""/>");
+      if DGVS /= null then
+         if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+            Emit_Line (Sp (Id + 2) & "<!-- column-name "
+                       & "ALT_Bg_" & TWdg.Name.all
+                       & " -->");
+            Emit_Line (Sp (Id + 2) & "<column type=""gchararray""/>");
+         end if;
       end if;
 
       Emit_Line (Sp (Id + 2) & "</columns>");
