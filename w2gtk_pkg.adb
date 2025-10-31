@@ -26,6 +26,7 @@ with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with W2gtk_Decls;             use W2gtk_Decls;
 with W2gtk_Emit;              use W2gtk_Emit;
 with Symbol_Tables;           use Symbol_Tables;
+with W2gtk_Backups;           use W2gtk_Backups;
 
 package body W2gtk_Pkg is
    package TIO renames Ada.Text_IO;
@@ -49,6 +50,8 @@ package body W2gtk_Pkg is
    package SBIO is new Ada.Text_IO.Enumeration_IO (ScrollBars_Enum);
    package DRIO is new Ada.Text_IO.Enumeration_IO (DialogResult_Enum);
    package CSIO is new Ada.Text_IO.Enumeration_IO (Cell_Style_Enum);
+
+   Max_Gen : Integer := 1;
 
    Test2  : constant String := "<data name=""$this.";
    Test5  : constant String := "<data name=""";
@@ -280,9 +283,9 @@ package body W2gtk_Pkg is
       -------------------------------------------------------
 
       --  set some properties of toolstripstatuslabel
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: "
-             & "set some properties of toolstripstatuslabel");
+      Debug (-1, "");
+      Debug (-1, "Adjusting to GTK");
+      Debug (0, "Set some properties of toolstripstatuslabel");
       TWin := Win_List;
       while TWin /= null loop
          TWdg := TWin.Widget_List;
@@ -311,7 +314,7 @@ package body W2gtk_Pkg is
 
       --  Is_Dialog is set if there are response buttons
       --  Debug (0, "");
-      --  Debug (0, "Adjusting to GTK: GtkWindows or GtkDialog");
+      --  Debug (0, "GtkWindows or GtkDialog");
       --  TWin := Win_List;
       --  while TWin /= null loop
       --     if not TWin.Is_Dialog then
@@ -323,8 +326,8 @@ package body W2gtk_Pkg is
       --  end loop;
 
       --  generate auxiliary elements
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: generate auxiliary windows");
+      Debug (-1, "");
+      Debug (0, "Generate auxiliary windows");
       TWin := Win_List;
       while TWin /= null loop
          TWdg := TWin.Widget_List;
@@ -551,8 +554,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: Set Have Widgets");
+      Debug (-1, "");
+      Debug (0, "Set Have Widgets");
       TWin := Win_List;
       while TWin /= null loop
          Set_Have (TWin);
@@ -600,8 +603,8 @@ package body W2gtk_Pkg is
       Debug (0, Sp (3) & "FileChooserButtons" & Have.FileChooserButtons'Image);
 
       --  set correct parent from parent name and set Gparent
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: reparenting from parent name");
+      Debug (-1, "");
+      Debug (0, "Reparenting from parent name");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -618,9 +621,9 @@ package body W2gtk_Pkg is
                      TWdgP := Find_Widget (TWin.Widget_List,
                                            TWdg.Parent_Name.all);
                      if TWdgP = null then
-                        TIO.Put_Line ("Widget " & TWdg.Name.all
-                                      & " without parent, "
-                                      & " tried " & TWdg.Parent_Name.all);
+                        Debug (0, Sp (3) & ("Widget " & TWdg.Name.all
+                               & " without parent, "
+                               & " tried " & TWdg.Parent_Name.all));
                         return -1;
                      end if;
                      TWdg.GParent := TWdgP;
@@ -641,8 +644,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: set maxlength for non-editable gtkentries, "
+      Debug (-1, "");
+      Debug (0, "Set maxlength for non-editable gtkentries, "
             & "comboboxes and labels");
       TWin := Win_List;
       while TWin /= null loop
@@ -687,8 +690,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: recast menus: "
+      Debug (-1, "");
+      Debug (0, "Recast menus: "
              & "GtkSeparatorToolItem in Menus => GtkSeparatorMenuItem");
       TWin := Win_List;
       while TWin /= null loop
@@ -717,8 +720,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: setting maxtabindex");
+      Debug (-1, "");
+      Debug (0, "Setting maxtabindex");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -736,8 +739,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: process tabindex and tabstop");
+      Debug (-1, "");
+      Debug (0, "Processing tabindex and tabstop");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -782,8 +785,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: inserting focus handler "
+      Debug (-1, "");
+      Debug (0, "Inserting focus handler "
              & "(only for dialogs)");
       TWin := Win_List;
       while TWin /= null loop
@@ -819,8 +822,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: selecting the has-focus widget");
+      Debug (-1, "");
+      Debug (0, "Selecting the has-focus widget");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -853,8 +856,8 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
 
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: setting the focus chain");
+      Debug (-1, "");
+      Debug (0, "Setting the focus chain");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -886,8 +889,8 @@ package body W2gtk_Pkg is
       end loop;
 
       --  process inheritable attributes (font, others?)
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: inheritable attributes");
+      Debug (-1, "");
+      Debug (0, "Inheritable attributes");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -901,8 +904,8 @@ package body W2gtk_Pkg is
       ---------------------------------------------------------
 
       --  reorder the widgets placing each widget in the correct parent list
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: relinking to the correct parent list");
+      Debug (-1, "");
+      Debug (0, "Relinking to the correct parent list");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -912,7 +915,7 @@ package body W2gtk_Pkg is
       end loop;
 
       --  remove a gtkbox parent which contains only one child container
-      Debug (0, "");
+      Debug (-1, "");
       Debug (0, "Removing gtkbox with only one child container");
       TWin := Win_List;
       while TWin /= null loop
@@ -923,7 +926,7 @@ package body W2gtk_Pkg is
       end loop;
 
       --  generating format columns
-      Debug (0, "");
+      Debug (-1, "");
       Debug (0, "Generating Format Columns");
       TWin := Win_List;
       while TWin /= null loop
@@ -934,8 +937,8 @@ package body W2gtk_Pkg is
       end loop;
 
       --  compute num_elements for stores. Must be after adjust format columns
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: compute num. elements for models");
+      Debug (-1, "");
+      Debug (0, "Compute number of elements for models");
       TWin := Win_List;
       while TWin /= null loop
          case TWin.Window_Type is
@@ -974,8 +977,8 @@ package body W2gtk_Pkg is
       end loop;
 
       --  recast menus: gtkmenuimageitem with no image => gtknormalmenuitem
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: recast menus:"
+      Debug (-1, "");
+      Debug (0, "Recast menus: "
              & "gtkmenuimageitem with no image => gtknormalmenuitem and");
       TWin := Win_List;
       while TWin /= null loop
@@ -986,8 +989,8 @@ package body W2gtk_Pkg is
       end loop;
 
       --  setting use_sort for data/treegrids
-      Debug (0, "");
-      Debug (0, "Adjusting to GTK: Use Sort in data/treeviews");
+      Debug (-1, "");
+      Debug (0, "Use Sort in data/treeviews");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -995,7 +998,7 @@ package body W2gtk_Pkg is
          end if;
          TWin := TWin.Next;
       end loop;
-      Debug (0, "End of Adjust");
+      Debug (-1, "End of Adjusting to GTK");
       return 0;
    end Adjust_To_Gtk;
 
@@ -1202,6 +1205,9 @@ package body W2gtk_Pkg is
 
                Put_Property ("Resizable");
                Put_Boolean (TWin.Resizable);
+
+               Put_Property ("Has Buttons");
+               Put_Boolean (TWin.Has_Buttons);
 
                Put_Property ("Modal");
                Put_Boolean (TWin.Modal);
@@ -2040,7 +2046,7 @@ package body W2gtk_Pkg is
 
       end Dump_Widget;
    begin
-      Debug (0, "Generating Dump");
+      Debug (-1, "Generating Dump");
       TIO.Create (File => LFile,
                   Mode => TIO.Out_File,
                   Name => Path & "/" & File_Name & ".dump");
@@ -2051,7 +2057,7 @@ package body W2gtk_Pkg is
          TWin := TWin.Next;
       end loop;
       TIO.Close (LFile);
-      Debug (0, "End of generating Dump");
+      Debug (-1, "End of generating Dump");
    end Dump;
 
    -------------------------------------------------------------------------
@@ -2080,8 +2086,9 @@ package body W2gtk_Pkg is
                    Name => Resx_Path & "/" & Resx_File_Name & ".resx");
 
          NLin := 0;
-         Debug (NLin, "");
-         Debug (NLin, "Parsing Resources: Window: " & Resx_File_Name);
+         Debug (-1, "");
+         Debug (-1, "Parsing Resources of " & Resx_File_Name);
+         Debug (0, "Window");
          while not TIO.End_Of_File (RFile) loop
             TIO.Get_Line (RFile, Line, Len);
             NLin := NLin + 1;
@@ -2193,7 +2200,7 @@ package body W2gtk_Pkg is
                                & "RightToLeft");
 
                      when No_Property =>
-                        TIO.Put_Line (Resx_File_Name & ".resx"
+                        Debug (NLin, Resx_File_Name & ".resx"
                                       & ": Line" & NLin'Image
                                       & ": unknown window property: "
                                       & Line (Idx0 + Test2'Length .. Len));
@@ -2201,7 +2208,7 @@ package body W2gtk_Pkg is
                         return -1;
                   end case;
                else
-                  TIO.Put_Line (Resx_File_Name & ".resx"
+                  Debug (NLin, Resx_File_Name & ".resx"
                                 & ": Line" & NLin'Image &
                                   ": cannot parse window property");
                   TIO.Close (RFile);
@@ -2214,8 +2221,8 @@ package body W2gtk_Pkg is
       exception
          when Constraint_Error =>
             TIO.Close (RFile);
-            TIO.Put_Line ("Constraint Error");
-            TIO.Put_Line (Resx_File_Name & ".resx"
+            Debug (NLin, "Constraint Error");
+            Debug (NLin, Resx_File_Name & ".resx"
                           & ": Line" & NLin'Image
                           & " " & Line (1 .. Len));
             return -1;
@@ -2249,8 +2256,8 @@ package body W2gtk_Pkg is
          end loop;
 
          --  continue reading
-         Debug (NLin, "");
-         Debug (NLin, "Parsing Resources: Widgets");
+         Debug (-1, "");
+         Debug (NLin, "Widgets");
          while not TIO.End_Of_File (RFile) loop
             TIO.Get_Line (RFile, Line, Len);
             NLin := NLin + 1;
@@ -2294,18 +2301,18 @@ package body W2gtk_Pkg is
                   Attr    : Widget_Attribute_Enum;
                begin
                   if PName = "" then
-                     TIO.Put_Line (Resx_File_Name & ".resx"
-                                   & ": Line" & NLin'Image
-                                   &  ": cannot find widget name");
+                     Debug (NLin, Resx_File_Name & ".resx"
+                            & ": Line" & NLin'Image
+                            &  ": cannot find widget name");
                      TIO.Close (RFile);
                      return -1;
                   end if;
 
                   if PAttrib = "" then
-                     TIO.Put_Line (Resx_File_Name & ".resx"
-                                   & ": Line" & NLin'Image
-                                   &  ": cannot find widget property"
-                                   & " for " & PName);
+                     Debug (NLin, Resx_File_Name & ".resx"
+                            & ": Line" & NLin'Image
+                            &  ": cannot find widget property"
+                            & " for " & PName);
                      TIO.Close (RFile);
                      return -1;
                   end if;
@@ -2318,10 +2325,10 @@ package body W2gtk_Pkg is
                                & Line (1 .. Len));
                         goto Continue_Loop;
                      end if;
-                     TIO.Put_Line (Resx_File_Name & ".resx"
-                                   & ": Line" & NLin'Image
-                                   & ": widget " & PName
-                                   & " not in Designer");
+                     Debug (NLin, Resx_File_Name & ".resx"
+                            & ": Line" & NLin'Image
+                            & ": widget " & PName
+                            & " not in Designer");
                      TIO.Close (RFile);
                      return -1;
                   end if;
@@ -2465,8 +2472,8 @@ package body W2gtk_Pkg is
 
                      when Attr_Name =>
                         if PName /= +Get_String (RFile) then
-                           TIO.Put_Line ("Line" & NLin'Image & ": " &
-                                           "name mistmatch");
+                           Debug (NLin, "Line" & NLin'Image & ": " &
+                                    "name mistmatch");
                            TIO.Close (RFile);
                            return -1;
                         end if;
@@ -2504,7 +2511,7 @@ package body W2gtk_Pkg is
                                 Get_Widget_Name (RFile);
                            begin
                               if WType /= WT.Windows_Type.all then
-                                 TIO.Put_Line ("Line" & NLin'Image & ": " &
+                                 Debug (NLin, "Line" & NLin'Image & ": " &
                                                  "windows type mistmatch");
                                  TIO.Close (RFile);
                                  return -1;
@@ -2637,7 +2644,7 @@ package body W2gtk_Pkg is
                                & PName & " " & PAttrib);
 
                      when others =>
-                        TIO.Put_Line (Resx_File_Name & ".resx"
+                        Debug (NLin, Resx_File_Name & ".resx"
                                       & ": Line" & NLin'Image &
                                         ": unknown widget property: " &
                                         Property);
@@ -2647,10 +2654,10 @@ package body W2gtk_Pkg is
                exception
                   when Constraint_Error =>
                      TIO.Close (RFile);
-                     TIO.Put_Line ("Constraint Error");
-                     TIO.Put_Line (Resx_File_Name & ".resx"
-                                   & ": Line:" & NLin'Image
-                                   & ": " & Property);
+                     Debug (NLin, "Constraint Error");
+                     Debug (NLin, Resx_File_Name & ".resx"
+                            & ": Line:" & NLin'Image
+                            & ": " & Property);
                      return -1;
                end;
             end;
@@ -2660,10 +2667,10 @@ package body W2gtk_Pkg is
       exception
          when Constraint_Error =>
             TIO.Close (RFile);
-            TIO.Put_Line ("Constraint Error");
-            TIO.Put_Line (Resx_File_Name & ".resx"
-                          & ": Line" & NLin'Image
-                          & " " & Line (1 .. Len));
+            Debug (NLin, "Constraint Error");
+            Debug (NLin, Resx_File_Name & ".resx"
+                   & ": Line" & NLin'Image
+                   & " " & Line (1 .. Len));
             return -1;
       end Parse_Widget_Properties;
 
@@ -2675,7 +2682,7 @@ package body W2gtk_Pkg is
 
       Result := Parse_Widget_Properties (TWin, Resx_Path, Resx_File_Name);
 
-      Debug (0, "End of Parsing Resources");
+      Debug (-1, "End of Parsing Resources");
       return Result;
    end Parse_Resource_File;
 
@@ -2730,17 +2737,16 @@ package body W2gtk_Pkg is
             end if;
             Child := Find_Widget (TWin.Widget_List, +Line (Idx0 .. Idx1 - 1));
             if Child = null then
-               TIO.Put_Line (Img (NLin) & ": "
-                             & Line (Idx0 .. Len) & ": widget not found");
+               Debug (NLin, Line (Idx0 .. Len) & ": widget not found");
                raise Constraint_Error;
             end if;
             if Child.Parent_Name /= null then
                if Child.Parent_Name.all /= Parent.Name.all then
-                  TIO.Put_Line ("Designer 2: " & Img (NLin) & ": "
-                                & "Warning: " & Child.Name.all & ": "
-                                & "Mismatch with Resource File: "
-                                & Child.Parent_Name.all & " / "
-                                & Parent.Name.all);
+                  Debug (NLin, "Designer 2: " & Img (NLin) & ": "
+                         & "Warning: " & Child.Name.all & ": "
+                         & "Mismatch with Resource File: "
+                         & Child.Parent_Name.all & " / "
+                         & Parent.Name.all);
                end if;
                Free (Child.Parent_Name);
             end if;
@@ -2806,7 +2812,7 @@ package body W2gtk_Pkg is
                   end if;
                end if;
             end if;
-            TIO.Put_Line ("Ill-formed date:" & Line (Idx .. Len));
+            Debug (NLin, "Ill-formed date:" & Line (Idx .. Len));
             raise Constraint_Error;
          end Get_Date;
 
@@ -2819,17 +2825,16 @@ package body W2gtk_Pkg is
             Idx3 := Index (Line (Idx2 .. Len), ")") - 1;
             Child := Find_Widget (TWin.Widget_List, +Line (Idx2 .. Idx3));
             if Child = null then
-               TIO.Put_Line (Img (NLin) & ": "
-                             & Line (Idx0 + 1 .. Len) & ": widget not found");
+               Debug (NLin, Line (Idx0 + 1 .. Len) & ": widget not found");
                raise Constraint_Error;
             end if;
             if Child.Parent_Name /= null then
                if Child.Parent_Name.all /= Parent.Name.all then
-                  TIO.Put_Line ("Designer 2: " & Img (NLin) & ": "
-                                & "Warning: " & Child.Name.all & ": "
-                                & "Mismatch with Resource File: "
-                                & Child.Parent_Name.all & " / "
-                                & Parent.Name.all);
+                  Debug (NLin, "Designer 2: " & Img (NLin) & ": "
+                         & "Warning: " & Child.Name.all & ": "
+                         & "Mismatch with Resource File: "
+                         & Child.Parent_Name.all & " / "
+                         & Parent.Name.all);
                end if;
                Free (Child.Parent_Name);
             end if;
@@ -2999,11 +3004,11 @@ package body W2gtk_Pkg is
                          & " " & Line (Idx0 .. Idx1 - 1));
 
                when DGVS_No_Attribute =>
-                  TIO.Put_Line (Resx_File_Name
-                                & ".Designer.vb (2)"
-                                & ": Line" & NLin'Image
-                                & ": unknown DGVS property: "
-                                & Line (Idx1 .. Len));
+                  Debug (NLin, Resx_File_Name
+                         & ".Designer.vb (2)"
+                         & ": Line" & NLin'Image
+                         & ": unknown DGVS property: "
+                         & Line (Idx1 .. Len));
             end case;
             return 0; --  skip to end of loop
          end Check_DataGridViewCellStyle;
@@ -3023,9 +3028,9 @@ package body W2gtk_Pkg is
                Len := 0;
                return 0;
             end if;
-            TIO.Put_Line ("Designer 2: " & Img (NLin) & ": "
-                          & Line (Idx0 .. Len)
-                          & ": widget not found");
+            Debug (NLin, "Designer 2: " & Img (NLin) & ": "
+                   & Line (Idx0 .. Len)
+                   & ": widget not found");
             return -1;
          end if;
          --  skip second test9-line
@@ -3084,11 +3089,11 @@ package body W2gtk_Pkg is
                   goto Continue_Loop;
 
                else
-                  TIO.Put_Line (Resx_File_Name
-                                & ".Designer.vb (2)"
-                                & ": Line" & NLin'Image
-                                & ": Designer: cannot parse "
-                                & Trim (Line (1 .. Len), Ada.Strings.Both));
+                  Debug (NLin, Resx_File_Name
+                         & ".Designer.vb (2)"
+                         & ": Line" & NLin'Image
+                         & ": Designer: cannot parse "
+                         & Trim (Line (1 .. Len), Ada.Strings.Both));
                   return -1;
                end if;
             end if;
@@ -3110,9 +3115,8 @@ package body W2gtk_Pkg is
                   if WT.Text /= null
                     and then WT.Text.all /= Line (Idx1 + 1 .. Len - 1)
                   then
-                     TIO.Put_Line (Img (NLin)
-                                   & ": text mistmatch between "
-                                   & "Designer and Resource");
+                     Debug (NLin, ": text mistmatch between "
+                            & "Designer and Resource");
                      raise Constraint_Error;
                   else
                      WT.Text := new String'(Trim (Line (Idx1 + 1 .. Len - 1),
@@ -3124,9 +3128,8 @@ package body W2gtk_Pkg is
 
                when Attr_Name =>
                   if WT.Name.all /= +Line (Idx1 + 1 .. Len - 1) then
-                     TIO.Put_Line (Img (NLin)
-                                   & ": name mistmatch between "
-                                   & "Designer and Resource");
+                     Debug (NLin, ": name mistmatch between "
+                            & "Designer and Resource");
                      raise Constraint_Error;
                   end if;
                   Debug (NLin, Sp (3) & "Set Widget Property "
@@ -3916,19 +3919,19 @@ package body W2gtk_Pkg is
                      IIO.Get (Line (Idx1 + Test20'Length .. Len),
                               Num, Last);
                      if Num not in DGVS'Range then
-                        TIO.Put_Line (Resx_File_Name
-                                      & "Designer.vb (2:) "
-                                      & "No datagridviewcellstyle"
-                                      & Img (Num)
-                                      & " at line" & NLin'Image);
+                        Debug (NLin, Resx_File_Name
+                               & "Designer.vb (2:) "
+                               & "No datagridviewcellstyle"
+                               & Img (Num)
+                               & " at line" & NLin'Image);
                         raise TIO.Data_Error;
                      end if;
                      if DGVS (Num).Name /= null then
-                        TIO.Put_Line (Resx_File_Name
-                                      & ".Designer.vb (2)"
-                                      & ": Line" & NLin'Image
-                                      & ": Designer: repeated: "
-                                      & Line (Idx0 .. Len));
+                        Debug (NLin, Resx_File_Name
+                               & ".Designer.vb (2)"
+                               & ": Line" & NLin'Image
+                               & ": Designer: repeated: "
+                               & Line (Idx0 .. Len));
                         raise TIO.Data_Error;
                      end if;
                      WT.DefaultCellStyle := Num;
@@ -3962,19 +3965,19 @@ package body W2gtk_Pkg is
                      IIO.Get (Line (Idx1 + Test20'Length .. Len),
                               Num, Last);
                      if Num not in DGVS'Range then
-                        TIO.Put_Line (Resx_File_Name
-                                      & "Designer.vb (2:) "
-                                      & "No datagridviewcellstyle"
-                                      & Img (Num)
-                                      & " at line" & NLin'Image);
+                        Debug (NLin, Resx_File_Name
+                               & "Designer.vb (2:) "
+                               & "No datagridviewcellstyle"
+                               & Img (Num)
+                               & " at line" & NLin'Image);
                         raise TIO.Data_Error;
                      end if;
                      if DGVS (Num).Name /= null then
-                        TIO.Put_Line (Resx_File_Name
-                                      & ".Designer.vb (2)"
-                                      & ": Line" & NLin'Image
-                                      & ": Designer: repeated: "
-                                      & Line (Idx0 .. Len));
+                        Debug (NLin, Resx_File_Name
+                               & ".Designer.vb (2)"
+                               & ": Line" & NLin'Image
+                               & ": Designer: repeated: "
+                               & Line (Idx0 .. Len));
                         raise TIO.Data_Error;
                      end if;
                      WT.AlternatingRowsDefaultCellStyle := Num;
@@ -3998,19 +4001,19 @@ package body W2gtk_Pkg is
                         IIO.Get (Line (Idx1 + Test20'Length .. Len),
                                  Num, Last);
                         if Num not in DGVS'Range then
-                           TIO.Put_Line (Resx_File_Name
-                                         & "Designer.vb (2:) "
-                                         & "No datagridviewcellstyle"
-                                         & Img (Num)
-                                         & " at line" & NLin'Image);
+                           Debug (NLin, Resx_File_Name
+                                  & "Designer.vb (2:) "
+                                  & "No datagridviewcellstyle"
+                                  & Img (Num)
+                                  & " at line" & NLin'Image);
                            raise TIO.Data_Error;
                         end if;
                         if DGVS (Num).Name /= null then
-                           TIO.Put_Line (Resx_File_Name
-                                         & ".Designer.vb (2)"
-                                         & ": Line" & NLin'Image
-                                         & ": Designer: repeated: "
-                                         & Line (Idx0 .. Len));
+                           Debug (NLin, Resx_File_Name
+                                  & ".Designer.vb (2)"
+                                  & ": Line" & NLin'Image
+                                  & ": Designer: repeated: "
+                                  & Line (Idx0 .. Len));
                            raise TIO.Data_Error;
                         end if;
                         Have.HDR_CellRenderers := Have.HDR_CellRenderers + 1;
@@ -4032,19 +4035,19 @@ package body W2gtk_Pkg is
                      IIO.Get (Line (Idx1 + Test20'Length .. Len),
                               Num, Last);
                      if Num not in DGVS'Range then
-                        TIO.Put_Line (Resx_File_Name
-                                      & "Designer.vb (2:) "
-                                      & "No datagridviewcellstyle"
-                                      & Img (Num)
-                                      & " at line" & NLin'Image);
+                        Debug (NLin, Resx_File_Name
+                               & "Designer.vb (2:) "
+                               & "No datagridviewcellstyle"
+                               & Img (Num)
+                               & " at line" & NLin'Image);
                         raise TIO.Data_Error;
                      end if;
                      if DGVS (Num).Name /= null then
-                        TIO.Put_Line (Resx_File_Name
-                                      & ".Designer.vb (2)"
-                                      & ": Line" & NLin'Image
-                                      & ": Designer: repeated: "
-                                      & Line (Idx0 .. Len));
+                        Debug (NLin, Resx_File_Name
+                               & ".Designer.vb (2)"
+                               & ": Line" & NLin'Image
+                               & ": Designer: repeated: "
+                               & Line (Idx0 .. Len));
                         raise TIO.Data_Error;
                      end if;
                      WT.RowHeadersDefaultCellStyle := Num;
@@ -4149,18 +4152,18 @@ package body W2gtk_Pkg is
                          & Line (Idx0 .. Len));
 
                when No_Attribute =>
-                  TIO.Put_Line (Resx_File_Name
-                                & ".Designer.vb (2)"
-                                & ": Line" & NLin'Image
-                                & ": Designer: unknown property: "
-                                & Line (Idx0 .. Len));
+                  Debug (NLin, Resx_File_Name
+                         & ".Designer.vb (2)"
+                         & ": Line" & NLin'Image
+                         & ": Designer: unknown property: "
+                         & Line (Idx0 .. Len));
 
                when others  =>
-                  TIO.Put_Line (Resx_File_Name
-                                & ".Designer.vb (2)"
-                                & ": Line" & NLin'Image
-                                & ": Designer: property not processed: "
-                                & Line (Idx0 .. Len));
+                  Debug (NLin, Resx_File_Name
+                         & ".Designer.vb (2)"
+                         & ": Line" & NLin'Image
+                         & ": Designer: property not processed: "
+                         & Line (Idx0 .. Len));
 
             end case;
             << Continue_Loop >>
@@ -4174,8 +4177,9 @@ package body W2gtk_Pkg is
                 Name => Resx_Path & "/" & Resx_File_Name & ".Designer.vb");
 
       NLin := 0;
-      Debug (NLin, "");
-      Debug (NLin, "Parsing (2) Designer: Attributes");
+      Debug (-1, "");
+      Debug (-1, "Parsing (2) Designer");
+      Debug (NLin, "Attributes");
       Ret := 0;
       while not TIO.End_Of_File (DFile) loop
          Get_Line;
@@ -4192,16 +4196,16 @@ package body W2gtk_Pkg is
          end if;
       end loop;
 
-      Debug (0, "End of Designer 2");
+      Debug (-1, "End of Parsing (2) Designer");
       TIO.Close (DFile);
       return Ret;
    exception
       when Constraint_Error =>
          TIO.Close (DFile);
-         TIO.Put_Line ("Constraint Error");
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb (2)"
-                       & ": Line" & NLin'Image
-                       & " " & Line (1 .. Len));
+         Debug (NLin, "Constraint Error");
+         Debug (NLin, Resx_File_Name & ".Designer.vb (2)"
+                & ": Line" & NLin'Image
+                & " " & Line (1 .. Len));
          return -1;
    end Parse2_Designer_File;
 
@@ -4242,12 +4246,13 @@ package body W2gtk_Pkg is
       --  skip first line
       Get_Line;
 
-      Debug (NLin, "Parsing (1) Designer: " & Test8);
+      Debug (-1, "Parsing (1) Designer");
       Found := False;
       while not TIO.End_Of_File (DFile) loop
          Get_Line;
          Idx0 := Index (Line (1 .. Len), Test8);
          if Idx0 in 1 .. Len then
+            Debug (NLin, Line (1 .. Len));
             TWin := new Window_Properties (GtkWindow);
             Found := True;
             TWin.Name := new String'(+Trim (Line (Idx0 + 14 .. Len),
@@ -4259,13 +4264,13 @@ package body W2gtk_Pkg is
          end if;
       end loop;
       if not Found then
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
-                       & """" & Test8 & """" & ": not found");
+         Debug (NLin, Resx_File_Name & ".Designer.vb (1)"
+                & """" & Test8 & """" & ": not found");
          TIO.Close (DFile);
          return -1;
       end if;
 
-      Debug (NLin, "Parsing (1) Designer: searching for " & Test13);
+      Debug (NLin, "Searching for " & Test13);
       Found := False;
       while not TIO.End_Of_File (DFile) loop
          Get_Line;
@@ -4277,13 +4282,13 @@ package body W2gtk_Pkg is
          end if;
       end loop;
       if not Found then
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
-                       & """" & Test13 & """" & ": not found");
+         Debug (NLin, Resx_File_Name & ".Designer.vb (1)"
+                & """" & Test13 & """" & ": not found");
          TIO.Close (DFile);
          return -1;
       end if;
 
-      Debug (NLin, "Parsing (1) Designer: searching for " & Test7);
+      Debug (NLin, "Searching for " & Test7);
       Get_Line;
       Idx0 := Index (Line (1 .. Len), Test7);
       if Idx0 in 1 .. Len then
@@ -4293,7 +4298,7 @@ package body W2gtk_Pkg is
          Debug (NLin, Sp (3) & "Not Found");
       end if;
 
-      Debug (NLin, "Parsing (1) Designer: searching for " & Test18);
+      Debug (NLin, "Searching for " & Test18);
       Idx0 := Index (Line (1 .. Len), Test18);
       if Idx0 in 1 .. Len then
          Debug (NLin, Sp (3) & "Found");
@@ -4302,7 +4307,7 @@ package body W2gtk_Pkg is
          Debug (NLin, Sp (3) & "Not Found");
       end if;
 
-      Debug (NLin, "Parsing (1) Designer: searching for " & Test19);
+      Debug (NLin, "Searching for " & Test19);
       Found := False;
       Mark_Line := NLin;
       loop
@@ -4356,16 +4361,16 @@ package body W2gtk_Pkg is
       end loop;
       if not Found then
          TIO.Close (DFile);
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
-                       & ": Me.<widget> not found");
+         Debug (NLin, Resx_File_Name & ".Designer.vb (1)"
+                & ": Me.<widget> not found");
          return -1;
       end if;
 
-      Debug (NLin, "Parsing Designer (1): widgets");
+      Debug (NLin, "Widgets");
       loop
          Idx0 := Index (Line (1 .. Len), "Me.");
          if Idx0 not in 1 .. Len then
-            TIO.Put_Line (Line (1 .. Len));
+            Debug (NLin, "unknown line " & Line (1 .. Len));
             exit;
          end if;
          Idx0 := Idx0 + 3; --  skip "Me."
@@ -4399,7 +4404,7 @@ package body W2gtk_Pkg is
             TIO.Close (DFile);
             Debug (NLin, Sp (3) & Resx_File_Name & ".Designer.vb (1): "
                    & ": unknown Widget " & Line (Idx2 .. Idx3));
-            TIO.Put_Line (Line (1 .. Len));
+            Debug (NLin, Sp (3) & Line (1 .. Len));
             return -1;
          end if;
 
@@ -4419,7 +4424,10 @@ package body W2gtk_Pkg is
          elsif WT.Widget_Type = GtkToolBar then
             WT.Windows_Type :=
               new String'("System.Windows.Forms.ToolStrip");
+         elsif WT.Widget_Type = GtkButton then
+            TWin.Has_Buttons := True;
          end if;
+
          Insert_Widget_By_Tail (TWin, WT);
          Debug (NLin, Sp (3) & "Created "
                 & WT.Widget_Type'Image & " "
@@ -4430,19 +4438,15 @@ package body W2gtk_Pkg is
          Get_Line;
       end loop;
 
-      Debug (NLin, "Parsing Designer (1): Resizable and buttons");
+      Debug (NLin, "Resizable and [Window or Dialog]");
       while not TIO.End_Of_File (DFile) loop
          Get_Line;
          if Contains (Line (1 .. Len), "FormBorderStyle.FixedToolWindow") then
             TWin.Resizable := False;
-            TWin.Modal     := True;
             Debug (NLin, Sp (3) & "Set Resizable False");
-            Debug (NLin, Sp (3) & "Set Modal True");
-            --  exit;
          elsif Contains (Line (1 .. Len), "FormBorderStyle.SizableToolWindow") then
             TWin.Resizable := True;
             Debug (NLin, Sp (3) & "Set Resizable True");
-            Debug (NLin, Sp (3) & "Set Modal True");
          elsif Contains (Line (1 .. Len), "AcceptButton") then
             Idx0 :=  Index (Line (1 .. Len), " = Me.");
             if Idx0 not in 1 .. Len then
@@ -4482,27 +4486,30 @@ package body W2gtk_Pkg is
             Debug (NLin, Sp (3) & "Set Cancel Button");
             Debug (NLin, Sp (3) & "Set Dialog");
          end if;
-
       end loop;
+      if (not TWin.Resizable) and TWin.Is_Dialog and TWin.Has_Buttons then
+         TWin.Modal := True;
+         Debug (NLin, Sp (3) & "Set Modal True");
+      end if;
 
-      Debug (0, "End of Parsing (1) Designer");
+      Debug (-1, "End of Parsing (1) Designer");
       TIO.Close (DFile);
 
       return 0;
    exception
       when TIO.Data_Error =>
          TIO.Close (DFile);
-         TIO.Put_Line ("Data Error");
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
-                       & ": Line" & NLin'Image
-                       & " " & Line (1 .. Len));
+         Debug (NLin, Sp (3) & "Data Error");
+         Debug (NLin, Sp (3) & Resx_File_Name & ".Designer.vb (1)"
+                & ": Line" & NLin'Image
+                & " " & Line (1 .. Len));
          return -1;
       when Constraint_Error =>
          TIO.Close (DFile);
-         TIO.Put_Line ("Constraint Error");
-         TIO.Put_Line (Resx_File_Name & ".Designer.vb (1)"
-                       & ": Line" & NLin'Image
-                       & " " & Line (1 .. Len));
+         Debug (NLin, Sp (3) & "Constraint Error");
+         Debug (NLin, Sp (3) & Resx_File_Name & ".Designer.vb (1)"
+                & ": Line" & NLin'Image
+                & " " & Line (1 .. Len));
          return -1;
    end Parse1_Designer_File;
 
@@ -4559,9 +4566,9 @@ package body W2gtk_Pkg is
                   if Idx1 not in 1 .. Len2 then
                      Idx1 := Index (Line3 (1 .. Len3), "Sub ");
                      if Idx1 not in 1 .. Len3 then
-                        TIO.Put_Line (Resx_File_Name & ".vb"
-                                      & ": Line: " & Img (NLin)
-                                      & ": could not find handler");
+                        Debug (NLin, Resx_File_Name & ".vb"
+                               & ": Line: " & Img (NLin)
+                               & ": could not find handler");
                         return "";
                      else
                         Len :=  Len3;
@@ -4585,9 +4592,9 @@ package body W2gtk_Pkg is
          if Idx1 not in Idx0 .. Len then
             Idx1 := Index (Line (Idx0 .. Len), " _");
             if Idx1 not in Idx0 .. Len then
-               TIO.Put_Line (Resx_File_Name
-                             & ": Line: " & Img (NLin)
-                             & ": could not find handler");
+               Debug (NLin, Resx_File_Name
+                      & ": Line: " & Img (NLin)
+                      & ": could not find handler");
                return "";
             end if;
          end if;
@@ -4603,10 +4610,10 @@ package body W2gtk_Pkg is
          if Idx1 not in
            Complete_Signal'First + 1 .. Complete_Signal'Last - 1
          then
-            TIO.Put_Line (Resx_File_Name & ".vb"
-                          & ": Line: " & Img (NLin)
-                          & ": cannot parse signal. Line: "
-                          & Complete_Signal);
+            Debug (NLin, Resx_File_Name & ".vb"
+                   & ": Line: " & Img (NLin)
+                   & ": cannot parse signal. Line: "
+                   & Complete_Signal);
             return -1;
          end if;
          declare
@@ -4649,9 +4656,9 @@ package body W2gtk_Pkg is
             else
                WT := Find_Widget (Win_List.Widget_List, +WName);
                if WT = null then
-                  TIO.Put_Line (Resx_File_Name & ".vb"
-                                & ": Line" & NLin'Image
-                                & ": cannot find widget in signal name");
+                  Debug (NLin, Resx_File_Name & ".vb"
+                         & ": Line" & NLin'Image
+                         & ": cannot find widget in signal name");
                   return -1;
                end if;
                WS := new Signal_Block;
@@ -4713,8 +4720,9 @@ package body W2gtk_Pkg is
 
       NLin := 0;
 
-      Debug (NLin, "");
-      Debug (NLin, "Parsing vb file");
+      Debug (-1, "");
+      Debug (-1, "Parsing vb file");
+      Debug (0, "Parsing signals");
       while not TIO.End_Of_File (VFile) loop
          Get_Line;
          Idx0 := Index (Line (1 .. Len), Test11);
@@ -4768,12 +4776,12 @@ package body W2gtk_Pkg is
                         begin
                            WTCD := Find_Widget (Win_List.Widget_List, WName);
                            if WTCD = null then
-                              TIO.Put_Line ("Warning: "
-                                            & Resx_File_Name & ".vb"
-                                            & ": Line" & NLin'Image
-                                            & ": cannot find widget "
-                                            & WName & "." & "ShowDialog()."
-                                            & " Could be an external widget.");
+                              Debug (NLin, "Warning: "
+                                     & Resx_File_Name & ".vb"
+                                     & ": Line" & NLin'Image
+                                     & ": cannot find widget "
+                                     & WName & "." & "ShowDialog()."
+                                     & " Could be an external widget.");
                            else
                               if WTCD.Widget_Type = GtkColorButton then
                                  WT.Associated_ColorButton := WTCD;
@@ -4797,10 +4805,10 @@ package body W2gtk_Pkg is
                         exception
                            when others =>
                               TIO.Close (VFile);
-                              TIO.Put_Line (Resx_File_Name & ".vb"
-                                            & ": Line" & NLin'Image
-                                            & ": error finding widget in "
-                                            & "ShowDialog()");
+                              Debug (NLin, Resx_File_Name & ".vb"
+                                     & ": Line" & NLin'Image
+                                     & ": error finding widget in "
+                                     & "ShowDialog()");
                               return -1;
                         end;
                      end if;
@@ -5051,10 +5059,29 @@ package body W2gtk_Pkg is
          end loop;
       end;
 
-      Debug (0, "End of Parsing vb file");
+      Debug (-1, "End of Parsing vb file");
       TIO.Close (VFile);
       return 0;
    end Parse_VB_File;
+
+   -------------------------------------------------------------------------
+   procedure Generate_Backup (Result    : out Integer;
+                             The_Path  : String;
+                             Filename  : String; --  lower case
+                             Use_Debug : Boolean);
+   procedure Generate_Backup (Result    : out Integer;
+                             The_Path  : String;
+                             Filename  : String; --  lower case
+                             Use_Debug : Boolean) is
+
+   begin
+      Get_Max_Gen (The_Path & "/" & Filename, Max_Gen);
+      Make_Backup (Result, The_Path & "/" & Filename, Max_Gen, Use_Debug);
+   exception
+      when others =>
+         Debug (-1, "Could not generate backup for " & Filename);
+         Result := -1;
+   end Generate_Backup;
 
    -------------------------------------------------------------------------
    function Parse_VS_File (Use_Debug      : Boolean;
@@ -5067,12 +5094,28 @@ package body W2gtk_Pkg is
    begin
       W2gtk_Decls.Use_Debug := Use_Debug;
 
+      if Use_Debug then
+         Generate_Backup (Result,
+                          Glade_Path,
+                          Resx_File_Name & ".log",
+                          False);
+         TIO.Create (File => Log_File,
+                     Mode => TIO.Out_File,
+                     Name => Glade_Path & "/" & Resx_File_Name & ".log");
+         Debug (-1, "Generating log backup");
+         Debug (-1, Glade_Path & "/" & Resx_File_Name & ".log"
+                   & " renamed to "
+                & Glade_Path & "/" & Resx_File_Name & ".log" & "~" & Img (Max_Gen));
+         Debug (-1, "");
+      end if;
+
       Result := Parse1_Designer_File (Resx_Path, Resx_File_Name);
       if Result /= 0 then
          return Result;
       end if;
 
-      Result := Parse_Resource_File (Win_List, Resx_Path, Resx_File_Name);
+      Result := Parse_Resource_File (Win_List,
+                                     Resx_Path, Resx_File_Name);
       if Result /= 0 then
          return Result;
       end if;
@@ -5095,6 +5138,14 @@ package body W2gtk_Pkg is
       end if;
 
       if Do_Dump then
+         Debug (-1, "");
+         Debug (-1, "Generating dump backup");
+         Generate_Backup (Result, Glade_Path,
+                          Resx_File_Name & ".dump",
+                          True);
+         if Result < 0 then
+            return Result;
+         end if;
          Dump (Glade_Path, Resx_File_Name);
       end if;
 
@@ -5106,7 +5157,8 @@ package body W2gtk_Pkg is
                                  Glade_File_Name : String) return Integer is
       TWin  : Window_Pointer;
    begin
-      Debug (0, "Generating Glade");
+      Debug (-1, "");
+      Debug (-1, "Generating Glade");
 
       if Win_List = null then
          TIO.Put_Line ("No window information");

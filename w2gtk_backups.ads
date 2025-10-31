@@ -14,11 +14,18 @@
 -- with this program; see the file COPYING3.                               --
 -- If not, see <http://www.gnu.org/licenses/>.                             --
 ------------------------------------------------------------------------------
-package W2Gtk2Ada is
+package W2gtk_Backups is
 
-   function Generate_Ada_Packages (Ada_Path   : String;
-                                   Glade_Path : String;
-                                   Filename   : String;
-                                   Use_Debug      : Boolean) return Integer;
+   function Perform_Diff (The_Path          : String;
+                          Filename_With_Ext : String;
+                          Max_Gen           : Integer;
+                          Use_Debug         : Boolean) return Integer;
 
-end W2Gtk2Ada;
+   procedure Get_Max_Gen (Gen_Filename : String;
+                          The_Max_Gen  : in out Integer);
+
+   procedure Make_Backup (Result            : out Integer;
+                          Complete_Filename : String;
+                          Max_Gen           : Integer;
+                          Use_Debug         : Boolean);
+end W2gtk_Backups;

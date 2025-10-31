@@ -49,8 +49,11 @@ package body W2gtk_Decls is
    procedure Debug (NLin : Integer; Msg : String) is
    begin
       if Use_Debug then
-         ITIO.Put (NLin, Width => 5);
-         TIO.Put_Line (": " & Msg);
+         if NLin >= 0 then
+            ITIO.Put (Log_File, NLin, Width => 5);
+            TIO.Put (Log_File, ": ");
+         end if;
+         TIO.Put_Line (Log_File, Msg);
       end if;
    end Debug;
 

@@ -146,21 +146,22 @@ begin
                             Glade_Path.all,
                             Icon_Path.all);
 
-   if Result /= 0 then
+   if Result < 0 then
       TIO.Put_Line ("Aborting...");
       GNAT.OS_Lib.OS_Exit (Result);
    end if;
 
-   if Result = 0 and then Glade then
+   if Result >= 0 and then Glade then
+      --  Generate_Backup (KKK.Glade);
       Result := Generate_Glade_File (Glade_Path.all,
                                      Glade_File_Name.all);
    end if;
 
-   if Result = 0 and then Ada_Path /= null and then Ada_Path.all /= "" then
+   if Result >= 0 and then Ada_Path /= null and then Ada_Path.all /= "" then
       Result := Generate_Ada_Packages (Ada_Path   => Ada_Path.all,
                                        Glade_Path => Glade_Path.all,
                                        Filename   => Glade_File_Name.all,
-                                       Debug      => Debug);
+                                       Use_Debug      => Debug);
    end if;
 
    Free (Ada_Path);

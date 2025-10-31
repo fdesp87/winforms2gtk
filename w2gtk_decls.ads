@@ -292,9 +292,16 @@ package W2gtk_Decls is
          when GtkWindow =>
             Resizable         : Boolean       := True;
             --  In windows forms, modal depends upon how it is called:
-            --  show => modal; showdialog => no modal
-            --  Here we assume that setting resizable to true means modal true
+            --          show => modal; showdialog => no modal
+            --  Here we assume that is modal when the following is all true:
+            --     not resizable, is a dialog and has buttons
+            --  in the form designer.
+            Has_Buttons       : Boolean       := False;
             Modal             : Boolean       := False;
+            --  In windows forms there is no difference between a dialog and
+            --  a window.
+            --  Here we assume it is a dialog when the form designer has
+            --      AcceptButton or CancelButton
             Is_Dialog         : Boolean       := False;
             Font_Name         : String_Access := null;
             Font_Size         : Integer       := Default_Font_Size;
@@ -724,8 +731,6 @@ package W2gtk_Decls is
       end case;
    end record;
 
-   Use_Debug : Boolean := True;
-
    function Sp (N : Integer) return String;
 
    procedure Debug (NLin : Integer; Msg : String);
@@ -811,6 +816,8 @@ package W2gtk_Decls is
    VFile : TIO.File_Type; --  visual basic (in)
    GFile : TIO.File_Type; --  glade        (out)
    LFile : TIO.File_Type; --  dump         (out)
+   Use_Debug : Boolean := True;
+   Log_File  : TIO.File_Type;
 
    Line   : String (1 .. 1024);
    Len    : Natural;

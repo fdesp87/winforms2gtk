@@ -23,6 +23,7 @@ with GNAT.OS_Lib;                use GNAT.OS_Lib;
 with GNAT.Expect;                use GNAT.Expect;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 with GNAT.Calendar.Time_IO;
+with W2gtk_Backups;              use W2gtk_Backups;
 
 
 package body W2Gtk2Ada is
@@ -1053,12 +1054,12 @@ package body W2Gtk2Ada is
    --  Emit Signals  --
    --------------------
 
-   procedure Emit_Signals (Debug : Boolean; Filename : String);
-   procedure Emit_Signals (Debug : Boolean; Filename : String) is
+   procedure Emit_Signals (Use_Debug : Boolean; Filename : String);
+   procedure Emit_Signals (Use_Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer;
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Signals...");
+      if Use_Debug then
+         Debug (-1, "Generating Signals...");
       end if;
       Emit_With_Use ("Gtkada.Builder");
       Emit_With_Use ("Glib.Object");
@@ -1193,12 +1194,12 @@ package body W2Gtk2Ada is
    --  Emit Register Signals  --
    ----------------------------
 
-   procedure Emit_Register_Signals (Debug : Boolean; Filename : String);
-   procedure Emit_Register_Signals (Debug : Boolean; Filename : String) is
+   procedure Emit_Register_Signals (Use_Debug : Boolean; Filename : String);
+   procedure Emit_Register_Signals (Use_Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer;
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Register of Signals...");
+      if Use_Debug then
+         Debug (-1, "Generating Register of Signals...");
       end if;
       Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
@@ -1711,12 +1712,12 @@ package body W2Gtk2Ada is
       end if;
    end Emit_Time_Picker_Methods_Body;
 
-   procedure Emit_Object_Collection (Debug : Boolean; Filename : String);
-   procedure Emit_Object_Collection (Debug : Boolean; Filename : String) is
+   procedure Emit_Object_Collection (Use_Debug : Boolean; Filename : String);
+   procedure Emit_Object_Collection (Use_Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer := Win_List;
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Object Collection...");
+      if Use_Debug then
+         Debug (-1, "Generating Object Collection...");
       end if;
       if Main_Window then
          Emit_With_Use ("Gtk.Window");
@@ -2062,14 +2063,14 @@ package body W2Gtk2Ada is
    ---------------------------
    --  Emit Stores_Enum  --
    ---------------------------
-   procedure Emit_Stores_Enum (Debug : Boolean; Filename : String);
-   procedure Emit_Stores_Enum (Debug : Boolean; Filename : String) is
+   procedure Emit_Stores_Enum (Use_Debug : Boolean; Filename : String);
+   procedure Emit_Stores_Enum (Use_Debug : Boolean; Filename : String) is
       Temp_Win : Window_Pointer := Win_List;
       Col      : Widget_Pointer;
       TWdg     : Widget_Pointer;
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Stores Enum...");
+      if Use_Debug then
+         Debug (-1, "Generating Stores Enum...");
       end if;
       Emit_With_Use ("Glib");
       TIO.Put_Line ("package " & Filename & "_Pkg.Stores_Enum is");
@@ -2136,11 +2137,11 @@ package body W2Gtk2Ada is
       ------------------------
    --  Emit Cell_Renderers  --
    ---------------------------
-   procedure Emit_Cell_Renderers (Debug : Boolean; Filename : String);
-   procedure Emit_Cell_Renderers (Debug : Boolean; Filename : String) is
+   procedure Emit_Cell_Renderers (Use_Debug : Boolean; Filename : String);
+   procedure Emit_Cell_Renderers (Use_Debug : Boolean; Filename : String) is
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Cell Renderers...");
+      if Use_Debug then
+         Debug (-1, "Generating Cell Renderers...");
       end if;
       TIO.Put_Line ("package " & Filename & "_Pkg.Cell_Renderers is");
       TIO.Put_Line (Sp (3) & "procedure Initialize;");
@@ -2357,17 +2358,17 @@ package body W2Gtk2Ada is
    --  Emit Main Window  --
    ------------------------
 
-   procedure Emit_Main_Window (Debug      : Boolean;
+   procedure Emit_Main_Window (Use_Debug  : Boolean;
                                Filename   : String;
                                Ada_Path   : String;
                                Glade_Path : String);
-   procedure Emit_Main_Window (Debug      : Boolean;
+   procedure Emit_Main_Window (Use_Debug  : Boolean;
                                Filename   : String;
                                Ada_Path   : String;
                                Glade_Path : String) is
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Main Window...");
+      if Use_Debug then
+         Debug (-1, "Generating Main Window...");
       end if;
       if Main_Window then
          TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
@@ -2517,11 +2518,11 @@ package body W2Gtk2Ada is
    --  Emit Main Program  --
    -------------------------
 
-   procedure Emit_Main_Package (Debug : Boolean; Filename : String);
-   procedure Emit_Main_Package (Debug : Boolean; Filename : String) is
+   procedure Emit_Main_Package (Use_Debug : Boolean; Filename : String);
+   procedure Emit_Main_Package (Use_Debug : Boolean; Filename : String) is
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Main Package...");
+      if Use_Debug then
+         Debug (-1, "Generating Main Package...");
       end if;
       Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
@@ -2534,11 +2535,11 @@ package body W2Gtk2Ada is
    --  Emit Main Program  --
    -------------------------
 
-   procedure Emit_Main_Program (Debug : Boolean; Filename : String);
-   procedure Emit_Main_Program (Debug : Boolean; Filename : String) is
+   procedure Emit_Main_Program (Use_Debug : Boolean; Filename : String);
+   procedure Emit_Main_Program (Use_Debug : Boolean; Filename : String) is
    begin
-      if Debug then
-         TIO.Put_Line (TIO.Standard_Output, "Generating Main Program...");
+      if Use_Debug then
+         Debug (-1, "Generating Main Program...");
       end if;
       TIO.Put_Line ("with Gtk.Main;");
       TIO.Put_Line ("with " & Filename & "_Pkg.Main_Windows;");
@@ -2811,16 +2812,16 @@ package body W2Gtk2Ada is
    --  Perform_Chop  --
    --------------------
 
-   function Perform_Chop (Ada_Path : String;
-                          Filename : String;
-                          Debug    : Boolean) return Integer;
-   function Perform_Chop (Ada_Path : String;
-                          Filename : String;
-                          Debug    : Boolean) return Integer is
+   function Perform_Chop (Ada_Path  : String;
+                          Filename  : String;
+                          Use_Debug : Boolean) return Integer;
+   function Perform_Chop (Ada_Path  : String;
+                          Filename  : String;
+                          Use_Debug : Boolean) return Integer is
       Status : aliased Integer;
       Args   : Argument_List (1 .. 4);
    begin
-      if Debug then
+      if Use_Debug then
          Args (1) := new String'("-v");
       else
          Args (1) := new String'("-q");
@@ -2837,13 +2838,13 @@ package body W2Gtk2Ada is
             Err_To_Out => True);
       begin
          if Output /= "" then
-            TIO.Put_Line (Output);
+            Debug (-1, Output);
          end if;
 
          if Status /= 0 then
-            TIO.Put_Line ("FAILED to execute command: "
-                          & "gnatchop "
-                          & Argument_List_To_String (Args));
+            Debug (-1, "FAILED to execute command: "
+                   & "gnatchop "
+                   & Argument_List_To_String (Args));
          end if;
          Free (Args);
          return Status;
@@ -2855,201 +2856,60 @@ package body W2Gtk2Ada is
       end;
    end Perform_Chop;
 
-   ---------------------
-   --  Perform Patch  --
-   ---------------------
-
-   function Perform_Patch (Ada_Path          : String;
-                           Filename_With_Ext : String;
-                           Debug             : Boolean) return Integer;
-   function Perform_Patch (Ada_Path          : String;
-                           Filename_With_Ext : String;
-                           Debug             : Boolean) return Integer is
-      Status    : aliased Integer;
-      Args      : Argument_List (1 .. 3);
-   begin
-      if Debug then
-         Args (1) := new String'("--verbose");
-      else
-         Args (1) := new String'("-s");
-      end if;
-      Args (2) := new String'(Ada_Path & "/" & Filename_With_Ext);
-      Args (3) := new String'(Args (2).all & ".patch");
-      if Debug then
-         TIO.Put_Line ("patch " & Args (1).all
-                       & " " & Args (2).all
-                       & " " & Args (3).all);
-      end if;
-      declare
-         Output : constant String := Get_Command_Output
-           (Command    => "/usr/bin/patch",
-            Arguments  => Args,
-            Input      => "",
-            Status     => Status'Access,
-            Err_To_Out => True);
-      begin
-         if Status /= 0 then
-            TIO.Put_Line ("FAILED to execute command: "
-                          & "/usr/bin/patch "
-                          & Argument_List_To_String (Args)
-                          & " status " & Img (Status));
-         else
-            if Debug then
-               TIO.Put_Line (Sp (3) & "patched " & Output);
-            end if;
-         end if;
-         Free (Args);
-         return Status;
-      exception
-         when Invalid_Process =>
-            Free (Args);
-            TIO.Put_Line ("FAILED to spawn patch");
-            return -1;
-      end;
-   end Perform_Patch;
-
-   --------------------
-   --  Perform Diff  --
-   --------------------
-
-   function Perform_Diff (Ada_Path          : String;
-                          Filename_With_Ext : String;
-                          Max_Gen           : Integer;
-                          Debug    : Boolean) return Integer;
-   function Perform_Diff (Ada_Path          : String;
-                          Filename_With_Ext : String;
-                          Max_Gen           : Integer;
-                          Debug    : Boolean) return Integer is
-      Status    : aliased Integer;
-      Args      : Argument_List (1 .. 2);
-      PatchFile : TIO.File_Type;
-   begin
-      Args (1) := new String'(Ada_Path & "/" & Filename_With_Ext);
-      Args (2) := new String'(Args (1).all & "~" & Img (Max_Gen));
-      if Debug then
-         TIO.Put_Line ("diff " & Args (1).all & " " & Args (2).all);
-      end if;
-      declare
-         Output : constant String := Get_Command_Output
-           (Command    => "/usr/bin/diff",
-            Arguments  => Args,
-            Input      => "> kaka ",
-            Status     => Status'Access,
-            Err_To_Out => True);
-      begin
-         if Status = 2 then
-            TIO.Put_Line (Sp (3)
-                          & Args (1).all
-                          & ": No previous version");
-         elsif Status /= 0 and Status /= 1 then
-            TIO.Put_Line ("FAILED to execute command: "
-                          & "/usr/bin/diff "
-                          & Argument_List_To_String (Args)
-                          & " status " & Img (Status));
-         else
-            if Output /= "" then
-               TIO.Create (File => PatchFile,
-                           Mode => TIO.Out_File,
-                           Name => Ada_Path & "/"
-                           & Filename_With_Ext & ".patch");
-               TIO.Put (PatchFile, Output);
-               TIO.Close (PatchFile);
-
-               Status := Perform_Patch (Ada_Path, Filename_With_Ext, Debug);
-            else
-               if Debug then
-                  TIO.Put_Line ("  files identical, no patching");
-               end if;
-            end if;
-         end if;
-         Free (Args);
-         return Status;
-      exception
-         when Invalid_Process =>
-            Free (Args);
-            TIO.Put_Line ("FAILED to spawn patch");
-            return -1;
-      end;
-   end Perform_Diff;
-
    ------------------------
    --  Generate Backups  --
    ------------------------
 
-   function Generate_Backups (Ada_Path : String;
+   function Generate_Backups (The_Path : String;
                               Filename : String; --  lower case
                               Debug    : Boolean) return Integer;
-   function Generate_Backups (Ada_Path : String;
+   function Generate_Backups (The_Path : String;
                               Filename : String; --  lower case
                               Debug    : Boolean) return Integer is
-      procedure Get_Max_Gen (Gen_Filename : String);
-      procedure Get_Max_Gen (Gen_Filename : String) is
-         Gen : Integer := Max_Gen - 1;
-      begin
-         loop
-            Gen := Gen + 1;
-            exit when not Exists (Gen_Filename & "~" & Img (Gen));
-         end loop;
-         Max_Gen := Integer'Max (Max_Gen, Gen);
-      end Get_Max_Gen;
-
-      procedure Make_Backup (Complete_Filename : String);
-      procedure Make_Backup (Complete_Filename : String) is
-      begin
-         if Exists (Complete_Filename) then
-            Rename (Complete_Filename,
-                    Complete_Filename & "~" & Img (Max_Gen));
-            if Debug then
-               TIO.Put_Line (Complete_Filename
-                             & " renamed to "
-                             & Complete_Filename & "~" & Img (Max_Gen));
-            end if;
-         end if;
-      end Make_Backup;
-
+      Result : Integer;
    begin
       if Main_Window then
-         Get_Max_Gen (Ada_Path & "/" & Filename & ".gpr");
-         Get_Max_Gen (Ada_Path & "/" & Filename & ".adb");
-         Get_Max_Gen (Ada_Path & "/" & Filename & ".css");
+         Get_Max_Gen (The_Path & "/" & Filename & ".gpr", Max_Gen);
+         Get_Max_Gen (The_Path & "/" & Filename & ".adb", Max_Gen);
+         Get_Max_Gen (The_Path & "/" & Filename & ".css", Max_Gen);
       end if;
-      Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg.ads");
-      Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-main_windows.ads");
-      Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-main_windows.adb");
-      Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-object_collection.ads");
-      Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-object_collection.adb");
+      Get_Max_Gen (The_Path & "/" & Filename & "_pkg.ads", Max_Gen);
+      Get_Max_Gen (The_Path & "/" & Filename & "_pkg-main_windows.ads", Max_Gen);
+      Get_Max_Gen (The_Path & "/" & Filename & "_pkg-main_windows.adb", Max_Gen);
+      Get_Max_Gen (The_Path & "/" & Filename & "_pkg-object_collection.ads", Max_Gen);
+      Get_Max_Gen (The_Path & "/" & Filename & "_pkg-object_collection.adb", Max_Gen);
       if Signals then
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-register_signals.ads");
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-register_signals.adb");
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-signals.ads");
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-signals.adb");
+         Get_Max_Gen (The_Path & "/" & Filename & "_pkg-register_signals.ads", Max_Gen);
+         Get_Max_Gen (The_Path & "/" & Filename & "_pkg-register_signals.adb", Max_Gen);
+         Get_Max_Gen (The_Path & "/" & Filename & "_pkg-signals.ads", Max_Gen);
+         Get_Max_Gen (The_Path & "/" & Filename & "_pkg-signals.adb", Max_Gen);
       end if;
       if Have.TreeStores > 0 or Have.ListStores > 0 then
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-stores_enum.ads");
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-cell_renderers.ads");
-         Get_Max_Gen (Ada_Path & "/" & Filename & "_pkg-cell_renderers.adb");
+         Get_Max_Gen (The_Path & "/" & Filename & "_pkg-stores_enum.ads", Max_Gen);
+         Get_Max_Gen (The_Path & "/" & Filename & "_pkg-cell_renderers.ads", Max_Gen);
+         Get_Max_Gen (The_Path & "/" & Filename & "_pkg-cell_renderers.adb", Max_Gen);
       end if;
 
       if Main_Window then
-         Make_Backup (Ada_Path & "/" & Filename & ".gpr");
-         Make_Backup (Ada_Path & "/" & Filename & ".adb");
-         Make_Backup (Ada_Path & "/" & Filename & ".css");
+         Make_Backup (Result, The_Path & "/" & Filename & ".gpr", Max_Gen, Debug);
+         Make_Backup (Result, The_Path & "/" & Filename & ".adb", Max_Gen, Debug);
+         Make_Backup (Result, The_Path & "/" & Filename & ".css", Max_Gen, Debug);
       end if;
-      Make_Backup (Ada_Path & "/" & Filename & "_pkg.ads");
-      Make_Backup (Ada_Path & "/" & Filename & "_pkg-main_windows.ads");
-      Make_Backup (Ada_Path & "/" & Filename & "_pkg-main_windows.adb");
-      Make_Backup (Ada_Path & "/" & Filename & "_pkg-object_collection.ads");
-      Make_Backup (Ada_Path & "/" & Filename & "_pkg-object_collection.adb");
+      Make_Backup (Result, The_Path & "/" & Filename & "_pkg.ads", Max_Gen, Debug);
+      Make_Backup (Result, The_Path & "/" & Filename & "_pkg-main_windows.ads", Max_Gen, Debug);
+      Make_Backup (Result, The_Path & "/" & Filename & "_pkg-main_windows.adb", Max_Gen, Debug);
+      Make_Backup (Result, The_Path & "/" & Filename & "_pkg-object_collection.ads", Max_Gen, Debug);
+      Make_Backup (Result, The_Path & "/" & Filename & "_pkg-object_collection.adb", Max_Gen, Debug);
       if Signals then
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-register_signals.ads");
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-register_signals.adb");
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-signals.ads");
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-signals.adb");
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-register_signals.ads", Max_Gen, Debug);
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-register_signals.adb", Max_Gen, Debug);
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-signals.ads", Max_Gen, Debug);
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-signals.adb", Max_Gen, Debug);
       end if;
       if Have.TreeStores > 0 or Have.ListStores > 0 then
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-stores_enum.ads");
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-cell_renderers.ads");
-         Make_Backup (Ada_Path & "/" & Filename & "_pkg-cell_renderers.ads");
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-stores_enum.ads", Max_Gen, Debug);
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-cell_renderers.ads", Max_Gen, Debug);
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-cell_renderers.ads", Max_Gen, Debug);
       end if;
       return 0;
    exception
@@ -3065,29 +2925,30 @@ package body W2Gtk2Ada is
    function Generate_Ada_Packages (Ada_Path   : String;
                                    Glade_Path : String;
                                    Filename   : String;
-                                   Debug      : Boolean) return Integer is
+                                   Use_Debug  : Boolean) return Integer is
       Status : Integer;
    begin
       Set_TWin;
       if TWin = null then
-         TIO.Put_Line ("could not find a gtkwindow");
+         Debug (-1, "could not find a gtkwindow");
          return -1;
       end if;
       Set_Signals;
 
-      if Debug then
-         TIO.New_Line;
-         TIO.Put_Line ("Generating Backups...");
+      if Use_Debug then
+         Debug (-1, "");
+         Debug (-1, "Generating Ada backups...");
       end if;
       Status := Generate_Backups (Ada_Path,
-                                  To_Lower (Filename), Debug);
+                                  To_Lower (Filename),
+                                  Use_Debug);
       if Status < 0 then
          return Status;
       end if;
 
-      if Debug then
-         TIO.New_Line;
-         TIO.Put_Line ("Generating Ada files...");
+      if Use_Debug then
+         Debug (-1, "");
+         Debug (-1, "Generating Ada files...");
       end if;
 
       TIO.Create (File => AdaFile,
@@ -3096,119 +2957,119 @@ package body W2Gtk2Ada is
 
       TIO.Set_Output (AdaFile);
       if Main_Window then
-         Emit_Main_Program (Debug, Capitalize (Filename));
+         Emit_Main_Program (Use_Debug, Capitalize (Filename));
       end if;
-      Emit_Main_Package (Debug, Capitalize (Filename));
-      Emit_Main_Window (Debug, Capitalize (Filename), Ada_Path, Glade_Path);
-      Emit_Object_Collection (Debug, Capitalize (Filename));
+      Emit_Main_Package (Use_Debug, Capitalize (Filename));
+      Emit_Main_Window (Use_Debug, Capitalize (Filename), Ada_Path, Glade_Path);
+      Emit_Object_Collection (Use_Debug, Capitalize (Filename));
       if Signals then
-         Emit_Signals (Debug, Capitalize (Filename));
-         Emit_Register_Signals (Debug, Capitalize (Filename));
+         Emit_Signals (Use_Debug, Capitalize (Filename));
+         Emit_Register_Signals (Use_Debug, Capitalize (Filename));
       end if;
       if Have.TreeStores > 0 or Have.ListStores > 0 then
-         Emit_Stores_Enum (Debug, Capitalize (Filename));
-         Emit_Cell_Renderers (Debug, Capitalize (Filename));
+         Emit_Stores_Enum (Use_Debug, Capitalize (Filename));
+         Emit_Cell_Renderers (Use_Debug, Capitalize (Filename));
       end if;
       TIO.Set_Output (TIO.Standard_Output);
 
       TIO.Close (AdaFile);
 
       if Main_Window then
-         if Debug then
-            TIO.Put_Line ("Generating gpr...");
+         if Use_Debug then
+            Debug (-1, "Generating gpr...");
          end if;
-         Status := Emit_GPR (Ada_Path, To_Lower (Filename), Debug);
+         Status := Emit_GPR (Ada_Path, To_Lower (Filename), Use_Debug);
          if Status = 0 then
-            if Debug then
-               TIO.Put_Line ("Generating css...");
+            if Use_Debug then
+               Debug (-1, "Generating css...");
             end if;
-            Status := Emit_CSS (Ada_Path, To_Lower (Filename), Debug);
+            Status := Emit_CSS (Ada_Path, To_Lower (Filename), Use_Debug);
          end if;
       else
          Status := 0;
       end if;
 
       if Status = 0 then
-         Status := Perform_Chop (Ada_Path, Filename, Debug);
+         Status := Perform_Chop (Ada_Path, Filename, Use_Debug);
          if Status = 0 then
             Delete_File (Ada_Path & "/" & Filename & ".TempAda");
-            if Debug then
-               TIO.Put_Line ("Deleting "
-                             & Ada_Path & "/" & Filename & ".TempAda");
+            if Use_Debug then
+               Debug (-1, "Deleting "
+                      & Ada_Path & "/" & Filename & ".TempAda");
             end if;
 
             if Main_Window then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & ".gpr",
-                                       Max_Gen, Debug);
+                                       Max_Gen, Use_Debug);
                if Status = 0 or Status = 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & ".adb",
-                                          Max_Gen, Debug);
+                                          Max_Gen, Use_Debug);
                end if;
                if Status = 0 or Status = 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & ".css",
-                                          Max_Gen, Debug);
+                                          Max_Gen, Use_Debug);
                end if;
             end if;
             if Status = 0 or Status = 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg.ads",
-                                       Max_Gen, Debug);
+                                       Max_Gen, Use_Debug);
             end if;
             if Status = 0 or Status = 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-main_windows.ads",
-                                       Max_Gen, Debug);
+                                       Max_Gen, Use_Debug);
             end if;
             if Status = 0 or Status = 2 then
                Status := Perform_Diff (Ada_Path,
                                        Filename
                                        & "_pkg-main_windows.adb",
-                                       Max_Gen, Debug);
+                                       Max_Gen, Use_Debug);
             end if;
             if Status = 0 or Status = 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-object_collection.ads",
-                                       Max_Gen, Debug);
+                                       Max_Gen, Use_Debug);
             end if;
             if Status = 0 or Status = 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-object_collection.adb",
-                                       Max_Gen, Debug);
+                                       Max_Gen, Use_Debug);
             end if;
             if Signals then
                if Status = 0 or Status = 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-register_signals.ads",
-                                          Max_Gen, Debug);
+                                          Max_Gen, Use_Debug);
                end if;
                if Status = 0 or Status = 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-register_signals.adb",
-                                          Max_Gen, Debug);
+                                          Max_Gen, Use_Debug);
                end if;
                if Status = 0 or Status = 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-signals.ads",
-                                          Max_Gen, Debug);
+                                          Max_Gen, Use_Debug);
                end if;
                if Status = 0 or Status = 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-signals.adb",
-                                          Max_Gen, Debug);
+                                          Max_Gen, Use_Debug);
                end if;
             end if;
             if Status = 0 or Status = 2 then
@@ -3216,26 +3077,26 @@ package body W2Gtk2Ada is
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-stores_enum.ads",
-                                          Max_Gen, Debug);
+                                          Max_Gen, Use_Debug);
                   if Status = 0 then
                      Status := Perform_Diff (Ada_Path,
                                              To_Lower (Filename)
                                              & "_pkg-cell_renderers.ads",
-                                             Max_Gen, Debug);
+                                             Max_Gen, Use_Debug);
                   end if;
                   if Status = 0 then
                      Status := Perform_Diff (Ada_Path,
                                              To_Lower (Filename)
                                              & "_pkg-cell_renderers.adb",
-                                             Max_Gen, Debug);
+                                             Max_Gen, Use_Debug);
                   end if;
                end if;
             end if;
          end if;
       end if;
 
-      if Debug then
-         TIO.Put_Line ("=== End of Process ===");
+      if Use_Debug then
+         Debug (-1, "=== End of Process ===");
       end if;
 
       return Status;

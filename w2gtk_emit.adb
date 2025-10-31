@@ -3676,6 +3676,9 @@ package body W2gtk_Emit is
       else
          Emit_Object (null, Id, "GtkWindow", "");
       end if;
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Name (TWin, Id + 2);
+      end if;
       if TWin.ToolTip /= null and then TWin.ToolTip.all /= "" then
          Emit_Line (Sp (Id + 2) & "<property name=""tooltip-text2"" "
                     & "translatable"
@@ -3690,9 +3693,6 @@ package body W2gtk_Emit is
          Emit_Line (Sp (Id + 2) & "<property name=""title"""
                     & " translatable=""yes"">"
                     & TWin.Name.all & "</property>");
-      end if;
-      if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Name (TWin, Id + 2);
       end if;
       Emit_Property (Id + 2, "resizable", TWin.Resizable);
       Emit_Property (Id + 2, "modal", TWin.Modal);
@@ -3716,7 +3716,8 @@ package body W2gtk_Emit is
       if TWin.Is_Dialog then
          Emit_GtkDialog (TWin, Id);
       else
-         Emit_Main_GtkWindow (TWin, Id + 2);
+         Emit_Main_GtkWindow (TWin, Id);
+         --  Emit_Main_GtkWindow (TWin, Id + 2);
       end if;
    end Emit_GtkWindow;
 
