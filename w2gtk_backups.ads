@@ -18,8 +18,7 @@ package W2gtk_Backups is
 
    function Perform_Diff (The_Path          : String;
                           Filename_With_Ext : String;
-                          Max_Gen           : Integer;
-                          Use_Debug         : Boolean) return Integer;
+                          Max_Gen           : Integer) return Integer;
 
    procedure Get_Max_Gen (Gen_Filename : String;
                           The_Max_Gen  : in out Integer);
@@ -27,5 +26,5 @@ package W2gtk_Backups is
    procedure Make_Backup (Result            : out Integer;
                           Complete_Filename : String;
                           Max_Gen           : Integer;
-                          Use_Debug         : Boolean);
+                          Use_Log           : Boolean := True);
 end W2gtk_Backups;

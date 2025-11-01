@@ -16,12 +16,14 @@
 ------------------------------------------------------------------------------
 package W2gtk_Pkg is
 
-   function Parse_VS_File (Use_Debug      : Boolean;
+   function Parse_VS_File (Log_Switch     : Boolean;
                            Do_Dump        : Boolean;
+                           Glade_Switch   : Boolean;
                            Resx_Path      : String;
                            Resx_File_Name : String;
                            Glade_Path     : String;
-                           Icon_Path      : String) return Integer;
+                           Icon_Path      : String;
+                           Ada_Path       : String) return Integer;
 
    function Generate_Glade_File (Glade_Path      : String;
                                  Glade_File_Name : String) return Integer;

@@ -31,26 +31,19 @@ package body W2gtk_Backups is
    ---------------------
 
    function Perform_Patch (The_Path          : String;
-                           Filename_With_Ext : String;
-                           Use_Debug         : Boolean) return Integer;
+                           Filename_With_Ext : String) return Integer;
    function Perform_Patch (The_Path          : String;
-                           Filename_With_Ext : String;
-                           Use_Debug         : Boolean) return Integer is
+                           Filename_With_Ext : String) return Integer is
       Status    : aliased Integer;
       Args      : Argument_List (1 .. 3);
    begin
-      if Use_Debug then
-         Args (1) := new String'("--verbose");
-      else
-         Args (1) := new String'("-s");
-      end if;
+      Args (1) := new String'("--verbose");
+      --  Args (1) := new String'("-s");
       Args (2) := new String'(The_Path & "/" & Filename_With_Ext);
       Args (3) := new String'(Args (2).all & ".patch");
-      if Use_Debug then
          Debug (-1, "patch " & Args (1).all
                 & " " & Args (2).all
                 & " " & Args (3).all);
-      end if;
       declare
          Output : constant String := Get_Command_Output
            (Command    => "/usr/bin/patch",
@@ -65,9 +58,7 @@ package body W2gtk_Backups is
                    & Argument_List_To_String (Args)
                    & " status " & Img (Status));
          else
-            if Use_Debug then
-               Debug (-1, Sp (3) & "patched " & Output);
-            end if;
+            Debug (-1, Sp (3) & "patched " & Output);
          end if;
          Free (Args);
          return Status;
@@ -85,17 +76,14 @@ package body W2gtk_Backups is
 
    function Perform_Diff (The_Path          : String;
                           Filename_With_Ext : String;
-                          Max_Gen           : Integer;
-                          Use_Debug         : Boolean) return Integer is
+                          Max_Gen           : Integer) return Integer is
       Status    : aliased Integer;
       Args      : Argument_List (1 .. 2);
       PatchFile : TIO.File_Type;
    begin
       Args (1) := new String'(The_Path & "/" & Filename_With_Ext);
       Args (2) := new String'(Args (1).all & "~" & Img (Max_Gen));
-      if Use_Debug then
-         Debug (-1, "diff " & Args (1).all & " " & Args (2).all);
-      end if;
+      Debug (-1, "diff " & Args (1).all & " " & Args (2).all);
       declare
          Output : constant String := Get_Command_Output
            (Command    => "/usr/bin/diff",
@@ -122,11 +110,9 @@ package body W2gtk_Backups is
                TIO.Put (PatchFile, Output);
                TIO.Close (PatchFile);
 
-               Status := Perform_Patch (The_Path, Filename_With_Ext, Use_Debug);
+               Status := Perform_Patch (The_Path, Filename_With_Ext);
             else
-               if Use_Debug then
-                  Debug (-1, "  files identical, no patching");
-               end if;
+               Debug (-1, "  files identical, no patching");
             end if;
          end if;
          Free (Args);
@@ -161,12 +147,12 @@ package body W2gtk_Backups is
    procedure Make_Backup (Result            : out Integer;
                           Complete_Filename : String;
                           Max_Gen           : Integer;
-                          Use_Debug         : Boolean) is
+                          Use_Log           : Boolean := True) is
    begin
       if Exists (Complete_Filename) then
          Rename (Complete_Filename,
                  Complete_Filename & "~" & Img (Max_Gen));
-         if Use_Debug then
+         if Use_Log then
             Debug (-1, Complete_Filename
                    & " renamed to "
                    & Complete_Filename & "~" & Img (Max_Gen));

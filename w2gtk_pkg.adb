@@ -5066,17 +5066,17 @@ package body W2gtk_Pkg is
 
    -------------------------------------------------------------------------
    procedure Generate_Backup (Result    : out Integer;
-                             The_Path  : String;
-                             Filename  : String; --  lower case
-                             Use_Debug : Boolean);
+                              The_Path  : String;
+                              Filename  : String;
+                              Use_Log   : Boolean := True);
    procedure Generate_Backup (Result    : out Integer;
-                             The_Path  : String;
-                             Filename  : String; --  lower case
-                             Use_Debug : Boolean) is
+                              The_Path  : String;
+                              Filename  : String;
+                              Use_Log   : Boolean := True) is
 
    begin
       Get_Max_Gen (The_Path & "/" & Filename, Max_Gen);
-      Make_Backup (Result, The_Path & "/" & Filename, Max_Gen, Use_Debug);
+      Make_Backup (Result, The_Path & "/" & Filename, Max_Gen, Use_Log);
    exception
       when others =>
          Debug (-1, "Could not generate backup for " & Filename);
@@ -5084,25 +5084,38 @@ package body W2gtk_Pkg is
    end Generate_Backup;
 
    -------------------------------------------------------------------------
-   function Parse_VS_File (Use_Debug      : Boolean;
+   function Parse_VS_File (Log_Switch     : Boolean;
                            Do_Dump        : Boolean;
+                           Glade_Switch   : Boolean;
                            Resx_Path      : String;
                            Resx_File_Name : String;
                            Glade_Path     : String;
-                           Icon_Path      : String) return Integer is
+                           Icon_Path      : String;
+                           Ada_Path       : String) return Integer is
       Result : Integer;
    begin
-      W2gtk_Decls.Use_Debug := Use_Debug;
+      W2gtk_Decls.Log := Log_Switch;
 
-      if Use_Debug then
+      if Log_Switch then
          Generate_Backup (Result,
                           Glade_Path,
                           Resx_File_Name & ".log",
-                          False);
+                          Use_Log => False);
          TIO.Create (File => Log_File,
                      Mode => TIO.Out_File,
                      Name => Glade_Path & "/" & Resx_File_Name & ".log");
-         Debug (-1, "Generating log backup");
+         Debug (-1, "w2gtk -log"
+                & (if Do_Dump then " -dump " else "")
+                & (if Glade_Switch then " -glade " else "")
+                & " -rp " & Resx_Path
+                & " -rf " & Resx_File_Name
+                & " -gp " & Glade_Path
+                & " -ip " & Icon_Path
+                & " -ap " & Ada_Path);
+         Debug (-1, "");
+         Debug (-1, "Processing " & Resx_Path & Resx_File_Name);
+         Debug (-1, "");
+         Debug (-1, "Generated log backup");
          Debug (-1, Glade_Path & "/" & Resx_File_Name & ".log"
                    & " renamed to "
                 & Glade_Path & "/" & Resx_File_Name & ".log" & "~" & Img (Max_Gen));
@@ -5139,10 +5152,9 @@ package body W2gtk_Pkg is
 
       if Do_Dump then
          Debug (-1, "");
-         Debug (-1, "Generating dump backup");
+         Debug (-1, "Generating Dump backup");
          Generate_Backup (Result, Glade_Path,
-                          Resx_File_Name & ".dump",
-                          True);
+                          Resx_File_Name & ".dump");
          if Result < 0 then
             return Result;
          end if;
@@ -5195,6 +5207,7 @@ package body W2gtk_Pkg is
       Emit_GtkTrailer (null, 0);
 
       TIO.Close (GFile);
+      Debug (-1, "End of generating Glade");
       return 0;
    end Generate_Glade_File;
 

@@ -32,7 +32,7 @@ procedure W2gtk is
    Glade_Path      : String_Access;
    Glade_File_Name : String_Access;
    Result          : Integer;
-   Debug           : Boolean := False;
+   Log             : Boolean := False;
    Dump            : Boolean := False;
    Glade           : Boolean := False;
 
@@ -93,7 +93,7 @@ begin
             end if;
          when 'l' =>
             if Full_Switch = "log" then
-               Debug := True;
+               Log := True;
             end if;
          when 'i' =>
             if Full_Switch = "ip" then
@@ -125,7 +125,7 @@ begin
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
    if Dump and then not Glade then
-      TIO.Put_Line ("Wrong options: missing glade options");
+      TIO.Put_Line ("Wrong options: missing -glade");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
    if Glade then
@@ -139,12 +139,14 @@ begin
       end if;
    end if;
 
-   Result := Parse_VS_File (Debug,
+   Result := Parse_VS_File (Log,
                             Dump,
+                            Glade,
                             Resx_Path.all,
                             Resx_File_Name.all,
                             Glade_Path.all,
-                            Icon_Path.all);
+                            Icon_Path.all,
+                            Ada_Path.all);
 
    if Result < 0 then
       TIO.Put_Line ("Aborting...");
@@ -160,8 +162,7 @@ begin
    if Result >= 0 and then Ada_Path /= null and then Ada_Path.all /= "" then
       Result := Generate_Ada_Packages (Ada_Path   => Ada_Path.all,
                                        Glade_Path => Glade_Path.all,
-                                       Filename   => Glade_File_Name.all,
-                                       Use_Debug      => Debug);
+                                       Filename   => Glade_File_Name.all);
    end if;
 
    Free (Ada_Path);

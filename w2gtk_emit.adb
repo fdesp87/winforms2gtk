@@ -14,6 +14,8 @@
 -- with this program; see the file COPYING3.                               --
 -- If not, see <http://www.gnu.org/licenses/>.                             --
 ------------------------------------------------------------------------------
+with Ada.Text_IO;
+
 with Ada.Strings;
 with Ada.Strings.Fixed;     use Ada.Strings.Fixed;
 with GNAT.Strings;          use GNAT.Strings;
@@ -21,6 +23,7 @@ with GNAT.Calendar.Time_IO;
 with Symbol_Tables;         use Symbol_Tables;
 
 package body W2gtk_Emit is
+   package TIO renames Ada.Text_IO;
 
    -------------------
    --  widget specs --
@@ -382,6 +385,7 @@ package body W2gtk_Emit is
          else
             Emit_Line (Sp (Id) & "<object class=""" & Wdg & """>");
          end if;
+         Debug (-1, Sp (Id) & Wdg & " " & WId);
       end Emit_Object;
 
       procedure Emit_Name (TWin : Window_Pointer; Id : Integer) is
@@ -1276,7 +1280,11 @@ package body W2gtk_Emit is
       Child : Widget_Pointer;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkMenuBar", TWdg.Name.all);
+      if TWdg.Name /= null and then TWdg.Name.all /= "" then
+         Emit_Object (TWdg, Id + 2, "GtkMenuBar", TWdg.Name.all);
+      else
+         Emit_Object (TWdg, Id + 2, "GtkMenuBar", "");
+      end if;
       Emit_Name (TWdg, Id + 4);
       if Pos = -1 then
          Emit_WH_Request (TWdg, Id + 4);
@@ -2256,7 +2264,7 @@ package body W2gtk_Emit is
          Emit_Entry (TWdg, Id + 4, 1, 20, 2, "01", "_Month");
          Emit_Entry (TWdg, Id + 4, 2, 20, 2, "01", "_Day");
          if TWdg.ShowUpDown then
-            Emit_Button (TWdg, Id + 3, Pos => 4);
+            Emit_Button (TWdg, Id + 4, Pos => 4);
          end if;
 
          Emit_Line (Sp (Id + 2) & "</object>");
@@ -2594,7 +2602,11 @@ package body W2gtk_Emit is
       Child : Widget_Pointer;
    begin
       Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all);
+      if TWdg.Name /= null and then TWdg.Name.all /= "" then
+         Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all);
+      else
+         Emit_Object (TWdg, Id + 2, "GtkBox", "");
+      end if;
       Emit_Name (TWdg, Id + 4);
       if Pos = -1 then
          Emit_WH_Request (TWdg, Id + 4);
@@ -3095,7 +3107,11 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkModelFilter (TWin : Window_Pointer; Id : Integer) is
    begin
-      Emit_Object (null, Id, "GtkTreeModelFilter", TWin.Name.all);
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Object (null, Id, "GtkTreeModelFilter", TWin.Name.all);
+      else
+         Emit_Object (null, Id, "GtkTreeModelFilter", "");
+      end if;
       Emit_Property (Id + 2, "child-model", TWin.Underlying_Model.Name.all);
       Emit_Line (Sp (Id) & "</object>");
    exception
@@ -3110,7 +3126,11 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkModelSort (TWin : Window_Pointer; Id : Integer) is
    begin
-      Emit_Object (null, Id, "GtkTreeModelSort", TWin.Name.all);
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Object (null, Id, "GtkTreeModelSort", TWin.Name.all);
+      else
+         Emit_Object (null, Id, "GtkTreeModelSort", "");
+      end if;
       Emit_Property (Id + 2, "model", TWin.Underlying_Model.Name.all);
       Emit_Line (Sp (Id) & "</object>");
    exception
@@ -3125,7 +3145,11 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkTreeStore (TWin : Window_Pointer; Id : Integer) is
    begin
-      Emit_Object (null, Id, "GtkTreeStore", TWin.Name.all);
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Object (null, Id, "GtkTreeStore", TWin.Name.all);
+      else
+         Emit_Object (null, Id, "GtkTreeStore", "");
+      end if;
       Emit_Store (TWin, Id);
       Emit_Line (Sp (Id) & "</object>");
    exception
@@ -3145,7 +3169,11 @@ package body W2gtk_Emit is
       then
          Emit_GtkTreeStore (TWin, Id);
       else
-         Emit_Object (null, Id, "GtkListStore", TWin.Name.all);
+         if TWin.Name /= null and then TWin.Name.all /= "" then
+            Emit_Object (null, Id, "GtkListStore", TWin.Name.all);
+         else
+            Emit_Object (null, Id, "GtkListStore", "");
+         end if;
          Emit_Store (TWin, Id);
          Emit_Line (Sp (Id) & "</object>");
       end if;
@@ -3162,7 +3190,11 @@ package body W2gtk_Emit is
    procedure Emit_GtkImage (TWin : Window_Pointer;
                             Id   : Integer) is
    begin
-      Emit_Object (null, Id, "GtkImage", TWin.Name.all);
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Object (null, Id, "GtkImage", TWin.Name.all);
+      else
+         Emit_Object (null, Id, "GtkImage", "");
+      end if;
       Emit_Name (TWin, Id + 2);
       Emit_Visible_And_Focus (TWin, Id, False);
       case TWin.Associated_Widget.Widget_Type is
@@ -3197,7 +3229,11 @@ package body W2gtk_Emit is
       use GNAT.Calendar.Time_IO;
       TWdg : constant Widget_Pointer := TWin.Associated_Widget;
    begin
-      Emit_Object (null, Id, "GtkEntryBuffer", TWin.Name.all);
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Object (null, Id, "GtkEntryBuffer", TWin.Name.all);
+      else
+         Emit_Object (null, Id, "GtkEntryBuffer", "");
+      end if;
       case TWdg.Widget_Type is
          when GtkCalendar =>
             Emit_Property (Id + 2, "text",
@@ -3221,7 +3257,11 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkFileChooserDialog (TWin : Window_Pointer; Id : Integer) is
    begin
-      Emit_Object (null, Id, "GtkFileChooserDialog", TWin.Name.all);
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Object (null, Id, "GtkFileChooserDialog", TWin.Name.all);
+      else
+         Emit_Object (null, Id, "GtkFileChooserDialog", "");
+      end if;
       Emit_Line (Sp (Id + 2) & "<property name=""can-focus"">False"
                  & "</property>");
       Emit_Line (Sp (Id + 2) & "<property name=""title"" translatable=""yes"">"
@@ -3284,7 +3324,11 @@ package body W2gtk_Emit is
       end Emit_Pattern;
 
    begin
-      Emit_Object (null, Id, "GtkFileFilter", TWin.Name.all);
+      if TWin.Name /= null and then TWin.Name.all /= "" then
+         Emit_Object (null, Id, "GtkFileFilter", TWin.Name.all);
+      else
+         Emit_Object (null, Id, "GtkFileFilter", "");
+      end if;
       Emit_Line (Sp (Id + 2) & "<patterns>");
       if TWin.FilterString /= null and then TWin.FilterString.all /= "" then
          declare
@@ -3461,11 +3505,9 @@ package body W2gtk_Emit is
    begin
       if TWin.Name /= null and then TWin.Name.all /= "" then
          Emit_Object (null, Id, "GtkDialog", TWin.Name.all);
+         Emit_Name (TWin, Id + 2);
       else
          Emit_Object (null, Id, "GtkDialog", "");
-      end if;
-      if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Name (TWin, Id + 2);
       end if;
       Emit_Property (Id + 2, "can-focus", False);
       if TWin.Title /= null and then TWin.Title.all /= "" then
@@ -3500,12 +3542,14 @@ package body W2gtk_Emit is
       end if;
 
       Emit_Line (Sp (Id + 2) & "<child internal-child=""vbox"">");
+      Debug (-1, Sp (Id + 2) & "internal-child=""vbox""");
       Emit_Object (null, Id + 4, "GtkBox", "");
       Emit_Property (Id + 6, "can-focus", False);
       Emit_Property (Id + 6, "orientation", "vertical");
       if Spacing > 0 then
          Emit_Property (Id + 6, "spacing", Spacing);
          Emit_Line (Sp (Id + 6) & "<child internal-child=""action_area"">");
+         Debug (-1, Sp (Id + 6) & "internal-child=""action_area""");
          Emit_Object (null, Id + 8, "GtkButtonBox", "");
          Emit_Property (Id + 10, "can-focus", False);
          Emit_Line (Sp (Id + 10) & "<property name=""layout-style"">"
@@ -3541,12 +3585,14 @@ package body W2gtk_Emit is
 
       if Spacing > 0 then
          Emit_Line (Sp (Id + 2) & "<action-widgets>");
+         Debug (-1, Sp (Id + 2) & "action-widgets");
          if TWin.Cancel_Button /= null then
             Emit_Line (Sp (Id + 4) & "<action-widget response="""
                        & To_Gtk (TWin.Cancel_Button.Dialog_Result)
                        & """>"
                        & TWin.Cancel_Button.Name.all
                        & "</action-widget>");
+            Debug (-1, Sp (Id + 4) & "action-widget response for Cancel_Button");
          end if;
          if TWin.Accept_Button /= null then
             Emit_Line (Sp (Id + 4) & "<action-widget response="""
@@ -3554,6 +3600,7 @@ package body W2gtk_Emit is
                        & """>"
                        & TWin.Accept_Button.Name.all
                        & "</action-widget>");
+            Debug (-1, Sp (Id + 4) & "action-widget response for Accept_Button");
          end if;
          Emit_Line (Sp (Id + 2) & "</action-widgets>");
       end if;
@@ -3717,7 +3764,6 @@ package body W2gtk_Emit is
          Emit_GtkDialog (TWin, Id);
       else
          Emit_Main_GtkWindow (TWin, Id);
-         --  Emit_Main_GtkWindow (TWin, Id + 2);
       end if;
    end Emit_GtkWindow;
 

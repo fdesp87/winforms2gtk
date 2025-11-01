@@ -14,11 +14,9 @@
 -- with this program; see the file COPYING3.                               --
 -- If not, see <http://www.gnu.org/licenses/>.                             --
 ------------------------------------------------------------------------------
-with Ada.Text_IO;
 with W2gtk_Decls; use W2gtk_Decls;
 
 package W2gtk_Emit is
-   package TIO renames Ada.Text_IO;
 
    procedure Emit_GtkHeader (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkWindow (TWin : Window_Pointer; Id : Integer);

@@ -18,7 +18,6 @@ package W2Gtk2Ada is
 
    function Generate_Ada_Packages (Ada_Path   : String;
                                    Glade_Path : String;
-                                   Filename   : String;
-                                   Use_Debug      : Boolean) return Integer;
+                                   Filename   : String) return Integer;
 
 end W2Gtk2Ada;

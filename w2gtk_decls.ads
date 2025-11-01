@@ -816,7 +816,7 @@ package W2gtk_Decls is
    VFile : TIO.File_Type; --  visual basic (in)
    GFile : TIO.File_Type; --  glade        (out)
    LFile : TIO.File_Type; --  dump         (out)
-   Use_Debug : Boolean := True;
+   Log   : Boolean := True;
    Log_File  : TIO.File_Type;
 
    Line   : String (1 .. 1024);
