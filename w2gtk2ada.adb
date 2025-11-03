@@ -1059,6 +1059,9 @@ package body W2Gtk2Ada is
       Temp_Win : Window_Pointer;
    begin
       Debug (-1, "Generating Signals...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       Emit_With_Use ("Gtkada.Builder");
       Emit_With_Use ("Glib.Object");
       TIO.New_Line;
@@ -1071,6 +1074,9 @@ package body W2Gtk2Ada is
       For_Each_Widget (Win_List, Emit_Signal_Specs'Access);
       TIO.Put_Line ("end " & Filename & "_Pkg.Signals;");
 
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       if With_Form_Closing and then Main_Window then
          TIO.Put_Line ("with Gtk.Main;");
       else
@@ -1197,6 +1203,9 @@ package body W2Gtk2Ada is
       Temp_Win : Window_Pointer;
    begin
       Debug (-1, "Generating Register of Signals...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg.Register_Signals is");
@@ -1204,6 +1213,9 @@ package body W2Gtk2Ada is
                     & " (Builder : Gtkada.Builder.Gtkada_Builder);");
       TIO.Put_Line ("end " & Filename & "_Pkg.Register_Signals;");
 
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       Emit_With_Use (Filename & "_Pkg.Signals");
       TIO.New_Line;
       TIO.Put_Line ("package body " & Filename & "_Pkg.Register_Signals is");
@@ -1713,6 +1725,9 @@ package body W2Gtk2Ada is
       Temp_Win : Window_Pointer := Win_List;
    begin
       Debug (-1, "Generating Object Collection...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       if Main_Window then
          Emit_With_Use ("Gtk.Window");
       else
@@ -1876,6 +1891,9 @@ package body W2Gtk2Ada is
       TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
 
       ------------------ body --------------------
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       if Have.TreeViews > 0
         and then Have.HDR_CellRenderers > 0
         and then Have.TreeViewColumns + Have.TreeViewToggles > 0
@@ -2064,6 +2082,9 @@ package body W2Gtk2Ada is
       TWdg     : Widget_Pointer;
    begin
       Debug (-1, "Generating Stores Enum...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       Emit_With_Use ("Glib");
       TIO.Put_Line ("package " & Filename & "_Pkg.Stores_Enum is");
       while Temp_Win /= null loop
@@ -2133,10 +2154,16 @@ package body W2Gtk2Ada is
    procedure Emit_Cell_Renderers (Filename : String) is
    begin
       Debug (-1, "Generating Cell Renderers...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg.Cell_Renderers is");
       TIO.Put_Line (Sp (3) & "procedure Initialize;");
       TIO.Put_Line ("end " & Filename & "_Pkg.Cell_Renderers;");
 
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       Emit_With_Use (Filename & "_Pkg.Object_Collection");
       Emit_With_Use ("Gtk.Cell_Renderer");
       Emit_With_Use ("Gtk.Cell_Renderer_Text");
@@ -2356,18 +2383,25 @@ package body W2Gtk2Ada is
                                Glade_Path : String) is
    begin
       Debug (-1, "Generating Main Window...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       if Main_Window then
          TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
          TIO.Put_Line (Sp (3) & "procedure Initialize;");
          TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
       else
          Emit_With_Use ("Gtk.Window");
+         TIO.New_Line;
          TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
          TIO.Put_Line (Sp (3) & "procedure Initialize "
                        & "(Parent : access Gtk_Window_Record'Class);");
          TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
       end if;
 
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       Emit_With_Use (Filename & "_Pkg.Object_Collection");
       if Signals then
          Emit_With_Use (Filename & "_Pkg.Register_Signals");
@@ -2508,6 +2542,9 @@ package body W2Gtk2Ada is
    procedure Emit_Main_Package (Filename : String) is
    begin
       Debug (-1, "Generating Main Package...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       Emit_With_Use ("Gtkada.Builder");
       TIO.New_Line;
       TIO.Put_Line ("package " & Filename & "_Pkg is");
@@ -2523,6 +2560,9 @@ package body W2Gtk2Ada is
    procedure Emit_Main_Program (Filename : String) is
    begin
       Debug (-1, "Generating Main Program...");
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       TIO.Put_Line ("with Gtk.Main;");
       TIO.Put_Line ("with " & Filename & "_Pkg.Main_Windows;");
       TIO.Put_Line ("procedure " & Filename & " is");
@@ -2547,6 +2587,9 @@ package body W2Gtk2Ada is
                   Mode => TIO.Out_File,
                   Name => Ada_Path & "/" & Filename & ".gpr");
 
+      TIO.New_Line;
+      TIO.Put_Line ("--  generated with w2gtk " & Version);
+      TIO.New_Line;
       TIO.Put_Line (GPRFile, "with ""gnatcoll_core"";");
       TIO.Put_Line (GPRFile, "with ""gtkada"";");
       TIO.Put_Line (GPRFile, "project "
@@ -2654,6 +2697,9 @@ package body W2Gtk2Ada is
                   Mode => TIO.Out_File,
                   Name => Ada_Path & "/" & Filename & ".css");
 
+      TIO.New_Line;
+      TIO.Put_Line ("/*  generated with w2gtk " & Version & " */");
+      TIO.New_Line;
       TIO.Put_Line (CSSFile, "/* Colors */");
       TIO.Put_Line (CSSFile, "");
       TIO.Put_Line (CSSFile, "@define-color bg_all        #CECECE;"
@@ -3058,9 +3104,6 @@ package body W2Gtk2Ada is
          end if;
       end if;
       Debug (-1, "End of Obtaining patches");
-
-      Debug (-1, "");
-      Debug (-1, "=== End of Process ===");
       return Status;
    end Generate_Ada_Packages;
 

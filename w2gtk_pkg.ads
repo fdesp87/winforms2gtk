@@ -16,7 +16,8 @@
 ------------------------------------------------------------------------------
 package W2gtk_Pkg is
 
-   function Parse_VS_File (Log_Switch     : Boolean;
+   function Parse_VS_File (Ada_Switch     : Boolean;
+                           Log_Switch     : Boolean;
                            Do_Dump        : Boolean;
                            Glade_Switch   : Boolean;
                            Resx_Path      : String;
@@ -25,6 +26,6 @@ package W2gtk_Pkg is
                            Icon_Path      : String;
                            Ada_Path       : String) return Integer;
 
-   function Generate_Glade_File (Glade_Path      : String;
-                                 Glade_File_Name : String) return Integer;
+   function Generate_Glade_File (Glade_Path : String;
+                                 FileName   : String) return Integer;
 end W2gtk_Pkg;

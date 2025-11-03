@@ -71,14 +71,15 @@ package body W2gtk_Decls is
       end if;
    end Img;
 
-   function Img (X : Float) return String is
-      Z : constant String := X'Image;
+   function Img (X : Float; Exp : Integer) return String is
+      Str : String (1 .. 20) := (others => ' ');
+      I   : constant Integer := Integer (X);
    begin
-      if X >= 0.0 then
-         return Z (Z'First + 1 .. Z'Last);
-      else
-         return Z;
+      if Float (I) = X then
+         return Img (I);
       end if;
+      FTIO.Put (Str, X, Aft => 0, Exp => Exp);
+      return Ada.Strings.Fixed.Trim (Str, Ada.Strings.Both);
    end Img;
 
    -------------
@@ -887,40 +888,98 @@ package body W2gtk_Decls is
    -------------------
    -- Insert_Signal --
    -------------------
-   --  insert by the front
-
-   procedure Insert_Signal (TWin : Window_Pointer;
-                            TS   : Signal_Pointer) is
+   --  ensure no duplicated Ada signal handlers
+   procedure Check_No_Duplicates (TS : Signal_Pointer);
+   procedure Check_No_Duplicates (TS : Signal_Pointer) is
+      B : Boolean;
    begin
-      if TWin.Signal_List = null then
-         TS.Next := null;
-         TWin.Signal_List := TS;
-      else
-         TS.Next := TWin.Signal_List;
-         TWin.Signal_List := TS;
-      end if;
-   end Insert_Signal;
-
-   procedure Insert_Signal (TWdg : Widget_Pointer;
-                            TS   : Signal_Pointer) is
-      Temp : Boolean;
-   begin
-      if TWdg.Signal_List = null then
-         TS.Next := null;
-         TWdg.Signal_List := TS;
-      else
-         TS.Next := TWdg.Signal_List;
-         TWdg.Signal_List := TS;
-      end if;
-      --  ensure no duplicated Ada signal handlers
-      Temp := Symbol_Tables.Insert_In_Handler_Map (TS);
-      if not Temp then
+      B := Symbol_Tables.Insert_In_Handler_Map (TS);
+      if not B then
          TS.GAda  := False;
          TS.Glade := False;
          Debug (0, "Warning"
                 & ": repeated handler " & TS.Handler.all
                 & ": No Glade, No Ada will be generated for this signal");
       end if;
+   end Check_No_Duplicates;
+
+   --  insert in alphabetic order
+   procedure Insert_Signal (TWin : Window_Pointer;
+                            TS   : Signal_Pointer) is
+      Temp, Temp_Prev : Signal_Pointer;
+   begin
+      TS.GtkName := new String '(Symbol_Tables.Convert_Signal_To_Gtk (TWin, TS));
+      if TWin.Signal_List = null then
+         --  insert by the front
+         TS.Next := null;
+         TWin.Signal_List := TS;
+         Check_No_Duplicates (TS);
+         return;
+      end if;
+
+      if TS.GtkName.all <= TWin.Signal_List.GtkName.all then
+         --  insert by the front
+         TS.Next := TWin.Signal_List;
+         TWin.Signal_List := TS;
+         Check_No_Duplicates (TS);
+         return;
+      end if;
+
+      Temp_Prev := TWin.Signal_List;
+      Temp      := Temp_Prev.Next;
+      while Temp /= null loop
+         if TS.GtkName.all <= Temp.GtkName.all then
+            TS.Next := Temp;
+            Temp_Prev.Next := TS;
+            Check_No_Duplicates (TS);
+            return;
+         end if;
+         Temp_Prev := Temp;
+         Temp := Temp.Next;
+      end loop;
+      --  insert at the end
+      TS.Next   := null;
+      Temp_Prev.Next := TS;
+      Check_No_Duplicates (TS);
+   end Insert_Signal;
+
+   procedure Insert_Signal (TWdg : Widget_Pointer;
+                            TS   : Signal_Pointer) is
+      Temp, Temp_Prev : Signal_Pointer;
+   begin
+      TS.GtkName := new String '(Symbol_Tables.Convert_Signal_To_Gtk (TWdg, TS));
+      if TWdg.Signal_List = null  then
+         --  insert by the front
+         TS.Next := null;
+         TWdg.Signal_List := TS;
+         Check_No_Duplicates (TS);
+         return;
+      end if;
+
+      if TS.GtkName.all <= TWdg.Signal_List.GtkName.all then
+         --  insert by the front
+         TS.Next := TWdg.Signal_List;
+         TWdg.Signal_List := TS;
+         Check_No_Duplicates (TS);
+         return;
+      end if;
+
+      Temp_Prev := TWdg.Signal_List;
+      Temp      := Temp_Prev.Next;
+      while Temp /= null loop
+         if TS.GtkName.all <= Temp.GtkName.all then
+            TS.Next := Temp;
+            Temp_Prev.Next := TS;
+            Check_No_Duplicates (TS);
+            return;
+         end if;
+         Temp_Prev := Temp;
+         Temp := Temp.Next;
+      end loop;
+      --  insert at the end
+      TS.Next   := null;
+      Temp_Prev.Next := TS;
+      Check_No_Duplicates (TS);
    end Insert_Signal;
 
    ------------------
@@ -948,6 +1007,9 @@ package body W2gtk_Decls is
       TS := TWdg.Signal_List;
       while TS /= null loop
          if TS.Name.all = Signal_Name then
+            return True;
+         end if;
+         if TS.GtkName.all = Signal_Name then
             return True;
          end if;
          TS := TS.Next;
@@ -1341,6 +1403,7 @@ package body W2gtk_Decls is
       Idx0  : Integer;
       Idx1  : Integer;
    begin
+      --  1 => start or left, 2 => top, 3 => end or right, 4 => bottom
       P    := Get_Pair (Data);
       Idx0 := Index (Data, ",");
       Idx1 := Index (Data (Idx0 + 1 .. Data'Last), ",");
@@ -1351,7 +1414,6 @@ package body W2gtk_Decls is
          raise TIO.Data_Error;
       end if;
       Q := Get_Pair (Data (Idx1 + 1 .. Data'Last));
-      --  1 => start or left, 2 => top, 3 => end or right, 4 => bottom
       return Margin_Array'(1 => P.One, 2 => P.Two,
                            3 => Q.One, 4 => Q.Two);
    end Get_Margin_Array;

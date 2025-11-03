@@ -74,30 +74,33 @@ package body Symbol_Tables is
    procedure Initialize_Signal_Symbol_Table is
       Wst : Signal_Map.Map renames Signal_Symbol_Table;
    begin
-      Wst.Insert ("Load", "realize");                 --  main window, dialog
-      Wst.Insert ("FormClosing", "delete-event");     --  main window, dialog
-      Wst.Insert ("TextChanged", "changed");          --  gtkentry gtkcombobox
-      Wst.Insert ("SelectedIndexChanged", "changed"); --  combobox
-      Wst.Insert ("ValueChanged", "value-changed");   --  spin
-      Wst.Insert ("SelectedValueChanged", "changed"); --  combobox
-      Wst.Insert ("CheckedChanged", "toggled");       --  checkbutton
-      Wst.Insert ("Checked", "toggled");              --  radiobutton
-      Wst.Insert ("Click", "clicked");      --  gtkbutton, treeviewcol-checkbox
+      Wst.Insert ("Load", "realize");
+      Wst.Insert ("FormClosing", "delete-event");
+
+      Wst.Insert ("TextChanged", "changed");
+      Wst.Insert ("SelectedIndexChanged", "changed");
+      Wst.Insert ("ValueChanged", "value-changed");
+      Wst.Insert ("SelectedValueChanged", "changed");
+      Wst.Insert ("CheckedChanged", "toggled");
+      Wst.Insert ("Checked", "toggled");
+      Wst.Insert ("Click", "clicked");
       Wst.Insert ("BeginPrint", "begin-print");
       Wst.Insert ("PrintPage", "print-page");
       Wst.Insert ("MouseClick", "clicked");
       Wst.Insert ("FileOk", "file-set");
       Wst.Insert ("MouseDoubleClick", "clicked");
-      Wst.Insert ("CloseButtonClick", "clicked");     --  not used
+      Wst.Insert ("CloseButtonClick", "clicked");
       Wst.Insert ("Selected", "clicked");
-      Wst.Insert ("CellMouseEnter", "motion-notify-event"); --  no used
-      Wst.Insert ("CellMouseLeave", "motion-notify-event"); --  no used
+      Wst.Insert ("CellMouseEnter", "motion-notify-event");
+      Wst.Insert ("CellMouseLeave", "motion-notify-event");
       Wst.Insert ("CellMouseClick", "row-activated");
       Wst.Insert ("RowCollapsed", "row-collapsed");
       Wst.Insert ("RowExpanded", "row-expanded");
-      Wst.Insert ("Toggled", "toggled");              --  gtkcheckboxcolum
+      Wst.Insert ("Toggled", "toggled");
+      Wst.Insert ("Enter", "enter-notify-event");
+      Wst.Insert ("GotFocus", "enter-notify-event");
       Wst.Insert ("Leave", "focus");
-      Wst.Insert ("LeaveFocus", "focus");
+      Wst.Insert ("LeaveFocus", "leave-notify-event");
       Wst.Insert ("DaySelected", "day-selected");
       Wst.Insert ("NextMonth", "next-month");
       Wst.Insert ("PrevMonth", "prev-month");

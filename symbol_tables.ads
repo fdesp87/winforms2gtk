@@ -25,9 +25,9 @@ package Symbol_Tables is
    function Get_Property (Win_Prop : String) return Window_Property_Enum;
    function Get_Attribute (Wdg_Attr : String) return Widget_Attribute_Enum;
    function Get_DGVS_Attribute (DGVS_Attr : String) return DGVS_Attribute_Enum;
+   function Insert_In_Handler_Map (TS : Signal_Pointer) return Boolean;
    function Convert_Signal_To_Gtk (TWin    : Window_Pointer;
                                    TS      : Signal_Pointer) return String;
    function Convert_Signal_To_Gtk (TWdg    : Widget_Pointer;
                                    TS      : Signal_Pointer) return String;
-   function Insert_In_Handler_Map (TS : Signal_Pointer) return Boolean;
 end Symbol_Tables;

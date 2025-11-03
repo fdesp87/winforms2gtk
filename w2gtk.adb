@@ -17,6 +17,7 @@
 with W2gtk_Pkg;             use W2gtk_Pkg;
 with W2Gtk2Ada;             use W2Gtk2Ada;
 with Symbol_Tables;
+with W2gtk_Decls;           use W2gtk_Decls;
 with Ada.Text_IO;
 with Ada.Command_Line;      use Ada.Command_Line;
 with GNAT.Command_Line;     use GNAT.Command_Line;
@@ -28,13 +29,13 @@ procedure W2gtk is
    Ada_Path        : String_Access;
    Icon_Path       : String_Access;
    Resx_Path       : String_Access;
-   Resx_File_Name  : String_Access;
+   Resx_FileName   : String_Access;
    Glade_Path      : String_Access;
-   Glade_File_Name : String_Access;
    Result          : Integer;
-   Log             : Boolean := False;
-   Dump            : Boolean := False;
-   Glade           : Boolean := False;
+   Produce_Log     : Boolean := False;
+   Produce_Dump    : Boolean := False;
+   Produce_Glade   : Boolean := False;
+   Produce_Ada     : Boolean := False;
 
    procedure Print_Help;
    procedure Print_Help is
@@ -43,17 +44,18 @@ procedure W2gtk is
                     & " -glade -dump -log -ap apath");
       TIO.Put_Line ("-h        produces this short help");
       TIO.Put_Line ("--help    produces this short help");
-      TIO.Put_Line ("-rp wpath indicates the windows form path");
-      TIO.Put_Line ("-rf wfile indicates the windows file name with"
+      TIO.Put_Line ("-rp wpath path to the windows form");
+      TIO.Put_Line ("-rf wfile windows form file name with"
                     & " no extension");
       TIO.Put_Line ("-ip ipath path to icons");
-      TIO.Put_Line ("-ap apath path to generated Ada code");
-      TIO.Put_Line ("-gp gpath indicates the glade path");
-      TIO.Put_Line ("-gf gfile indicates the generates glade file name with"
+      TIO.Put_Line ("-ap apath path to the generated Ada files");
+      TIO.Put_Line ("-gp gpath path to the generated glade file");
+      TIO.Put_Line ("-gf gfile generated glade file name with"
                     & " no extension");
+      TIO.Put_Line ("-ada      generate the Ada files");
       TIO.Put_Line ("-glade    generate the glade file");
-      TIO.Put_Line ("-dump     generate a dump file (requires glade options)");
-      TIO.Put_Line ("-log      generate lots of messages in a log file");
+      TIO.Put_Line ("-dump     generate the dump file");
+      TIO.Put_Line ("-log      generate the log file");
       GNAT.OS_Lib.OS_Exit (0);
    end Print_Help;
 begin
@@ -61,8 +63,8 @@ begin
    Symbol_Tables.Initialize;
 
    loop
-      case Getopt ("h -help rp= rf= gp= gf= ip= ap= "
-                   & "log dump glade") is
+      case Getopt ("h -help rp= rf= gp= ip= ap= "
+                   & "ada log dump glade") is
          when 'h' | '-' =>
             Print_Help;
          when 'r' =>
@@ -72,7 +74,7 @@ begin
                end if;
             elsif Full_Switch = "rf" then
                if Parameter /= "" then
-                  Resx_File_Name := new String'(Parameter);
+                  Resx_FileName := new String'(Parameter);
                end if;
             end if;
          when 'g' =>
@@ -80,20 +82,16 @@ begin
                if Parameter /= "" then
                   Glade_Path := new String'(Parameter);
                end if;
-            elsif Full_Switch = "gf" then
-               if Parameter /= "" then
-                  Glade_File_Name := new String'(Parameter);
-               end if;
             elsif Full_Switch = "glade" then
-               Glade := True;
+               Produce_Glade := True;
             end if;
          when 'd' =>
             if Full_Switch = "dump" then
-               Dump := True;
+               Produce_Dump := True;
             end if;
          when 'l' =>
             if Full_Switch = "log" then
-               Log := True;
+               Produce_Log := True;
             end if;
          when 'i' =>
             if Full_Switch = "ip" then
@@ -110,6 +108,8 @@ begin
                else
                   Ada_Path := new String'("");
                end if;
+            elsif Full_Switch = "ada" then
+               Produce_Ada := True;
             end if;
          when others =>
             exit;
@@ -120,30 +120,37 @@ begin
       TIO.Put_Line ("Wrong options: missing -rp");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
-   if Resx_File_Name = null then
+   if Resx_FileName = null then
       TIO.Put_Line ("Wrong options: missing -rf");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
-   if Dump and then not Glade then
-      TIO.Put_Line ("Wrong options: missing -glade");
+   if Produce_Dump and then Glade_Path = null then
+      TIO.Put_Line ("Wrong options: -dump requires -gp");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
-   if Glade then
+   if Produce_Glade then
       if Glade_Path = null then
          TIO.Put_Line ("Wrong options: missing -gp");
          GNAT.OS_Lib.OS_Exit (-1);
       end if;
-      if Glade_File_Name = null then
-         TIO.Put_Line ("Wrong options: missing -gf");
+   end if;
+   if Produce_Ada then
+      if Ada_Path = null then
+         TIO.Put_Line ("Wrong options: -ada requires ap");
          GNAT.OS_Lib.OS_Exit (-1);
       end if;
    end if;
+   if Produce_Log and then Glade_Path = null then
+      TIO.Put_Line ("Wrong options: -log requires -gp");
+      GNAT.OS_Lib.OS_Exit (-1);
+   end if;
 
-   Result := Parse_VS_File (Log,
-                            Dump,
-                            Glade,
+   Result := Parse_VS_File (Produce_Ada,
+                            Produce_Log,
+                            Produce_Dump,
+                            Produce_Glade,
                             Resx_Path.all,
-                            Resx_File_Name.all,
+                            Resx_FileName.all,
                             Glade_Path.all,
                             Icon_Path.all,
                             Ada_Path.all);
@@ -153,24 +160,26 @@ begin
       GNAT.OS_Lib.OS_Exit (Result);
    end if;
 
-   if Result >= 0 and then Glade then
+   if Result >= 0 and then Produce_Glade then
       --  Generate_Backup (KKK.Glade);
-      Result := Generate_Glade_File (Glade_Path.all,
-                                     Glade_File_Name.all);
+      Result := Generate_Glade_File (Glade_Path => Glade_Path.all,
+                                     FileName => Resx_FileName.all);
    end if;
 
-   if Result >= 0 and then Ada_Path /= null and then Ada_Path.all /= "" then
+   if Result >= 0 and then Produce_Ada and then Ada_Path /= null then
       Result := Generate_Ada_Packages (Ada_Path   => Ada_Path.all,
                                        Glade_Path => Glade_Path.all,
-                                       Filename   => Glade_File_Name.all);
+                                       Filename   => Resx_FileName.all);
    end if;
+
+   Debug (-1, "");
+   Debug (-1, "=== End of Process ===");
 
    Free (Ada_Path);
    Free (Resx_Path);
    Free (Icon_Path);
-   Free (Resx_File_Name);
+   Free (Resx_FileName);
    Free (Glade_Path);
-   Free (Glade_File_Name);
 
    GNAT.OS_Lib.OS_Exit (Result);
 exception

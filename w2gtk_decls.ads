@@ -21,6 +21,8 @@ with GNATCOLL.Tribooleans;  use GNATCOLL.Tribooleans;
 with GNATCOLL.Utils;
 
 package W2gtk_Decls is
+   Version : constant String := "2.0";
+
    package TIO renames Ada.Text_IO;
    package AC  renames Ada.Calendar;
 
@@ -32,6 +34,7 @@ package W2gtk_Decls is
 
    type Margin_Array is array (Integer range 1 .. 4) of Integer;
    Null_Margin : constant Margin_Array := (others => -1);
+   --  left, top, right, bottom
 
    type Location_Pair is record
       From_Top  : Integer := -1;
@@ -100,6 +103,7 @@ package W2gtk_Decls is
    type Signal_Block is record
       Next    : Signal_Pointer;
       Name    : String_Access := null; --  original signal name
+      GtkName : String_Access := null; --  gtk signal name
       Handler : String_Access := null; --  handler name
       Line    : Integer;
       Proc    : Boolean := True;       --  false means function
@@ -736,7 +740,7 @@ package W2gtk_Decls is
    procedure Debug (NLin : Integer; Msg : String);
 
    function Img (X : Integer) return String;
-   function Img (X : Float) return String;
+   function Img (X : Float; Exp : Integer) return String;
 
    function Find_Widget (Start : Widget_Pointer;
                          WType : Widget_Enum) return Widget_Pointer;

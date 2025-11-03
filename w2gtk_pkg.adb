@@ -25,7 +25,7 @@ with GNATCOLL.Tribooleans;    use GNATCOLL.Tribooleans;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with W2gtk_Decls;             use W2gtk_Decls;
 with W2gtk_Emit;              use W2gtk_Emit;
-with Symbol_Tables;           use Symbol_Tables;
+with Symbol_Tables;
 with W2gtk_Backups;           use W2gtk_Backups;
 
 package body W2gtk_Pkg is
@@ -1150,11 +1150,21 @@ package body W2gtk_Pkg is
          begin
             TS := TWin.Signal_List;
             while TS /= null loop
-               Put_Property ("Signal");
+               if TS.Glade then
+                  if TS.After then
+                     Put_Property ("Glade Signal (after)");
+                  else
+                     Put_Property ("Glade Signal (before)");
+                  end if;
+               else
+                  if TS.After then
+                     Put_Property ("Signal (after)");
+                  else
+                     Put_Property ("Signal (before)");
+                  end if;
+               end if;
                TIO.Put (LFile, TS.Name.all
-                        & " ("
-                        & Convert_Signal_To_Gtk (TWin, TS)
-                        & ") ");
+                        & " [Gtk " & TS.GtkName.all & "] ");
                if TS.Handler /= null then
                   TIO.Put (LFile, " => " & TS.Name.all);
                end if;
@@ -1241,10 +1251,10 @@ package body W2gtk_Pkg is
                TIO.New_Line (LFile);
 
                Put_Property ("Margin");
-               TIO.Put (LFile, "Top " & Img (TWin.Margins (1))
-                        & ", Bottom " & Img (TWin.Margins (3))
-                        & ", Start " & Img (TWin.Margins (2))
-                        & ", End " & Img (TWin.Margins (4)));
+               TIO.Put (LFile, "Top " & Img (TWin.Margins (2))
+                        & ", Bottom " & Img (TWin.Margins (4))
+                        & ", Start " & Img (TWin.Margins (1))
+                        & ", End " & Img (TWin.Margins (3)));
                TIO.New_Line (LFile);
 
                Put_Property ("AutoScale");
@@ -1454,9 +1464,7 @@ package body W2gtk_Pkg is
                   end if;
                end if;
                TIO.Put (LFile, TS.Name.all
-                        & " ("
-                        & Convert_Signal_To_Gtk (TWdgP, TS)
-                        & ") ");
+                        & " [Gtk " & TS.GtkName.all & "] ");
                if TS.Handler /= null then
                   if TS.GAda then
                      if TS.Proc then
@@ -1563,10 +1571,10 @@ package body W2gtk_Pkg is
             TIO.New_Line (LFile);
 
             Put_Property ("Margin");
-            TIO.Put_Line (LFile, "Top " & Img (TWdgP.Margins (1))
-                          & ", Bottom " & Img (TWdgP.Margins (3))
-                          & ", Start " & Img (TWdgP.Margins (2))
-                          & ", End " & Img (TWdgP.Margins (4)));
+            TIO.Put_Line (LFile, "Top " & Img (TWdgP.Margins (2))
+                          & ", Bottom " & Img (TWdgP.Margins (4))
+                          & ", Start " & Img (TWdgP.Margins (1))
+                          & ", End " & Img (TWdgP.Margins (3)));
 
             Put_Property ("Padding");
             Put_Integer (TWdgP.Padding);
@@ -1952,10 +1960,10 @@ package body W2gtk_Pkg is
 
                      Put_Property ("MinMargins");
                      TIO.Put_Line (LFile,
-                              "Top " & Img (TWdgP.MinMargins (1))
-                              & ", Bottom " & Img (TWdgP.MinMargins (3))
-                              & ", Start " & Img (TWdgP.MinMargins (2))
-                              & ", End " & Img (TWdgP.MinMargins (4)));
+                              "Top " & Img (TWdgP.MinMargins (2))
+                              & ", Bottom " & Img (TWdgP.MinMargins (4))
+                              & ", Start " & Img (TWdgP.MinMargins (1))
+                              & ", End " & Img (TWdgP.MinMargins (3)));
 
                when BackgroundWorker =>
                      Put_Property ("Report Progress");
@@ -2050,6 +2058,7 @@ package body W2gtk_Pkg is
       TIO.Create (File => LFile,
                   Mode => TIO.Out_File,
                   Name => Path & "/" & File_Name & ".dump");
+      TIO.Put_Line (LFile, "Generating Dump by w2gtk " & Version);
       Dump_DGVS;
       TWin := Win_List;
       while TWin /= null loop
@@ -4648,10 +4657,14 @@ package body W2gtk_Pkg is
                if Ret = 1 then
                   Debug (NLin, Sp (3) & "Created Signal "
                          & Complete_Signal (Complete_Signal'First ..
-                             Complete_Signal'Last - 1));
+                             Complete_Signal'Last - 1)
+                         & " [Gtk " & WS.GtkName.all & "]"
+                         & " => " & WS.Handler.all);
                else
                   Debug (NLin, Sp (3) & "Created Signal " &
-                           Win_List.Name.all & "." & SName);
+                           Win_List.Name.all & "." & SName
+                         & " [Gtk " & WS.GtkName.all & "]"
+                         & " => " & WS.Handler.all);
                end if;
             else
                WT := Find_Widget (Win_List.Widget_List, +WName);
@@ -4703,9 +4716,14 @@ package body W2gtk_Pkg is
                   if Ret = 1 then
                      Debug (NLin, Sp (3) & "Created Signal "
                             & Complete_Signal (Complete_Signal'First ..
-                                Complete_Signal'Last - 1));
+                                Complete_Signal'Last - 1)
+                            & " [Gtk " & WS.GtkName.all & "]"
+                            & " => " & WS.Handler.all);
                   else
-                     Debug (NLin, Sp (3) & "Created Signal " & Complete_Signal);
+                     Debug (NLin, Sp (3) & "Created Signal "
+                            & Complete_Signal
+                            & " [Gtk " & WS.GtkName.all & "]"
+                            & " => " & WS.Handler.all);
                   end if;
                end if;
             end if;
@@ -5084,7 +5102,8 @@ package body W2gtk_Pkg is
    end Generate_Backup;
 
    -------------------------------------------------------------------------
-   function Parse_VS_File (Log_Switch     : Boolean;
+   function Parse_VS_File (Ada_Switch     : Boolean;
+                           Log_Switch     : Boolean;
                            Do_Dump        : Boolean;
                            Glade_Switch   : Boolean;
                            Resx_Path      : String;
@@ -5105,6 +5124,7 @@ package body W2gtk_Pkg is
                      Mode => TIO.Out_File,
                      Name => Glade_Path & "/" & Resx_File_Name & ".log");
          Debug (-1, "w2gtk -log"
+                & (if Ada_Switch then " -ada " else "")
                 & (if Do_Dump then " -dump " else "")
                 & (if Glade_Switch then " -glade " else "")
                 & " -rp " & Resx_Path
@@ -5113,6 +5133,7 @@ package body W2gtk_Pkg is
                 & " -ip " & Icon_Path
                 & " -ap " & Ada_Path);
          Debug (-1, "");
+         Debug (-1, "This is w2gtk " & Version);
          Debug (-1, "Processing " & Resx_Path & Resx_File_Name);
          Debug (-1, "");
          Debug (-1, "Generated log backup");
@@ -5165,8 +5186,8 @@ package body W2gtk_Pkg is
    end Parse_VS_File;
 
    -------------------------------------------------------------------------
-   function Generate_Glade_File (Glade_Path      : String;
-                                 Glade_File_Name : String) return Integer is
+   function Generate_Glade_File (Glade_Path : String;
+                                 FileName   : String) return Integer is
       TWin  : Window_Pointer;
    begin
       Debug (-1, "");
@@ -5178,7 +5199,7 @@ package body W2gtk_Pkg is
       end if;
       TIO.Create (File => GFile,
                   Mode => TIO.Out_File,
-                  Name => Glade_Path & "/" & Glade_File_Name & ".glade");
+                  Name => Glade_Path & "/" & FileName & ".glade");
       Emit_GtkHeader (null, 0);
       TWin := Win_List;
       while TWin /= null loop
