@@ -92,31 +92,33 @@ package body W2gtk_Backups is
             Status     => Status'Access,
             Err_To_Out => True);
       begin
-         if Status = 2 then
-            Debug (-1, Sp (3)
-                   & Args (1).all
-                   & ": No previous version");
-         elsif Status /= 0 and Status /= 1 then
-            Debug (-1, "FAILED To Execute Command: "
-                   & "/usr/bin/diff "
-                   & Argument_List_To_String (Args)
-                   & " status " & Img (Status));
-         else
-            if Output /= "" then
-               TIO.Create (File => PatchFile,
-                           Mode => TIO.Out_File,
-                           Name => The_Path & "/"
-                           & Filename_With_Ext & ".patch");
-               TIO.Put (PatchFile, Output);
-               TIO.Close (PatchFile);
-
-               --  Status := Perform_Patch (The_Path, Filename_With_Ext);
-               Debug (-1, "Patch file generated. Review the patch and use to recover changes");
-               Debug (-1, "");
-            else
+         case Status is
+            when 0 =>
                Debug (-1, "  files identical, no patching");
-            end if;
-         end if;
+            when 1 =>
+               if Output /= "" then
+                  TIO.Create (File => PatchFile,
+                              Mode => TIO.Out_File,
+                              Name => The_Path & "/"
+                              & Filename_With_Ext & ".patch");
+                  TIO.Put (PatchFile, Output);
+                  TIO.Close (PatchFile);
+                  --  Status := Perform_Patch (The_Path, Filename_With_Ext);
+                  Debug (-1, "Patch file generated. Review the patch and use"
+                         & " it to recover changes");
+                  Debug (-1, "");
+               end if;
+            when 2 =>
+               Debug (-1, "FAILED To Execute Command: "
+                      & "/usr/bin/diff "
+                      & Argument_List_To_String (Args)
+                      & " status " & Img (Status));
+            when others =>
+               Debug (-1, "FAILED To Execute Command: "
+                      & "/usr/bin/diff "
+                      & Argument_List_To_String (Args)
+                      & " status " & Img (Status));
+         end case;
          Free (Args);
          return Status;
       exception

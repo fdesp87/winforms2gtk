@@ -21,7 +21,6 @@ with GNATCOLL.Tribooleans;  use GNATCOLL.Tribooleans;
 with GNATCOLL.Utils;
 
 package W2gtk_Decls is
-   Version : constant String := "2.0";
 
    package TIO renames Ada.Text_IO;
    package AC  renames Ada.Calendar;
@@ -288,9 +287,11 @@ package W2gtk_Decls is
                                  Str_Cancel_Button);
 
    type Window_Properties (Window_Type : Window_Enum) is record
-      Next           : Window_Pointer;
-      Name           : String_Access := null; --  it is id
-      Title          : String_Access := null;
+      Next           : Window_Pointer := null;
+      Prev           : Window_Pointer := null;
+      Name           : String_Access  := null; --  it is id
+      Original_Name  : String_Access  := null;
+      Title          : String_Access  := null;
       Signal_List    : Signal_Pointer;
       case Window_Type is
          when GtkWindow =>
@@ -340,7 +341,7 @@ package W2gtk_Decls is
             Num_Elements : Integer := 0;
             case Window_Type is
                when GtkModelSort | GtkModelFilter =>
-                  Underlying_Model : Window_Pointer;
+                  Underlaying_Model : Window_Pointer;
                when others => null;
             end case;
       end case;
@@ -735,6 +736,8 @@ package W2gtk_Decls is
       end case;
    end record;
 
+   Duplicate_Window_Name : exception;
+
    function Sp (N : Integer) return String;
 
    procedure Debug (NLin : Integer; Msg : String);
@@ -765,18 +768,32 @@ package W2gtk_Decls is
    procedure Insert_Widget_By_Tail (Parent : Window_Pointer;
                                     WT     : Widget_Pointer);
    procedure Set_Have (WT : Widget_Pointer);
-   procedure Insert_Signal (TWin : Window_Pointer;
-                            TS   : Signal_Pointer);
-   procedure Insert_Signal (TWdg : Widget_Pointer;
-                            TS   : Signal_Pointer);
+   function Insert_Signal (TWin : Window_Pointer;
+                           TS   : Signal_Pointer) return Boolean;
+   function Insert_Signal (TWdg : Widget_Pointer;
+                            TS   : Signal_Pointer) return Boolean;
    function Signal_Exists (TWin : Window_Pointer;
                            Signal_Name : String) return Boolean;
    function Signal_Exists (TWdg        : Widget_Pointer;
                            Signal_Name : String) return Boolean;
    procedure Insert_Focus (Into : Window_Pointer; Focus : Widget_Pointer);
 
-   procedure Insert_Window_By_Tail (TWin : Window_Pointer);
-   procedure Insert_Window_By_Front (TWin : Window_Pointer);
+   function Next_Window (Root : Window_Pointer;
+                         TWin : Window_Pointer) return Window_Pointer;
+   procedure Insert_Window_By_Order (Root : in out Window_Pointer;
+                                     TWin : Window_Pointer);
+   procedure Insert_Window_By_Front (Root : in out Window_Pointer;
+                                     TWin : Window_Pointer);
+   procedure Insert_Window_By_Tail (Root : in out Window_Pointer;
+                                    TWin : Window_Pointer);
+   function Extract_First_Window (Root : in out Window_Pointer) return Window_Pointer;
+   procedure Extract_Window (Root : in out Window_Pointer;
+                             TWin : Window_Pointer);
+   function Find_Window (Root : Window_Pointer;
+                         Name : String) return Window_Pointer;
+   procedure Insert_Window (Root  : in out Window_Pointer;
+                            After : Window_Pointer;
+                            TWin  : Window_Pointer);
    procedure Set_Have (WP : Window_Pointer);
 
    function Contains (Source : String; Pattern : String) return Boolean;
@@ -812,8 +829,7 @@ package W2gtk_Decls is
    function To_Gtk (T       : Widget_Pointer;
                     For_Ada : Boolean := False) return String;
    function To_Gtk (D : DialogResult_Enum) return String;
-   function "+" (Str : String) return String is
-      (GNATCOLL.Utils.Capitalize (Str));
+   function "+" (Str : String) return String is (GNATCOLL.Utils.Capitalize (Str));
 
    RFile : TIO.File_Type; --  resource     (in)
    DFile : TIO.File_Type; --  designer     (in)

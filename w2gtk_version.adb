@@ -10,15 +10,17 @@
 -- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
 -- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this program; see the file COPYING3.                               --
--- If not, see <http://www.gnu.org/licenses/>.                             --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --
 ------------------------------------------------------------------------------
-package W2Gtk2Ada is
+package body W2gtk_Version is
 
-   function Generate_Ada_Packages (Ada_Path   : String;
-                                   Glade_Path : String;
-                                   Filename   : String;
-                                   Ada_Main   : String) return Integer;
+   Version_Number : constant String (1 .. 5) := "02.00";
 
-end W2Gtk2Ada;
+   function Version return String is
+   begin
+      return Version_Number;
+   end Version;
+
+end W2gtk_Version;

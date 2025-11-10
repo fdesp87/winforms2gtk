@@ -16,6 +16,8 @@
 ------------------------------------------------------------------------------
 with "gnatcoll_core";
 with "gnatcoll_postgres";
+with "gtkada";
+with "strings_edit";
 
 project w2gtk is
 

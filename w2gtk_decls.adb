@@ -885,12 +885,13 @@ package body W2gtk_Decls is
       Temp1.Prev := WT;
    end Insert_Widget_By_Tail;
 
-   -------------------
-   -- Insert_Signal --
-   -------------------
+   --------------------
+   -- Not_Duplicated --
+   --------------------
+
    --  ensure no duplicated Ada signal handlers
-   procedure Check_No_Duplicates (TS : Signal_Pointer);
-   procedure Check_No_Duplicates (TS : Signal_Pointer) is
+   function Not_Duplicated (TS : Signal_Pointer) return Boolean;
+   function Not_Duplicated (TS : Signal_Pointer) return Boolean is
       B : Boolean;
    begin
       B := Symbol_Tables.Insert_In_Handler_Map (TS);
@@ -901,28 +902,30 @@ package body W2gtk_Decls is
                 & ": repeated handler " & TS.Handler.all
                 & ": No Glade, No Ada will be generated for this signal");
       end if;
-   end Check_No_Duplicates;
+      return not B;
+   end Not_Duplicated;
 
+   -------------------
+   -- Insert_Signal --
+   -------------------
    --  insert in alphabetic order
-   procedure Insert_Signal (TWin : Window_Pointer;
-                            TS   : Signal_Pointer) is
+   function Insert_Signal (TWin : Window_Pointer;
+                           TS   : Signal_Pointer) return Boolean is
       Temp, Temp_Prev : Signal_Pointer;
    begin
-      TS.GtkName := new String '(Symbol_Tables.Convert_Signal_To_Gtk (TWin, TS));
+      TS.GtkName := new String'(Symbol_Tables.Convert_Signal_To_Gtk (TWin, TS));
       if TWin.Signal_List = null then
          --  insert by the front
          TS.Next := null;
          TWin.Signal_List := TS;
-         Check_No_Duplicates (TS);
-         return;
+         return Not_Duplicated (TS);
       end if;
 
       if TS.GtkName.all <= TWin.Signal_List.GtkName.all then
          --  insert by the front
          TS.Next := TWin.Signal_List;
          TWin.Signal_List := TS;
-         Check_No_Duplicates (TS);
-         return;
+         return Not_Duplicated (TS);
       end if;
 
       Temp_Prev := TWin.Signal_List;
@@ -931,8 +934,7 @@ package body W2gtk_Decls is
          if TS.GtkName.all <= Temp.GtkName.all then
             TS.Next := Temp;
             Temp_Prev.Next := TS;
-            Check_No_Duplicates (TS);
-            return;
+            return Not_Duplicated (TS);
          end if;
          Temp_Prev := Temp;
          Temp := Temp.Next;
@@ -940,11 +942,17 @@ package body W2gtk_Decls is
       --  insert at the end
       TS.Next   := null;
       Temp_Prev.Next := TS;
-      Check_No_Duplicates (TS);
+      return Not_Duplicated (TS);
+   exception
+      when Symbol_Tables.Unknown_Signal => return False;
    end Insert_Signal;
 
-   procedure Insert_Signal (TWdg : Widget_Pointer;
-                            TS   : Signal_Pointer) is
+   -------------------
+   -- Insert_Signal --
+   -------------------
+   --  insert in alphabetic order
+   function  Insert_Signal (TWdg : Widget_Pointer;
+                            TS   : Signal_Pointer) return Boolean is
       Temp, Temp_Prev : Signal_Pointer;
    begin
       TS.GtkName := new String '(Symbol_Tables.Convert_Signal_To_Gtk (TWdg, TS));
@@ -952,16 +960,14 @@ package body W2gtk_Decls is
          --  insert by the front
          TS.Next := null;
          TWdg.Signal_List := TS;
-         Check_No_Duplicates (TS);
-         return;
+         return Not_Duplicated (TS);
       end if;
 
       if TS.GtkName.all <= TWdg.Signal_List.GtkName.all then
          --  insert by the front
          TS.Next := TWdg.Signal_List;
          TWdg.Signal_List := TS;
-         Check_No_Duplicates (TS);
-         return;
+         return Not_Duplicated (TS);
       end if;
 
       Temp_Prev := TWdg.Signal_List;
@@ -970,8 +976,7 @@ package body W2gtk_Decls is
          if TS.GtkName.all <= Temp.GtkName.all then
             TS.Next := Temp;
             Temp_Prev.Next := TS;
-            Check_No_Duplicates (TS);
-            return;
+            return Not_Duplicated (TS);
          end if;
          Temp_Prev := Temp;
          Temp := Temp.Next;
@@ -979,7 +984,9 @@ package body W2gtk_Decls is
       --  insert at the end
       TS.Next   := null;
       Temp_Prev.Next := TS;
-      Check_No_Duplicates (TS);
+      return Not_Duplicated (TS);
+   exception
+      when Symbol_Tables.Unknown_Signal => return False;
    end Insert_Signal;
 
    ------------------
@@ -1112,36 +1119,246 @@ package body W2gtk_Decls is
       raise Program_Error;
    end Insert_Focus;
 
-   -------------------
-   -- Insert_Window --
-   -------------------
-   --  insert by the tail
-   procedure Insert_Window_By_Tail (TWin : Window_Pointer) is
+   -----------------
+   -- Next_Window --
+   -----------------
+
+   function Next_Window (Root : Window_Pointer;
+                         TWin : Window_Pointer) return Window_Pointer is
+   begin
+      if Root = null then
+         return null;
+      end if;
+      if TWin = null then
+         return null;
+      end if;
+      if TWin = Root then
+         if TWin.Next = Root then
+            return null; -- there was only one
+         else
+            return TWin.Next;
+         end if;
+      end if;
+      if TWin.Next = Root then
+         return null; -- twin was last
+      else
+         return TWin.Next;
+      end if;
+   end Next_Window;
+
+   -----------------
+   -- Find_Window --
+   -----------------
+
+   function Find_Window (Root : Window_Pointer;
+                         Name : String) return Window_Pointer is
+      Temp : Window_Pointer := Root;
+   begin
+      if Root = null then
+         return null;
+      end if;
+      while Temp /= null  loop
+         if Name = Temp.Name.all then
+            return Temp;
+         end if;
+         Temp := Next_Window (Root, Temp);
+      end loop;
+      return null;
+   end Find_Window;
+
+   ------------------
+   -- Is_Duplicate --
+   ------------------
+
+   --  ensure no duplicated gtk windows
+   function Is_Duplicate (Root : Window_Pointer;
+                          TWin : Window_Pointer) return Boolean;
+   function Is_Duplicate (Root : Window_Pointer;
+                          TWin : Window_Pointer) return Boolean is
+      Temp : constant Window_Pointer := Find_Window (Root, TWin.Name.all);
+   begin
+      return Temp /= null;
+   end Is_Duplicate;
+
+   ----------------------------
+   -- Insert_Window_By_Order --
+   ----------------------------
+
+   --  insert by order
+   procedure Insert_Window_By_Order (Root : in out Window_Pointer;
+                                     TWin : Window_Pointer) is
       Temp : Window_Pointer;
    begin
-      if Win_List = null then
-         Win_List := TWin;
-         TWin.Next := null;
+      if Is_Duplicate (Root, TWin) then
+         raise Duplicate_Window_Name;
+      end if;
+      if Root = null then --  list empty
+         Insert_Window_By_Front (Root, TWin);
          return;
       end if;
-      Temp := Win_List;
-      loop
-         exit when Temp.Next = null;
+
+      if TWin.Name.all <= Root.Name.all then --  less than first
+         Insert_Window_By_Front (Root, TWin);
+         return;
+      end if;
+
+      if TWin.Name.all > Root.Prev.Name.all then --  after last
+         Insert_Window_By_Tail (Root, TWin);
+         return;
+      end if;
+
+      Temp := Root.Next;
+      while Temp /= Root loop
+         if TWin.Name.all <= Temp.Name.all then
+            TWin.Next := Temp;
+            TWin.Prev := Temp.Prev;
+            Temp.Prev.Next := TWin;
+            Temp.Prev := TWin;
+            return;
+         end if;
          Temp := Temp.Next;
       end loop;
-      Temp.Next := TWin;
-      TWin.Next := null;
+      raise Program_Error;
+   end Insert_Window_By_Order;
+
+   ---------------------------
+   -- Insert_Window_By_Tail --
+   ---------------------------
+   --  insert by the tail
+   procedure Insert_Window_By_Tail (Root : in out Window_Pointer;
+                                    TWin : Window_Pointer) is
+      Last : Window_Pointer;
+   begin
+      if Is_Duplicate (Root, TWin) then
+         raise Duplicate_Window_Name;
+      end if;
+      if Root = null then
+         Root := TWin;
+         TWin.Prev := TWin;
+         TWin.Next := TWin;
+      else
+         Last := Root.Prev;
+         TWin.Next := Root;
+         TWin.Prev := Last;
+         Last.Next := TWin;
+         Root.Prev := TWin;
+      end if;
    end Insert_Window_By_Tail;
+
+   ----------------------------
+   -- Insert_Window_By_Front --
+   ----------------------------
+   --  insert by the front
+   procedure Insert_Window_By_Front (Root : in out Window_Pointer;
+                                     TWin : Window_Pointer) is
+   begin
+      if Is_Duplicate (Root, TWin) then
+         raise Duplicate_Window_Name;
+      end if;
+      if Root = null then
+         Root := TWin;
+         TWin.Prev := TWin;
+         TWin.Next := TWin;
+      else
+         TWin.Next := Root;
+         TWin.Prev := Root.Prev;
+         Root.Prev.Next := TWin;
+         Root.Prev := TWin;
+         Root      := TWin;
+      end if;
+   end Insert_Window_By_Front;
+
+   --------------------------
+   -- Extract_First_Window --
+   --------------------------
+
+   function Extract_First_Window (Root : in out Window_Pointer)
+                                  return Window_Pointer is
+      TWin : Window_Pointer;
+   begin
+      if Root = null then
+         return null;
+      end if;
+      TWin := Root;
+      if Root.Next = Root then
+         --  only one
+         TWin.Next := null;
+         TWin.Prev := null;
+         Root := null;
+      else
+         Root.Prev.Next := Root.Next;
+         Root.Next.Prev := Root.Prev;
+         Root := Root.Next;
+         TWin.Next := null;
+         TWin.Prev := null;
+      end if;
+      return TWin;
+   end Extract_First_Window;
+
+   --------------------
+   -- Extract_Window --
+   --------------------
+
+   procedure Extract_Window (Root : in out Window_Pointer;
+                             TWin : Window_Pointer) is
+   begin
+      if Root = null then
+         raise Program_Error;
+      end if;
+      if Root.Next = Root then --  only one
+         if Root = TWin then
+            Root := null;
+            TWin.Next := null;
+            TWin.Prev := null;
+            return;
+         else
+            raise Program_Error;
+         end if;
+      end if;
+      if TWin = Root then --  extract the first
+         Root.Prev.Next := Root.Next;
+         Root.Next.Prev := Root.Prev;
+         Root := Root.Next;
+         TWin.Next := null;
+         TWin.Prev := null;
+         return;
+      end if;
+      if TWin = Root.Prev then --  extract the last
+         Root.Prev.Prev := Root;
+         Root.Prev := Root.Prev.Prev;
+         TWin.Next := null;
+         TWin.Prev := null;
+         return;
+      end if;
+      --  extract in the midle
+      TWin.Prev.Next := TWin.Next;
+      TWin.Next.Prev := TWin.Prev;
+      TWin.Next := null;
+      TWin.Prev := null;
+   end Extract_Window;
 
    -------------------
    -- Insert_Window --
    -------------------
-   --  insert by the tail
-   procedure Insert_Window_By_Front (TWin : Window_Pointer) is
+
+   procedure Insert_Window (Root  : in out Window_Pointer;
+                            After : Window_Pointer;
+                            TWin  : Window_Pointer) is
    begin
-      TWin.Next := Win_List;
-      Win_List  := TWin;
-   end Insert_Window_By_Front;
+      if Root = null then
+         Insert_Window_By_Tail (Root, TWin);
+         return;
+      end if;
+
+      if After.Next = Root then --  after is last
+         Insert_Window_By_Tail (Root, TWin);
+      else
+         TWin.Next := After.Next;
+         TWin.Prev := After;
+         After.Next.Prev := TWin;
+         After.Next := TWin;
+      end if;
+   end Insert_Window;
 
    -------------------------------
    -- Relink_Children_To_Parent --

@@ -27,8 +27,10 @@ with W2gtk_Decls;             use W2gtk_Decls;
 with W2gtk_Emit;              use W2gtk_Emit;
 with Symbol_Tables;
 with W2gtk_Backups;           use W2gtk_Backups;
+with W2gtk_Version;              use W2gtk_Version;
 
 package body W2gtk_Pkg is
+
    package TIO renames Ada.Text_IO;
    --  package WinIO is new Ada.Text_IO.Enumeration_IO (Window_Enum);
    --  package WdgIO is new Ada.Text_IO.Enumeration_IO (Widget_Enum);
@@ -102,6 +104,9 @@ package body W2gtk_Pkg is
       NCol  : Widget_Pointer;
       TS    : Signal_Pointer;
       Found : Boolean;
+      Counter : Integer;
+      Win_List_Aux : Window_Pointer := null;
+      B : Boolean;
 
       procedure Visit_GtkTree_Widget_For_GtkBox
         (Parent : in out Widget_Pointer);
@@ -141,6 +146,7 @@ package body W2gtk_Pkg is
       procedure Visit_GtkTree_Widget_For_Columns (TWdg : Widget_Pointer);
       procedure Visit_GtkTree_Widget_For_Columns (TWdg : Widget_Pointer) is
          Num : Integer;
+         B   : Boolean;
       begin
          if TWdg = null then
             return;
@@ -177,10 +183,12 @@ package body W2gtk_Pkg is
                                             & Temp.Name.all
                                             & "_Toggled");
                               TS.Line    := -1;
-                              Insert_Signal (Temp, TS); --  Toggled
-                              Debug (0, Sp (3) & Temp.Name.all
-                                     & ": generated "
-                                     & TS.Handler.all);
+                              B := Insert_Signal (Temp, TS); --  Toggled
+                              if B then
+                                 Debug (0, Sp (3) & Temp.Name.all
+                                        & ": generated "
+                                        & TS.Handler.all);
+                              end if;
                            end if;
                         end if;
                      when ExpandableColumn | DataGridViewTextBoxColumn =>
@@ -261,10 +269,12 @@ package body W2gtk_Pkg is
                   TS.Handler := new String'("On_"
                                             & TWdg.Name.all
                                             & "_Clicked");
-                  Insert_Signal (TWdg, TS); --  Click
-                  Debug (0, Sp (3) & "Created Signal "
-                         & TWdg.Name.all
-                         & ".clicked");
+                  B := Insert_Signal (TWdg, TS); --  Click
+                  if B then
+                     Debug (0, Sp (3) & "Created synthetic Signal "
+                            & TWdg.Name.all
+                            & ".clicked");
+                  end if;
                end if;
             end if;
          end if;
@@ -273,18 +283,29 @@ package body W2gtk_Pkg is
          Visit_Use_Sort (TWdg.Child_List);
       end Visit_Use_Sort;
 
+      --  procedure Print_Counter (Msg : String);
+      --  procedure Print_Counter (Msg : String) is
+      --     Counter : Integer := 0;
+      --     TWin : Window_Pointer := Win_List;
+      --  begin
+      --     while TWin /= null loop
+      --        Counter := Counter + 1;
+      --        TWin := Next_Window (Win_List, TWin);
+      --     end loop;
+      --     Ada.Text_IO.Put_Line (Msg & Counter'Image);
+      --  end Print_Counter;
+
    begin
       if Win_List = null then
          return -1; --  no windows
       end if;
-
+      Debug (-1, "");
+      Debug (-1, "Adjusting to GTK");
       -------------------------------------------------------
       --  Initially each widget list of a window is plain  --
       -------------------------------------------------------
 
       --  set some properties of toolstripstatuslabel
-      Debug (-1, "");
-      Debug (-1, "Adjusting to GTK");
       Debug (0, "Set some properties of toolstripstatuslabel");
       TWin := Win_List;
       while TWin /= null loop
@@ -309,7 +330,7 @@ package body W2gtk_Pkg is
             end if;
             TWdg := TWdg.Next;
          end loop;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       --  Is_Dialog is set if there are response buttons
@@ -322,12 +343,13 @@ package body W2gtk_Pkg is
       --           TWin.Is_Dialog := True;
       --        end if;
       --     end if;
-      --     TWin := TWin.Next;
+      --     TWin := Next_Window (Win_List, TWin);
       --  end loop;
 
       --  generate auxiliary elements
       Debug (-1, "");
       Debug (0, "Generate auxiliary windows");
+      Counter := 0;
       TWin := Win_List;
       while TWin /= null loop
          TWdg := TWin.Widget_List;
@@ -339,9 +361,10 @@ package body W2gtk_Pkg is
                     and then TWdg.OpenFileFilter.all /= ""
                   then
                      NWin1 := new Window_Properties (GtkFileFilter);
-                     NWin1.Name := new String'("Filefilter"
+                     NWin1.Name := new String'("GtkFileFilter"
                                                & "_" & TWdg.Name.all
                                               );
+                     NWin1.Original_Name := new String'(TWdg.Name.all);
                      NWin1.Title := TWdg.OpenFileTitle;
                      NWin1.FilterString := new
                        String'(TWdg.OpenFileFilter.all);
@@ -350,9 +373,10 @@ package body W2gtk_Pkg is
                   end if;
 
                   NWin0 := new Window_Properties (GtkFileChooserDialog);
-                  NWin0.Name := new String'("Filechooserdialog"
+                  NWin0.Name := new String'("GtkileChooserDialog"
                                             & "_" & TWdg.Name.all
                                            );
+                  NWin0.Original_Name := new String'(TWdg.Name.all);
                   NWin0.Title := TWdg.OpenFileTitle;
                   NWin0.FilterName := NWin1.Name;
                   NWin0.Transient_For := TWin;
@@ -361,14 +385,17 @@ package body W2gtk_Pkg is
                   if TWdg.OpenFileDialog = null then
                      TWdg.OpenFileDialog := NWin0.Name;
                   end if;
-                  Insert_Window_By_Front (NWin0);
-                  Debug (0, Sp (3) & "Generated filechooserdialog for "
+                  Insert_Window_By_Front (Win_List_Aux, NWin0);
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated filechooserdialog for "
                          & NWin0.Name.all
                          & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
 
-                  Insert_Window_By_Front (NWin1);
-                  Debug (0, Sp (3) & "Generated filefilter "
+                  Insert_Window_By_Front (Win_List_Aux, NWin1);
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
                          & NWin1.Name.all
                          & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
@@ -379,13 +406,16 @@ package body W2gtk_Pkg is
                   then
                      Num_Aux_Widgets := Num_Aux_Widgets + 1;
                      NWin1 := new Window_Properties (GtkEntryBuffer);
-                     NWin1.Name := new String'("Entrybuffer"
+                     NWin1.Name := new String'("GtkEntryBuffer"
                                                & "_" & TWdg.Name.all
                                               );
+                     NWin1.Original_Name := new String'(TWdg.Name.all);
                      NWin1.Associated_Widget := TWdg;
                      TWdg.Buffer := NWin1;
-                     Insert_Window_By_Front (NWin1);
-                     Debug (0, Sp (3) & "Generated entrybuffer for "
+                     Insert_Window_By_Front (Win_List_Aux, NWin1);
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated entrybuffer for "
                             & NWin1.Name.all
                             & " for " & TWdg.Name.all
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -394,13 +424,16 @@ package body W2gtk_Pkg is
                when GtkListBox =>
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
                   NWin1 := new Window_Properties (GtkListStore);
-                  NWin1.Name := new String'("Liststore"
+                  NWin1.Name := new String'("GtkListStore"
                                             & "_" & TWdg.Name.all
                                            );
+                  NWin1.Original_Name := new String'(TWdg.Name.all);
                   NWin1.Associated_Widget := TWdg;
                   TWdg.ListStore := NWin1;
-                  Insert_Window_By_Front (NWin1);
-                  Debug (0, Sp (3) & "Generated liststore for "
+                  Insert_Window_By_Front (Win_List_Aux, NWin1);
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated liststore for "
                          & NWin1.Name.all
                          & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
@@ -410,13 +443,16 @@ package body W2gtk_Pkg is
                   if TWdg.ImagePath /= null then
                      Num_Aux_Widgets := Num_Aux_Widgets + 1;
                      NWin1 := new Window_Properties (GtkImage);
-                     NWin1.Name := new String'("Gtkimage"
+                     NWin1.Name := new String'("GtkImage"
                                                & "_" & TWdg.Name.all
                                               );
+                     NWin1.Original_Name := new String'(TWdg.Name.all);
                      NWin1.Associated_Widget := TWdg;
                      TWdg.Win_Image := NWin1;
-                     Insert_Window_By_Front (NWin1);
-                     Debug (0, Sp (3) & "Generated gtkimage for "
+                     Insert_Window_By_Front (Win_List_Aux, NWin1);
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtkimage for "
                             & NWin1.Name.all
                             & " for " & TWdg.Name.all
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -426,13 +462,16 @@ package body W2gtk_Pkg is
                   if TWdg.ImageMenu /= null then
                      Num_Aux_Widgets := Num_Aux_Widgets + 1;
                      NWin1 := new Window_Properties (GtkImage);
-                     NWin1.Name := new String'("Gtkimage"
+                     NWin1.Name := new String'("GtkImage"
                                                & "_" & TWdg.Name.all
                                               );
+                     NWin1.Original_Name := new String'(TWdg.Name.all);
                      NWin1.Associated_Widget := TWdg;
                      TWdg.ImageMenuWin := NWin1;
-                     Insert_Window_By_Front (NWin1);
-                     Debug (0, Sp (3) & "Generated gtkimage for "
+                     Insert_Window_By_Front (Win_List_Aux, NWin1);
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtkimage for "
                             & NWin1.Name.all
                             & " for " & TWdg.Name.all
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -445,24 +484,30 @@ package body W2gtk_Pkg is
                       not TWdg.Has_Expander
                   then
                      NWin0 := new Window_Properties (GtkListStore);
-                     NWin0.Name := new String'("Gtkliststore"
+                     NWin0.Name := new String'("GtkListstore"
                                                & "_"
                                                & Normalize_Name (TWdg)
                                               );
+                     NWin0.Original_Name := new String'(TWdg.Name.all);
                      NWin0.Associated_Widget := TWdg;
-                     Debug (0, Sp (3) & "Generated gtkliststore for "
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtkliststore for "
                             & NWin0.Name.all
                             & " for " & Normalize_Name (TWdg)
                             & " (" & TWdg.Widget_Type'Image & ")");
                   else
                      Num_Aux_Widgets := Num_Aux_Widgets + 1;
                      NWin0 := new Window_Properties (GtkTreeStore);
-                     NWin0.Name := new String'("Gtktreestore"
+                     NWin0.Name := new String'("GtkTreeStore"
                                                & "_"
                                                & Normalize_Name (TWdg)
                                               );
+                     NWin0.Original_Name := new String'(TWdg.Name.all);
                      NWin0.Associated_Widget := TWdg;
-                     Debug (0, Sp (3) & "Generated gtktreestore for "
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtktreestore for "
                             & NWin0.Name.all
                             & " for " & Normalize_Name (TWdg)
                             & " (" & TWdg.Widget_Type'Image & ")");
@@ -470,26 +515,32 @@ package body W2gtk_Pkg is
                   --  generate the filter model
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
                   NWin1 := new Window_Properties (GtkModelFilter);
-                  NWin1.Name := new String'("Gtkmodelfilter"
+                  NWin1.Name := new String'("GtkModelFilter"
                                             & "_"
                                             & Normalize_Name (TWdg)
                                            );
+                  NWin1.Original_Name := new String'(TWdg.Name.all);
                   NWin1.Associated_Widget := TWdg;
-                  NWin1.Underlying_Model  := NWin0;
-                  Debug (0, Sp (3) & "Generated gtkmodelfilter for "
+                  NWin1.Underlaying_Model := NWin0;
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkmodelfilter for "
                          & NWin1.Name.all
                          & " for " & NWin0.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
                   --  generate the sort model
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
                   NWin2 := new Window_Properties (GtkModelSort);
-                  NWin2.Name := new String'("Gtkmodelsort"
+                  NWin2.Name := new String'("GtkModelSort"
                                             & "_"
                                             & Normalize_Name (TWdg)
                                            );
+                  NWin2.Original_Name := new String'(TWdg.Name.all);
                   NWin2.Associated_Widget := TWdg;
-                  NWin2.Underlying_Model  := NWin1;
-                  Debug (0, Sp (3) & "Generated gtkmodelsort for "
+                  NWin2.Underlaying_Model := NWin1;
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkmodelsort for "
                          & NWin2.Name.all
                          & " for " & NWin1.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
@@ -498,9 +549,9 @@ package body W2gtk_Pkg is
                   TWdg.Model := NWin2;
 
                   --  insert the objects
-                  Insert_Window_By_Front (NWin2);
-                  Insert_Window_By_Front (NWin1);
-                  Insert_Window_By_Front (NWin0);
+                  Insert_Window_By_Front (Win_List_Aux, NWin2);
+                  Insert_Window_By_Front (Win_List_Aux, NWin1);
+                  Insert_Window_By_Front (Win_List_Aux, NWin0);
 
                when GtkTabPage =>
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
@@ -551,11 +602,66 @@ package body W2gtk_Pkg is
             end case;
             TWdg := TWdg.Next;
          end loop;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
-      Debug (0, "Set Have Widgets");
+      Debug (0, "Moving Windows to Windows List");
+      NWin0 := Extract_First_Window (Win_List);
+      if NWin0.Window_Type /= GtkWindow then
+         raise Program_Error;
+      end if;
+      if Win_List /= null then
+         raise Program_Error;
+      end if;
+      Counter := 0;
+      loop
+         TWin := Extract_First_Window (Win_List_Aux);
+         exit when TWin = null;
+         Counter := Counter + 1;
+         Insert_Window_By_Order (Win_List, TWin);
+         Debug (0, Sp (3) & Counter'Image & " "
+                & "Inserting by order " & TWin.Name.all);
+      end loop;
+      Counter := Counter + 1;
+      Insert_Window_By_Tail (Win_List, NWin0);
+      Debug (0, Sp (3) & Counter'Image & " "
+             & "Inserting by tail " & NWin0.Name.all);
+
+      Debug (-1, "");
+      Debug (0, "Reordering Sort Models");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkListStore or TWin.Window_Type = GtkTreeStore then
+            NWin0 := Find_Window (Win_List, "GtkModelSort_"
+                                  & TWin.Original_Name.all);
+            if NWin0 /= null then
+               Extract_Window (Win_List, NWin0);
+               Insert_Window (Win_List, TWin, NWin0);
+               Debug (0, NWin0.Name.all);
+            end if;
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+
+      Debug (-1, "");
+      Debug (0, "Reordering Filter Models");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkListStore or TWin.Window_Type = GtkTreeStore then
+            NWin0 := Find_Window (Win_List, "GtkModelFilter_"
+                                  & TWin.Original_Name.all);
+            if NWin0 /= null then
+               Extract_Window (Win_List, NWin0);
+               Insert_Window (Win_List, TWin, NWin0);
+               Debug (0, NWin0.Name.all);
+            end if;
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+
+      Debug (-1, "");
+      Debug (0, "Set Have Windows and Widgets");
       TWin := Win_List;
       while TWin /= null loop
          Set_Have (TWin);
@@ -566,7 +672,7 @@ package body W2gtk_Pkg is
                TWdg := TWdg.Next;
             end loop;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (0, Sp (3) & "ListStores" & Have.ListStores'Image);
@@ -604,7 +710,7 @@ package body W2gtk_Pkg is
 
       --  set correct parent from parent name and set Gparent
       Debug (-1, "");
-      Debug (0, "Reparenting from parent name");
+      Debug (0, "Reparenting widgets from parent name");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -641,7 +747,7 @@ package body W2gtk_Pkg is
                TWdg := TWdg.Next;
             end loop;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
@@ -687,7 +793,7 @@ package body W2gtk_Pkg is
                TWdg := TWdg.Next;
             end loop;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
@@ -717,7 +823,7 @@ package body W2gtk_Pkg is
                TWdg := TWdg.Next;
             end loop;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
@@ -736,7 +842,7 @@ package body W2gtk_Pkg is
                    & ".MaxTabIndex " & Image (TWin.MaxTabIndex, 0));
             TWin.MinTabIndex := TWin.MaxTabIndex;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
@@ -782,7 +888,7 @@ package body W2gtk_Pkg is
                TWdg := TWdg.Next;
             end loop;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
@@ -807,10 +913,12 @@ package body W2gtk_Pkg is
                               TS.Handler := new String'("On_"
                                                         & TWdg.Name.all
                                                         & "_Leave");
-                              Insert_Signal (TWdg, TS);
-                              Debug (0, Sp (3) & "Created Signal "
-                                     & TWdg.Name.all
-                                     & ".leave");
+                              B := Insert_Signal (TWdg, TS);
+                              if B then
+                                 Debug (0, Sp (3) & "Created synthetic Signal "
+                                        & TWdg.Name.all
+                                        & ".leave");
+                              end if;
                            end if;
                         when others => null;
                      end case;
@@ -819,7 +927,7 @@ package body W2gtk_Pkg is
                end loop;
             end if;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
@@ -853,7 +961,7 @@ package body W2gtk_Pkg is
                       & ".Has_Focus True");
             end if;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       Debug (-1, "");
@@ -885,7 +993,7 @@ package body W2gtk_Pkg is
                end loop;
             end if;
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       --  process inheritable attributes (font, others?)
@@ -896,7 +1004,7 @@ package body W2gtk_Pkg is
          if TWin.Window_Type = GtkWindow then
             Process_Inheritable (TWin);
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       ---------------------------------------------------------
@@ -911,7 +1019,7 @@ package body W2gtk_Pkg is
          if TWin.Window_Type = GtkWindow then
             Relink_Children_To_Parent (TWin);
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       --  remove a gtkbox parent which contains only one child container
@@ -922,7 +1030,7 @@ package body W2gtk_Pkg is
          if TWin.Window_Type = GtkWindow then
             Visit_GtkTree_Widget_For_GtkBox (TWin.Widget_List);
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       --  generating format columns
@@ -933,7 +1041,7 @@ package body W2gtk_Pkg is
          if TWin.Window_Type = GtkWindow then
             Visit_GtkTree_Widget_For_Columns (TWin.Widget_List);
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       --  compute num_elements for stores. Must be after adjust format columns
@@ -968,12 +1076,12 @@ package body W2gtk_Pkg is
                   end if;
                end if;
             when GtkModelFilter =>
-               TWin.Num_Elements := TWin.Underlying_Model.Num_Elements;
+               TWin.Num_Elements := TWin.Underlaying_Model.Num_Elements;
             when GtkModelSort =>
-               TWin.Num_Elements := TWin.Underlying_Model.Num_Elements;
+               TWin.Num_Elements := TWin.Underlaying_Model.Num_Elements;
             when others => null;
          end case;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       --  recast menus: gtkmenuimageitem with no image => gtknormalmenuitem
@@ -985,7 +1093,7 @@ package body W2gtk_Pkg is
          if TWin.Window_Type = GtkWindow then
             Visit_GtkMenuImageItem_Widget (TWin.Widget_List);
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
 
       --  setting use_sort for data/treegrids
@@ -996,11 +1104,12 @@ package body W2gtk_Pkg is
          if TWin.Window_Type = GtkWindow then
             Visit_Use_Sort (TWin.Widget_List);
          end if;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
       Debug (-1, "End of Adjusting to GTK");
       return 0;
    end Adjust_To_Gtk;
+
 
    -------------------------------------------------------------------------
    procedure Dump (Path : String; File_Name : String) is
@@ -1207,6 +1316,8 @@ package body W2gtk_Pkg is
 
          Put_Property ("Name");
          Put_String_Access (TWin.Name);
+         Put_Property ("Original Name");
+         Put_String_Access (TWin.Original_Name);
 
          case TWin.Window_Type is
             when GtkWindow =>
@@ -1360,14 +1471,14 @@ package body W2gtk_Pkg is
 
             when GtkModelFilter =>
                Put_Property ("Underlying Model");
-               Put_String_Access (TWin.Underlying_Model.Name);
+               Put_String_Access (TWin.Underlaying_Model.Name);
 
                Dump_Associated_Widget;
                Dump_Signal_List;
 
             when GtkModelSort =>
                Put_Property ("Underlying Model");
-               Put_String_Access (TWin.Underlying_Model.Name);
+               Put_String_Access (TWin.Underlaying_Model.Name);
 
                Dump_Associated_Widget;
                Dump_Signal_List;
@@ -2063,7 +2174,7 @@ package body W2gtk_Pkg is
       TWin := Win_List;
       while TWin /= null loop
          Dump_Window (TWin, 0);
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
       TIO.Close (LFile);
       Debug (-1, "End of generating Dump");
@@ -2199,6 +2310,7 @@ package body W2gtk_Pkg is
                      when Str_Name =>
                         if TWin.Name = null then
                            TWin.Name := new String'(+Get_String (RFile));
+                           TWin.Original_Name := new String'(TWin.Name.all);
                            Debug (NLin, Sp (3) & "Set Window Property Name "
                                   & TWin.Name.all);
                         end if;
@@ -4266,7 +4378,8 @@ package body W2gtk_Pkg is
             Found := True;
             TWin.Name := new String'(+Trim (Line (Idx0 + 14 .. Len),
                                      Ada.Strings.Both));
-            Insert_Window_By_Tail (TWin);
+            TWin.Original_Name := new String'(TWin.Name.all);
+            Insert_Window_By_Order (Win_List, TWin);
             Debug (NLin, Sp (3) & "Created GtkWindow " & TWin.Name.all);
             Debug (NLin, Sp (3) & "Set Window Property Name " & TWin.Name.all);
             exit;
@@ -4631,6 +4744,7 @@ package body W2gtk_Pkg is
             SName : constant String :=
               Complete_Signal (Idx1 + 1 .. Complete_Signal'Last);
             WS : Signal_Pointer;
+            B  : Boolean;
          begin
             if WName = "MyBase" or WName = "Me" then
                WS := new Signal_Block;
@@ -4653,18 +4767,20 @@ package body W2gtk_Pkg is
                   end if;
                end;
                WS.Line := NLin;
-               Insert_Signal (Win_List, WS);
-               if Ret = 1 then
-                  Debug (NLin, Sp (3) & "Created Signal "
-                         & Complete_Signal (Complete_Signal'First ..
-                             Complete_Signal'Last - 1)
-                         & " [Gtk " & WS.GtkName.all & "]"
-                         & " => " & WS.Handler.all);
-               else
-                  Debug (NLin, Sp (3) & "Created Signal " &
-                           Win_List.Name.all & "." & SName
-                         & " [Gtk " & WS.GtkName.all & "]"
-                         & " => " & WS.Handler.all);
+               B := Insert_Signal (Win_List, WS);
+               if B then
+                  if Ret = 1 then
+                     Debug (NLin, Sp (3) & "Created Signal "
+                            & Complete_Signal (Complete_Signal'First ..
+                                Complete_Signal'Last - 1)
+                            & " [Gtk " & WS.GtkName.all & "]"
+                            & " => " & WS.Handler.all);
+                  else
+                     Debug (NLin, Sp (3) & "Created Signal " &
+                              Win_List.Name.all & "." & SName
+                            & " [Gtk " & WS.GtkName.all & "]"
+                            & " => " & WS.Handler.all);
+                  end if;
                end if;
             else
                WT := Find_Widget (Win_List.Widget_List, +WName);
@@ -4712,23 +4828,29 @@ package body W2gtk_Pkg is
                if WT.Widget_Type = GtkCalendar then
                   Debug (NLin, "Ignoring Signal " & WS.Name.all);
                else
-                  Insert_Signal (WT, WS);
-                  if Ret = 1 then
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & Complete_Signal (Complete_Signal'First ..
-                                Complete_Signal'Last - 1)
-                            & " [Gtk " & WS.GtkName.all & "]"
-                            & " => " & WS.Handler.all);
-                  else
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & Complete_Signal
-                            & " [Gtk " & WS.GtkName.all & "]"
-                            & " => " & WS.Handler.all);
+                  B := Insert_Signal (WT, WS);
+                  if B then
+                     if Ret = 1 then
+                        Debug (NLin, Sp (3) & "Created Signal "
+                               & Complete_Signal (Complete_Signal'First ..
+                                   Complete_Signal'Last - 1)
+                               & " [Gtk " & WS.GtkName.all & "]"
+                               & " => " & WS.Handler.all);
+                     else
+                        Debug (NLin, Sp (3) & "Created Signal "
+                               & Complete_Signal
+                               & " [Gtk " & WS.GtkName.all & "]"
+                               & " => " & WS.Handler.all);
+                     end if;
                   end if;
                end if;
             end if;
          end;
          return Ret;
+      exception
+         when others =>
+            Ada.Text_IO.Put_Line ("exception");
+            return -1;
       end Parse_Handler;
 
    begin
@@ -4778,7 +4900,7 @@ package body W2gtk_Pkg is
                   More := (Ret = 1);
                end loop;
 
-               --  continue reading to end sub to locate color.showdialog
+               --  continue reading to end sub to locate .showdialog
                while not TIO.End_Of_File (VFile) loop
                   Get_Line;
                   Idx0 := Index (Line (1 .. Len), Test12);
@@ -4843,6 +4965,7 @@ package body W2gtk_Pkg is
       declare
          TWin : Window_Pointer;
          WS   : Signal_Pointer;
+         B    : Boolean;
       begin
          TWin := Win_List;
          while TWin /= null loop
@@ -4855,225 +4978,254 @@ package body W2gtk_Pkg is
                      WS.Name := new String'("NextMonth");
                      WS.Handler := new String'("On_Next_Month_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all & ".NextMonth");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all & ".NextMonth");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("PrevMonth");
                      WS.Handler := new String'("On_Prev_Month_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all & ".PrevMonth");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all & ".PrevMonth");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("NextYear");
                      WS.Handler := new String'("On_Next_Year_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all & ".NextYear");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all & ".NextYear");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("PrevYear");
                      WS.Handler := new String'("On_Prev_Year_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all & ".PrevYear");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                               & WT.Name.all & ".PrevYear");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("DaySelectedDoubleClick");
                      WS.Handler := new String'("On_Day_Selected_Double_Click_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all & ".day_selected_double_click");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                               & WT.Name.all & ".day_selected_double_click");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("DaySelected");
                      WS.Handler := new String'("On_Day_Selected_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
                             & WT.Name.all & ".day_selected");
-
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Click");
                      WS.Handler := new String'("On_Button_Clicked_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal " & WT.Name.all & ".clicked");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                               & WT.Name.all & ".clicked");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Activate");
                      WS.Handler := new String'("On_Entry_Year_Activate_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Year_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                               & WT.Name.all
+                               & ".Year_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("LeaveFocus");
                      WS.Handler := new String'("On_Entry_Year_Leavefocus_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Year_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                               & WT.Name.all
+                               & ".Year_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Activate");
                      WS.Handler := new String'("On_Entry_Month_Activate_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Month_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                               & WT.Name.all
+                               & ".Month_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("LeaveFocus");
                      WS.Handler := new String'("On_Entry_Month_Leavefocus_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Month_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                               & WT.Name.all
+                               & ".Month_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Activate");
                      WS.Handler := new String'("On_Entry_Day_Activate_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Day_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Day_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("LeaveFocus");
                      WS.Handler := new String'("On_Entry_Day_Leavefocus_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Day_Activate");
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Day_Activate");
 
+                     end if;
                   else
                      WS := new Signal_Block;
                      WS.Name := new String'("Click");
                      WS.Handler := new String'("On_Sec_Button_Up_Clicked_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Sec_Clicked");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Sec_Clicked");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Click");
                      WS.Handler := new String'("On_Sec_Button_Down_Clicked_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
                             & ".Sec_Clicked");
-
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Click");
                      WS.Handler := new String'("On_Min_Button_Up_Clicked_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Min_Clicked");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Min_Clicked");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Click");
                      WS.Handler := new String'("On_Min_Button_Down_Clicked_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Min_Clicked");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Min_Clicked");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Click");
                      WS.Handler := new String'("On_Hour_Button_Up_Clicked_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Hour_Clicked");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Hour_Clicked");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Click");
                      WS.Handler := new String'("On_Hour_Button_Down_Clicked_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Hour_Clicked");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Hour_Clicked");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Activate");
                      WS.Handler := new String'("On_Entry_Hour_Activate_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Hour_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Hour_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("LeaveFocus");
                      WS.Handler := new String'("On_Entry_Hour_Leavefocus_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Hour_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Hour_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Activate");
                      WS.Handler := new String'("On_Entry_Min_Activate_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Min_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Min_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("LeaveFocus");
                      WS.Handler := new String'("On_Entry_Min_Leavefocus_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Min_Activate");
-
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Min_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("Activate");
                      WS.Handler := new String'("On_Entry_Sec_Activate_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Sec_Activate");
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Sec_Activate");
+                     end if;
                      WS := new Signal_Block;
                      WS.Name := new String'("LeaveFocus");
                      WS.Handler := new String'("On_Entry_Sec_Leavefocus_"
                                                & WT.Name.all);
-                     Insert_Signal (WT, WS);
-                     Debug (NLin, Sp (3) & "Created Signal "
-                            & WT.Name.all
-                            & ".Sec_Activate");
+                     B := Insert_Signal (WT, WS);
+                     if B then
+                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                               & WT.Name.all
+                               & ".Sec_Activate");
+                     end if;
                   end if;
 
                when others => null;
                end case;
                WT := WT.Next;
             end loop;
-            TWin := TWin.Next;
+            TWin := Next_Window (Win_List, TWin);
          end loop;
       end;
 
@@ -5143,25 +5295,29 @@ package body W2gtk_Pkg is
          Debug (-1, "");
       end if;
 
-      Result := Parse1_Designer_File (Resx_Path, Resx_File_Name);
+      Result := Parse1_Designer_File (Resx_Path,
+                                      Resx_File_Name);
       if Result /= 0 then
          return Result;
       end if;
 
       Result := Parse_Resource_File (Win_List,
-                                     Resx_Path, Resx_File_Name);
+                                     Resx_Path,
+                                     Resx_File_Name);
       if Result /= 0 then
          return Result;
       end if;
 
       Result := Parse2_Designer_File (Win_List,
-                                      Resx_Path, Resx_File_Name,
+                                      Resx_Path,
+                                      Resx_File_Name,
                                       Icon_Path);
       if Result /= 0 then
          return Result;
       end if;
 
-      Result := Parse_VB_File (Resx_Path, Resx_File_Name);
+      Result := Parse_VB_File (Resx_Path,
+                               Resx_File_Name);
       if Result /= 0 then
          return Result;
       end if;
@@ -5188,10 +5344,19 @@ package body W2gtk_Pkg is
    -------------------------------------------------------------------------
    function Generate_Glade_File (Glade_Path : String;
                                  FileName   : String) return Integer is
-      TWin  : Window_Pointer;
+      TWin : Window_Pointer;
+      Result : Integer;
    begin
       Debug (-1, "");
-      Debug (-1, "Generating Glade");
+      Debug (-1, "Generating Glade backup");
+      Generate_Backup (Result, Glade_Path,
+                       FileName & ".glade");
+      if Result < 0 then
+         return Result;
+      end if;
+
+      Debug (-1, "");
+      Debug (-1, "Generating Glade " & Glade_Path & "/" & FileName & ".glade");
 
       if Win_List = null then
          TIO.Put_Line ("No window information");
@@ -5223,7 +5388,7 @@ package body W2gtk_Pkg is
             when GtkModelSort =>
                Emit_GtkModelSort (TWin, 2);
          end case;
-         TWin := TWin.Next;
+         TWin := Next_Window (Win_List, TWin);
       end loop;
       Emit_GtkTrailer (null, 0);
 

@@ -26,6 +26,7 @@ with GNAT.OS_Lib;           use GNAT.OS_Lib;
 procedure W2gtk is
    package TIO renames Ada.Text_IO;
 
+   Ada_Main        : String_Access;
    Ada_Path        : String_Access;
    Icon_Path       : String_Access;
    Resx_Path       : String_Access;
@@ -41,7 +42,7 @@ procedure W2gtk is
    procedure Print_Help is
    begin
       TIO.Put_Line ("w2gtk -rp wpath -rf wfile -gp gpath -gf gfile -h --help"
-                    & " -glade -dump -log -ap apath");
+                    & " -glade -dump -log -ap apath -ada main");
       TIO.Put_Line ("-h        produces this short help");
       TIO.Put_Line ("--help    produces this short help");
       TIO.Put_Line ("-rp wpath path to the windows form");
@@ -52,7 +53,7 @@ procedure W2gtk is
       TIO.Put_Line ("-gp gpath path to the generated glade file");
       TIO.Put_Line ("-gf gfile generated glade file name with"
                     & " no extension");
-      TIO.Put_Line ("-ada      generate the Ada files");
+      TIO.Put_Line ("-ada main generate the Ada files being <main> the Main Ada program");
       TIO.Put_Line ("-glade    generate the glade file");
       TIO.Put_Line ("-dump     generate the dump file");
       TIO.Put_Line ("-log      generate the log file");
@@ -64,14 +65,22 @@ begin
 
    loop
       case Getopt ("h -help rp= rf= gp= ip= ap= "
-                   & "ada log dump glade") is
+                   & "ada= log dump glade") is
          when 'h' | '-' =>
             Print_Help;
          when 'r' =>
             if Full_Switch = "rp" then
-               if Parameter /= "" then
-                  Resx_Path := new String'(Parameter);
-               end if;
+               declare
+                  P : constant String := Parameter;
+               begin
+                  if P /= "" then
+                     if P (P'Last) = '/' then
+                        Resx_Path := new String'(P (P'First .. P'Last - 1));
+                     else
+                        Resx_Path := new String'(P);
+                     end if;
+                  end if;
+               end;
             elsif Full_Switch = "rf" then
                if Parameter /= "" then
                   Resx_FileName := new String'(Parameter);
@@ -79,9 +88,17 @@ begin
             end if;
          when 'g' =>
             if Full_Switch = "gp" then
-               if Parameter /= "" then
-                  Glade_Path := new String'(Parameter);
-               end if;
+               declare
+                  P : constant String := Parameter;
+               begin
+                  if P /= "" then
+                     if P (P'Last) = '/' then
+                        Glade_Path := new String'(P (P'First .. P'Last - 1));
+                     else
+                        Glade_Path := new String'(P);
+                     end if;
+                  end if;
+               end;
             elsif Full_Switch = "glade" then
                Produce_Glade := True;
             end if;
@@ -95,20 +112,35 @@ begin
             end if;
          when 'i' =>
             if Full_Switch = "ip" then
-               if Parameter /= "" then
-                  Icon_Path := new String'(Parameter);
-               else
-                  Icon_Path := new String'("");
-               end if;
+               declare
+                  P : constant String := Parameter;
+               begin
+                  if P /= "" then
+                     if P (P'Last) = '/' then
+                        Icon_Path := new String'(P (P'First .. P'Last - 1));
+                     else
+                        Icon_Path := new String'(P);
+                     end if;
+                  end if;
+               end;
             end if;
          when 'a' =>
             if Full_Switch = "ap" then
-               if Parameter /= "" then
-                  Ada_Path := new String'(Parameter);
-               else
-                  Ada_Path := new String'("");
-               end if;
+               declare
+                  P : constant String := Parameter;
+               begin
+                  if P /= "" then
+                     if P (P'Last) = '/' then
+                        Ada_Path := new String'(P (P'First .. P'Last - 1));
+                     else
+                        Ada_Path := new String'(P);
+                     end if;
+                  end if;
+               end;
             elsif Full_Switch = "ada" then
+               if Parameter /= "" then
+                  Ada_Main := new String'(Parameter);
+               end if;
                Produce_Ada := True;
             end if;
          when others =>
@@ -117,43 +149,76 @@ begin
    end loop;
 
    if Resx_Path = null then
-      TIO.Put_Line ("Wrong options: missing -rp");
+      TIO.Put_Line ("Wrong options: missing -rp <resource_name path>");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
    if Resx_FileName = null then
-      TIO.Put_Line ("Wrong options: missing -rf");
-      GNAT.OS_Lib.OS_Exit (-1);
-   end if;
-   if Produce_Dump and then Glade_Path = null then
-      TIO.Put_Line ("Wrong options: -dump requires -gp");
+      TIO.Put_Line ("Wrong options: missing -rf <resource_name>");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
    if Produce_Glade then
       if Glade_Path = null then
-         TIO.Put_Line ("Wrong options: missing -gp");
+         TIO.Put_Line ("Wrong options: missing -gp <glade_path>");
          GNAT.OS_Lib.OS_Exit (-1);
       end if;
    end if;
    if Produce_Ada then
       if Ada_Path = null then
-         TIO.Put_Line ("Wrong options: -ada requires ap");
+         TIO.Put_Line ("Wrong options: -ap requires <ada path>");
          GNAT.OS_Lib.OS_Exit (-1);
       end if;
+      if Ada_Main = null then
+         TIO.Put_Line ("Wrong options: -ada requires <main Ada program>");
+         GNAT.OS_Lib.OS_Exit (-1);
+      end if;
+   end if;
+   if Produce_Dump and then Glade_Path = null then
+      TIO.Put_Line ("Wrong options: -dump requires -gp");
+      GNAT.OS_Lib.OS_Exit (-1);
    end if;
    if Produce_Log and then Glade_Path = null then
       TIO.Put_Line ("Wrong options: -log requires -gp");
       GNAT.OS_Lib.OS_Exit (-1);
    end if;
 
-   Result := Parse_VS_File (Produce_Ada,
-                            Produce_Log,
-                            Produce_Dump,
-                            Produce_Glade,
-                            Resx_Path.all,
-                            Resx_FileName.all,
-                            Glade_Path.all,
-                            Icon_Path.all,
-                            Ada_Path.all);
+   if Produce_Ada then
+      if Produce_Glade or Produce_Log or Produce_Dump then
+         Result := Parse_VS_File (Produce_Ada,
+                                  Produce_Log,
+                                  Produce_Dump,
+                                  Produce_Glade,
+                                  Resx_Path.all,
+                                  Resx_FileName.all,
+                                  Glade_Path.all,
+                                  Icon_Path.all,
+                                  Ada_Path.all);
+      else
+         Result := Parse_VS_File (Produce_Ada,
+                                  Produce_Log,
+                                  Produce_Dump,
+                                  Produce_Glade,
+                                  Resx_Path.all,
+                                  Resx_FileName.all,
+                                  "",
+                                  Icon_Path.all,
+                                  Ada_Path.all);
+      end if;
+   else
+      if Produce_Glade or Produce_Log or Produce_Dump then
+         Result := Parse_VS_File (Produce_Ada,
+                                  Produce_Log,
+                                  Produce_Dump,
+                                  Produce_Glade,
+                                  Resx_Path.all,
+                                  Resx_FileName.all,
+                                  Glade_Path.all,
+                                  Icon_Path.all,
+                                  "");
+      else
+         TIO.Put_Line ("Nothing to produce, exiting...");
+         GNAT.OS_Lib.OS_Exit (Result);
+      end if;
+   end if;
 
    if Result < 0 then
       TIO.Put_Line ("Aborting...");
@@ -169,7 +234,8 @@ begin
    if Result >= 0 and then Produce_Ada and then Ada_Path /= null then
       Result := Generate_Ada_Packages (Ada_Path   => Ada_Path.all,
                                        Glade_Path => Glade_Path.all,
-                                       Filename   => Resx_FileName.all);
+                                       Filename   => Resx_FileName.all,
+                                       Ada_Main   => Ada_Main.all);
    end if;
 
    Debug (-1, "");

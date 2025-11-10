@@ -18,13 +18,14 @@ with W2gtk_Decls;                use W2gtk_Decls;
 with Ada.Text_IO;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Directories;            use Ada.Directories;
+with Ada.Calendar;
+with GNAT.Calendar.Time_IO;
 with GNATCOLL.Arg_Lists;         use GNATCOLL.Arg_Lists;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
 with GNAT.Expect;                use GNAT.Expect;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
-with GNAT.Calendar.Time_IO;
 with W2gtk_Backups;              use W2gtk_Backups;
-
+with W2gtk_Version;              use W2gtk_Version;
 
 package body W2Gtk2Ada is
    package TIO renames Ada.Text_IO;
@@ -34,8 +35,43 @@ package body W2Gtk2Ada is
    AdaFile      : TIO.File_Type;
    TWin         : Window_Pointer :=  null;
    Main_Window  : Boolean := False;
+   Main_Program : Boolean := False;
    Signals      : Boolean := False;
    With_Form_Closing : Boolean := False;
+   Now          : Ada.Calendar.Time;
+
+   ------------------------
+   --  Insert_Your_Code  --
+   ------------------------
+
+   procedure Insert_Your_Code (Spaces    : Integer;
+                               With_Null : Boolean := True);
+   procedure Insert_Your_Code (Spaces    : Integer;
+                               With_Null : Boolean := True) is
+   begin
+      TIO.Put_Line (Sp (Spaces) & "--  INSERT YOUR CODE HERE"
+                    & " [w2gtk " & Version & "]");
+      if With_Null then
+         TIO.Put_Line (Sp (Spaces) & "null;");
+      end if;
+      TIO.Put_Line (Sp (Spaces) & "--  END OF INSERT YOUR CODE"
+                    & " [w2gtk " & Version & "]");
+   end Insert_Your_Code;
+
+   --------------
+   --  Banner  --
+   --------------
+
+   procedure Include_Banner;
+   procedure Include_Banner is
+      --  version'lenght = 5
+   begin
+      TIO.New_Line;
+      TIO.Put_Line ("----------------------------------");
+      TIO.Put_Line ("--  generated with w2gtk " & Version & "  --");
+      TIO.Put_Line ("----------------------------------");
+      TIO.New_Line;
+   end Include_Banner;
 
    --------------
    --  Quoted  --
@@ -51,8 +87,8 @@ package body W2Gtk2Ada is
    --  Set_TWin  --
    ----------------
 
-   procedure Set_TWin;
-   procedure Set_TWin is
+   procedure Set_TWin (Ada_Main : String);
+   procedure Set_TWin (Ada_Main : String) is
       Temp_Win : Window_Pointer := Win_List;
    begin
       while Temp_Win /= null loop
@@ -60,10 +96,11 @@ package body W2Gtk2Ada is
             TWin := Temp_Win;
             if not TWin.Is_Dialog then
                Main_Window := True;
+               Main_Program := (Capitalize (Ada_Main) = Capitalize (TWin.Name.all));
                exit;
             end if;
          end if;
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
    end Set_TWin;
 
@@ -104,13 +141,63 @@ package body W2Gtk2Ada is
          if Temp_Win.Window_Type = GtkWindow then
             Visit_Widget (Temp_Win.Widget_List, Callback);
          end if;
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
    end For_Each_Widget;
+
+   ------------------------
+   --  Emit_Package Spec --
+   ------------------------
+
+   procedure Emit_Package_Spec (Pkgname : String;
+                                Prev_Line : Boolean := True);
+   procedure Emit_Package_Spec (Pkgname : String;
+                                Prev_Line : Boolean := True) is
+   begin
+      Insert_Your_Code (0, False);
+      if Prev_Line then
+         TIO.New_Line;
+      end if;
+      TIO.Put_Line ("package " & Pkgname & " is");
+      TIO.New_Line;
+   end Emit_Package_Spec;
+
+   ------------------------
+   --  Emit_Package Body --
+   ------------------------
+
+   procedure Emit_Package_Body (Pkgname  : String;
+                                Prev_Line : Boolean := True);
+   procedure Emit_Package_Body (Pkgname  : String;
+                                Prev_Line : Boolean := True) is
+   begin
+      Insert_Your_Code (0, False);
+      if Prev_Line then
+         TIO.New_Line;
+      end if;
+      TIO.Put_Line ("package body " & Pkgname & " is");
+      TIO.New_Line;
+   end Emit_Package_Body;
+
+   ------------------------
+   --  Emit_Package End  --
+   ------------------------
+
+   procedure Emit_Package_End (Pkgname  : String;
+                               Prev_Line : Boolean := True);
+   procedure Emit_Package_End (Pkgname  : String;
+                               Prev_Line : Boolean := True) is
+   begin
+      if Prev_Line then
+         TIO.New_Line;
+      end if;
+      TIO.Put_Line ("end " & Pkgname & ";");
+   end Emit_Package_End;
 
    --------------------
    --  Emit_With_Use --
    --------------------
+
    procedure Emit_With_Use (Pkg : String);
    procedure Emit_With_Use (Pkg : String) is
    begin
@@ -151,7 +238,7 @@ package body W2Gtk2Ada is
          if With_Form_Closing then
             exit;
          end if;
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
       if Signals then
          return;
@@ -352,16 +439,16 @@ package body W2Gtk2Ada is
                      TIO.New_Line;
                   end if;
                end if;
-               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
                if With_Form_Closing
                  and then
                    TS.Handler.all =
                      "On_" & Capitalize (TWin0.Name.all) & "_Formclosing"
                  and then Main_Window
                then
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (6) & "Gtk.Main.Main_Quit;");
                else
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6);
                end if;
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             else
@@ -370,7 +457,7 @@ package body W2Gtk2Ada is
                              & " return Boolean is");
                TIO.Put_Line (Sp (6) & "pragma Unreferenced (B);");
                TIO.Put_Line (Sp (3) & "begin");
-               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               Insert_Your_Code (6, False);
                TIO.Put_Line (Sp (6) & "return False; --  signal not processed");
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             end if;
@@ -426,7 +513,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "On_Entry_Day_Activate_"
                                 & TWdg.Name.all
                                 & " (User_Data);");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (6)
                                 & "return False; --  signal not processed");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
@@ -478,8 +565,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
                   TIO.Put_Line (Sp (12) & "return;");
                   TIO.Put_Line (Sp (6) & "end;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Entry_Month_Leavefocus")
@@ -493,7 +579,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "On_Entry_Month_Activate_"
                                 & TWdg.Name.all
                                 & " (User_Data);");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (6)
                                 & "return False; --  signal not processed");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
@@ -546,8 +632,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
                   TIO.Put_Line (Sp (12) & "return;");
                   TIO.Put_Line (Sp (6) & "end;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Entry_Year_Leavefocus")
@@ -561,7 +646,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "On_Entry_Year_Activate_"
                                 & TWdg.Name.all
                                 & " (User_Data);");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (6)
                                 & "return False; --  signal not processed");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
@@ -614,8 +699,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (12) & TWdg.Name.all & "_Set_Entries;");
                   TIO.Put_Line (Sp (12) & "return;");
                   TIO.Put_Line (Sp (6) & "end;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Button_Clicked")
@@ -632,8 +716,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (9) & "(not Me."
                                 & TWdg.Name.all & "_Calendar"
                                 & ".Get_Visible);");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Day_Selected")
@@ -644,8 +727,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Day_Selected_Double_Click")
@@ -658,8 +740,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all & "_Calendar"
                                 & ".Set_Visible (False);");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Prev_Year")
@@ -670,8 +751,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Next_Year")
@@ -682,8 +762,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Prev_Month")
@@ -694,8 +773,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Next_Month")
@@ -706,8 +784,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Set_Entries;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
                end if;
 
@@ -774,7 +851,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (9) & "return False;");
                   TIO.Put_Line (Sp (6) & "end if;");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Sec := Sec;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (6) & "return False;  --  signal not processed");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
@@ -788,8 +865,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & "Temp := On_Entry_Sec_Leavefocus_"
                                 & TWdg.Name.all & " (User_Data);");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Entry_Min_Leavefocus")
@@ -818,7 +894,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (9) & "return False;");
                   TIO.Put_Line (Sp (6) & "end if;");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Min := Min;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (6) & "return False;  --  signal not processed");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
@@ -832,8 +908,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & "Temp := On_Entry_Min_Leavefocus_"
                                 & TWdg.Name.all & " (User_Data);");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Entry_Hour_Leavefocus")
@@ -862,7 +937,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (9) & "return False;");
                   TIO.Put_Line (Sp (6) & "end if;");
                   TIO.Put_Line (Sp (6) & TWdg.Name.all & "_Hour := Hour;");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (6) & "return False;  --  signal not processed");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
@@ -876,7 +951,6 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (3) & "begin");
                   TIO.Put_Line (Sp (6) & "Temp := On_Entry_Hour_Leavefocus_"
                                 & TWdg.Name.all & " (User_Data);");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
                   TIO.Put_Line (Sp (6) & "null;");
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
@@ -896,8 +970,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Sec_Entry.Set_Text (Img ("
                                 & TWdg.Name.all & "_Sec" & "));");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Sec_Button_Down_Clicked")
@@ -916,8 +989,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Sec_Entry.Set_Text (Img ("
                                 & TWdg.Name.all & "_Sec" & "));");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Min_Button_Up_Clicked")
@@ -936,8 +1008,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Min_Entry.Set_Text (Img ("
                                 & TWdg.Name.all & "_Min" & "));");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Min_Button_Down_Clicked")
@@ -956,8 +1027,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Min_Entry.Set_Text (Img ("
                                 & TWdg.Name.all & "_Min" & "));");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Hour_Button_Up_Clicked")
@@ -976,8 +1046,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Hour_Entry.Set_Text (Img ("
                                 & TWdg.Name.all & "_Hour" & "));");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
 
                elsif Starts_With (TS.Handler.all, "On_Hour_Button_Down_Clicked")
@@ -996,8 +1065,7 @@ package body W2Gtk2Ada is
                   TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
                                 & "_Hour_Entry.Set_Text (Img ("
                                 & TWdg.Name.all & "_Hour" & "));");
-                  TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-                  TIO.Put_Line (Sp (6) & "null;");
+                  Insert_Your_Code (6, False);
                   TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
                end if;
                TIO.New_Line;
@@ -1016,7 +1084,7 @@ package body W2Gtk2Ada is
                              & " return Boolean is");
                TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                TIO.Put_Line (Sp (3) & "begin");
-               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               Insert_Your_Code (6, False);
                if TWdg.Next_Focus /= null then
                   TIO.Put_Line (Sp (6) & "Gtk.Widget.Grab_Focus");
                   TIO.Put_Line (Sp (8) & "(Gtk_Widget (Me."
@@ -1031,8 +1099,7 @@ package body W2Gtk2Ada is
                              & " is");
                TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                TIO.Put_Line (Sp (3) & "begin");
-               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
-               TIO.Put_Line (Sp (6) & "null;");
+               Insert_Your_Code (6);
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             else  --  TS.Proc is false
                TIO.Put_Line (Sp (3) & "function " & TS.Handler.all);
@@ -1040,7 +1107,7 @@ package body W2Gtk2Ada is
                              & " return Boolean is");
                TIO.Put_Line (Sp (6) & "pragma Unreferenced (User_Data);");
                TIO.Put_Line (Sp (3) & "begin");
-               TIO.Put_Line (Sp (6) & "--  INSERT YOUR CODE HERE");
+               Insert_Your_Code (6, False);
                TIO.Put_Line (Sp (6) & "return False; --  signal not processed");
                TIO.Put_Line (Sp (3) & "end " & TS.Handler.all & ";");
             end if;
@@ -1059,24 +1126,19 @@ package body W2Gtk2Ada is
       Temp_Win : Window_Pointer;
    begin
       Debug (-1, "Generating Signals...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       Emit_With_Use ("Gtkada.Builder");
       Emit_With_Use ("Glib.Object");
-      TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_Pkg.Signals is");
+      Emit_Package_Spec (Filename & "_Pkg.Signals");
       Temp_Win := Win_List;
       while Temp_Win /= null loop
          Emit_Signal_Specs (Temp_Win);
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
       For_Each_Widget (Win_List, Emit_Signal_Specs'Access);
-      TIO.Put_Line ("end " & Filename & "_Pkg.Signals;");
+      Emit_Package_End (Filename & "_Pkg.Signals");
 
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       if With_Form_Closing and then Main_Window then
          TIO.Put_Line ("with Gtk.Main;");
       else
@@ -1117,8 +1179,7 @@ package body W2Gtk2Ada is
             Emit_With_Use ("Gtk.Style_Context");
          end if;
       end if;
-      TIO.New_Line;
-      TIO.Put_Line ("package body " & Filename & "_Pkg.Signals is");
+      Emit_Package_Body (Filename & "_Pkg.Signals", True);
       if Have.Date_Pickers > 0 then
          TIO.Put_Line (Sp (3) &
                          "function Img (Value : Guint) return String;");
@@ -1146,10 +1207,10 @@ package body W2Gtk2Ada is
       Temp_Win := Win_List;
       while Temp_Win /= null loop
          Emit_Signal_Bodies (Temp_Win);
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
       For_Each_Widget (Win_List, Emit_Signal_Bodies'Access);
-      TIO.Put_Line ("end " & Filename & "_Pkg.Signals;");
+      Emit_Package_End (Filename & "_Pkg.Signals");
    end Emit_Signals;
 
    ---------------------------------
@@ -1203,33 +1264,27 @@ package body W2Gtk2Ada is
       Temp_Win : Window_Pointer;
    begin
       Debug (-1, "Generating Register of Signals...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       Emit_With_Use ("Gtkada.Builder");
-      TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_Pkg.Register_Signals is");
+      Emit_Package_Spec (Filename & "_Pkg.Register_Signals");
       TIO.Put_Line (Sp (3) & "procedure Register"
                     & " (Builder : Gtkada.Builder.Gtkada_Builder);");
-      TIO.Put_Line ("end " & Filename & "_Pkg.Register_Signals;");
+      Emit_Package_End (Filename & "_Pkg.Register_Signals");
 
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       Emit_With_Use (Filename & "_Pkg.Signals");
-      TIO.New_Line;
-      TIO.Put_Line ("package body " & Filename & "_Pkg.Register_Signals is");
+      Emit_Package_Body (Filename & "_Pkg.Register_Signals", True);
       TIO.Put_Line (Sp (3) & "procedure Register"
                     & " (Builder : Gtkada.Builder.Gtkada_Builder) is");
       TIO.Put_Line (Sp (3) & "begin");
       Temp_Win := Win_List;
       while Temp_Win /= null loop
          Emit_Register_All_Signals (Temp_Win);
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
       For_Each_Widget (Win_List, Emit_Register_All_Signals'Access);
       TIO.Put_Line (Sp (3) & "end Register;");
-      TIO.Put_Line ("end " & Filename & "_Pkg.Register_Signals;");
+      Emit_Package_End (Filename & "_Pkg.Register_Signals");
    end Emit_Register_Signals;
 
    ------------------------------
@@ -1725,9 +1780,7 @@ package body W2Gtk2Ada is
       Temp_Win : Window_Pointer := Win_List;
    begin
       Debug (-1, "Generating Object Collection...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       if Main_Window then
          Emit_With_Use ("Gtk.Window");
       else
@@ -1828,8 +1881,7 @@ package body W2Gtk2Ada is
       end if;
       TIO.Put_Line ("with Glib;");
       Emit_With_Use ("Glib.Object");
-      TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_Pkg.Object_Collection is");
+      Emit_Package_Spec (Filename & "_Pkg.Object_Collection", True);
       TIO.Put_Line (Sp (3) & "type Widget_Collection_Record is new "
                     & "Glib.Object.GObject_Record with record");
       while Temp_Win /= null loop
@@ -1838,7 +1890,7 @@ package body W2Gtk2Ada is
          end if;
          TIO.Put_Line (Sp (6) & Temp_Win.Name.all & " : "
                        & To_Gtk (Temp_Win) & ";");
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
       For_Each_Widget (Win_List, Emit_Object'Access);
       TIO.Put_Line (Sp (3) & "end record;");
@@ -1886,14 +1938,10 @@ package body W2Gtk2Ada is
          TIO.New_Line;
          For_Each_Widget (Win_List, Emit_Time_Picker_Methods_Spec'Access);
       end if;
-
-      TIO.New_Line;
-      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
+      Emit_Package_End (Filename & "_Pkg.Object_Collection");
 
       ------------------ body --------------------
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       if Have.TreeViews > 0
         and then Have.HDR_CellRenderers > 0
         and then Have.TreeViewColumns + Have.TreeViewToggles > 0
@@ -1911,8 +1959,7 @@ package body W2Gtk2Ada is
       if Have.Column_Tooltips > 0 then
          Emit_With_Use ("Gtk.Widget");
       end if;
-      TIO.Put_Line ("package body " & Filename & "_Pkg.Object_Collection is");
-      TIO.New_Line;
+      Emit_Package_Body (Filename & "_Pkg.Object_Collection", True);
       TIO.Put_Line (Sp (3) & "procedure New_Widget_Collection ("
                     & "OC : out Widget_Collection) is");
       TIO.Put_Line (Sp (3) & "begin");
@@ -1938,7 +1985,7 @@ package body W2Gtk2Ada is
             TIO.Put_Line (Sp (8) & To_Gtk (Temp_Win)
                           & " (Builder.Get_Object (");
             TIO.Put_Line (Sp (8) & Quoted (Temp_Win.Name.all) & "));");
-            Temp_Win := Temp_Win.Next;
+            Temp_Win := Next_Window (Win_List, Temp_Win);
          end loop;
          For_Each_Widget (Win_List, Initialize_Object'Access);
       end if;
@@ -2068,8 +2115,7 @@ package body W2Gtk2Ada is
       if Have.Time_Pickers > 0 then
          For_Each_Widget (Win_List, Emit_Time_Picker_Methods_Body'Access);
       end if;
-
-      TIO.Put_Line ("end " & Filename & "_Pkg.Object_Collection;");
+      Emit_Package_End (Filename & "_Pkg.Object_Collection");
    end Emit_Object_Collection;
 
    ---------------------------
@@ -2082,11 +2128,9 @@ package body W2Gtk2Ada is
       TWdg     : Widget_Pointer;
    begin
       Debug (-1, "Generating Stores Enum...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       Emit_With_Use ("Glib");
-      TIO.Put_Line ("package " & Filename & "_Pkg.Stores_Enum is");
+      Emit_Package_Spec (Filename & "_Pkg.Stores_Enum");
       while Temp_Win /= null loop
          case Temp_Win.Window_Type is
             when GtkListStore | GtkTreeStore =>
@@ -2142,9 +2186,9 @@ package body W2Gtk2Ada is
                end if;
             when others => null;
          end case;
-         Temp_Win := Temp_Win.Next;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
-      TIO.Put_Line ("end " & Filename & "_Pkg.Stores_Enum;");
+      Emit_Package_End (Filename & "_Pkg.Stores_Enum");
    end Emit_Stores_Enum;
 
       ------------------------
@@ -2154,16 +2198,12 @@ package body W2Gtk2Ada is
    procedure Emit_Cell_Renderers (Filename : String) is
    begin
       Debug (-1, "Generating Cell Renderers...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_Pkg.Cell_Renderers is");
+      Include_Banner;
+      Emit_Package_Spec (Filename & "_Pkg.Cell_Renderers");
       TIO.Put_Line (Sp (3) & "procedure Initialize;");
-      TIO.Put_Line ("end " & Filename & "_Pkg.Cell_Renderers;");
+      Emit_Package_End (Filename & "_Pkg.Cell_Renderers");
 
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       Emit_With_Use (Filename & "_Pkg.Object_Collection");
       Emit_With_Use ("Gtk.Cell_Renderer");
       Emit_With_Use ("Gtk.Cell_Renderer_Text");
@@ -2174,9 +2214,7 @@ package body W2Gtk2Ada is
       end if;
       Emit_With_Use ("Pango.Font");
 
-      TIO.New_Line;
-      TIO.Put_Line ("package body " & Filename & "_Pkg.Cell_Renderers is");
-      TIO.New_Line;
+      Emit_Package_Body (Filename & "_Pkg.Cell_Renderers", True);
       TIO.Put_Line (Sp (3) & "procedure Initialize is");
       TIO.Put_Line (Sp (3) & "begin");
       TIO.Put_Line (Sp (6) & "null; --  if no cell renderers are generated");
@@ -2367,47 +2405,43 @@ package body W2Gtk2Ada is
          end if;
       end loop;
       TIO.Put_Line (Sp (3) & "end Initialize;");
-      TIO.New_Line;
-      TIO.Put_Line ("end " & Filename & "_Pkg.Cell_Renderers;");
+      Emit_Package_End (Filename & "_Pkg.Cell_Renderers");
    end Emit_Cell_Renderers;
 
 ------------------------
    --  Emit Main Window  --
    ------------------------
 
-   procedure Emit_Main_Window (Filename   : String;
-                               Ada_Path   : String;
-                               Glade_Path : String);
-   procedure Emit_Main_Window (Filename   : String;
-                               Ada_Path   : String;
-                               Glade_Path : String) is
+   procedure Emit_Main_Window (Capitalized_Filename   : String;
+                               Original_Filename      : String;
+                               Ada_Path               : String;
+                               Glade_Path             : String);
+   procedure Emit_Main_Window (Capitalized_Filename   : String;
+                               Original_Filename      : String;
+                               Ada_Path               : String;
+                               Glade_Path             : String) is
    begin
       Debug (-1, "Generating Main Window...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       if Main_Window then
-         TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
+         Emit_Package_Spec (Capitalized_Filename & "_Pkg.Main_Windows");
          TIO.Put_Line (Sp (3) & "procedure Initialize;");
-         TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
+         Emit_Package_End (Capitalized_Filename & "_Pkg.Main_Windows");
       else
          Emit_With_Use ("Gtk.Window");
-         TIO.New_Line;
-         TIO.Put_Line ("package " & Filename & "_Pkg.Main_Windows is");
+         Emit_Package_Spec (Capitalized_Filename & "_Pkg.Main_Windows");
          TIO.Put_Line (Sp (3) & "procedure Initialize "
                        & "(Parent : access Gtk_Window_Record'Class);");
-         TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
+         Emit_Package_End (Capitalized_Filename & "_Pkg.Main_Windows");
       end if;
 
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
-      Emit_With_Use (Filename & "_Pkg.Object_Collection");
+      Include_Banner;
+      Emit_With_Use (Capitalized_Filename & "_Pkg.Object_Collection");
       if Signals then
-         Emit_With_Use (Filename & "_Pkg.Register_Signals");
+         Emit_With_Use (Capitalized_Filename & "_Pkg.Register_Signals");
       end if;
       if Have.TreeStores > 0 or Have.ListStores > 0 then
-         Emit_With_Use (Filename & "_Pkg.Cell_Renderers");
+         Emit_With_Use (Capitalized_Filename & "_Pkg.Cell_Renderers");
       end if;
       Emit_With_Use ("Ada.Text_IO");
       TIO.Put_Line ("with Gtk.Main;");
@@ -2416,20 +2450,19 @@ package body W2Gtk2Ada is
          Emit_With_Use ("Gtkada.Style");
       end if;
       Emit_With_Use ("Gtk.Widget");
+      Emit_With_Use ("Gtk.Window");
       Emit_With_Use ("Gtkada.Builder");
       Emit_With_Use ("Gtk.Dialog");
       Emit_With_Use ("Gtkada.Dialogs");
       TIO.Put_Line ("with Glib;");
       Emit_With_Use ("Glib.Object");
       Emit_With_Use ("Glib.Error");
-      TIO.New_Line;
-      TIO.Put_Line ("package body " & Filename & "_Pkg.Main_Windows is");
-      TIO.New_Line;
+
+      Emit_Package_Body (Capitalized_Filename & "_Pkg.Main_Windows", True);
       TIO.Put_Line (Sp (3) & "Glade_Filename : constant String :=");
       TIO.Put_Line (Sp (6)
                     & Quoted (Glade_Path & "/"
-                      --  & To_Lower (TWin.Name.all) & ".glade")
-                      & TWin.Name.all & ".glade")
+                      & Original_Filename & ".glade")
                     & ";");
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "procedure Report_Glade_Error (Err : GError);");
@@ -2482,7 +2515,7 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (6) & "Load_Css_File");
          TIO.Put_Line (Sp (8)
                        & "("
-                       & Quoted (Ada_Path & "/" & To_Lower (Filename)
+                       & Quoted (Ada_Path & "/" & To_Lower (Capitalized_Filename)
                          & ".css") & ",");
          TIO.Put_Line (Sp (9) & "Ada.Text_IO.Put_Line'Access,");
          TIO.Put_Line (Sp (9)
@@ -2492,12 +2525,12 @@ package body W2Gtk2Ada is
       end if;
       TIO.Put_Line (Sp (6) & "--  Initialize Widgets_Collection");
       TIO.Put_Line (Sp (6) & "Me := "
-                    & Filename & "_Pkg.Object_Collection."
+                    & Capitalized_Filename & "_Pkg.Object_Collection."
                     & "New_Widget_Collection;");
       if Have.TreeStores > 0 or Have.ListStores > 0 then
          TIO.New_Line;
          TIO.Put_Line (Sp (6) & "--  Initialize Cell Renderers");
-         TIO.Put_Line (Sp (6) & Filename & "_Pkg.Cell_Renderers.Initialize;");
+         TIO.Put_Line (Sp (6) & Capitalized_Filename & "_Pkg.Cell_Renderers.Initialize;");
       end if;
       if Signals then
          TIO.New_Line;
@@ -2506,10 +2539,7 @@ package body W2Gtk2Ada is
       end if;
       TIO.New_Line;
       TIO.Put_Line (Sp (6) & "Builder.Do_Connect;");
-      TIO.New_Line;
-      TIO.Put_Line (Sp (6) & "--  set initial data");
-      TIO.Put_Line (Sp (6) & "--     INSERT YOUR INITIAL DATA");
-      TIO.New_Line;
+      Insert_Your_Code (6, False);
       TIO.Put_Line (Sp (6) & "--  display");
       if not Main_Window then
          TIO.Put_Line (Sp (6) & "Gtk_Window");
@@ -2531,7 +2561,7 @@ package body W2Gtk2Ada is
          TIO.New_Line;
       end if;
       TIO.Put_Line (Sp (3) & "end Initialize;");
-      TIO.Put_Line ("end " & Filename & "_Pkg.Main_Windows;");
+      Emit_Package_End (Capitalized_Filename & "_Pkg.Main_Windows");
    end Emit_Main_Window;
 
    -------------------------
@@ -2542,14 +2572,11 @@ package body W2Gtk2Ada is
    procedure Emit_Main_Package (Filename : String) is
    begin
       Debug (-1, "Generating Main Package...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       Emit_With_Use ("Gtkada.Builder");
-      TIO.New_Line;
-      TIO.Put_Line ("package " & Filename & "_Pkg is");
+      Emit_Package_Spec (Filename & "_Pkg");
       TIO.Put_Line (Sp (3) & "Builder : Gtkada_Builder;");
-      TIO.Put_Line ("end " & Filename & "_Pkg;");
+      Emit_Package_End (Filename & "_Pkg");
    end Emit_Main_Package;
 
    -------------------------
@@ -2560,17 +2587,17 @@ package body W2Gtk2Ada is
    procedure Emit_Main_Program (Filename : String) is
    begin
       Debug (-1, "Generating Main Program...");
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      Include_Banner;
       TIO.Put_Line ("with Gtk.Main;");
       TIO.Put_Line ("with " & Filename & "_Pkg.Main_Windows;");
+      TIO.New_Line;
       TIO.Put_Line ("procedure " & Filename & " is");
       TIO.Put_Line ("begin");
+      TIO.New_Line;
       TIO.Put_Line (Sp (3) & "Gtk.Main.Init;");
       TIO.Put_Line (Sp (3) & Filename & "_Pkg.Main_Windows.Initialize;");
       TIO.Put_Line (Sp (3) & "Gtk.Main.Main;");
-      TIO.Put_Line ("end " & Filename & ";");
+      Emit_Package_End (Filename);
    end Emit_Main_Program;
 
    ----------------
@@ -2587,9 +2614,11 @@ package body W2Gtk2Ada is
                   Mode => TIO.Out_File,
                   Name => Ada_Path & "/" & Filename & ".gpr");
 
-      TIO.New_Line;
-      TIO.Put_Line ("--  generated with w2gtk " & Version);
-      TIO.New_Line;
+      TIO.New_Line (GPRFile);
+      TIO.Put_Line (GPRFile, "----------------------------------");
+      TIO.Put_Line (GPRFile, "--  generated with w2gtk " & Version & "  --");
+      TIO.Put_Line (GPRFile, "----------------------------------");
+      TIO.New_Line (GPRFile);
       TIO.Put_Line (GPRFile, "with ""gnatcoll_core"";");
       TIO.Put_Line (GPRFile, "with ""gtkada"";");
       TIO.Put_Line (GPRFile, "project "
@@ -2608,6 +2637,8 @@ package body W2Gtk2Ada is
                     & "             --  debug");
       TIO.Put_Line (GPRFile, "         ""-gnat2022"","
                     & "      --  Ada 2022");
+      TIO.Put_Line (GPRFile, "         ""-gnatX"","
+                    & "         --  GNAT extensions");
       TIO.Put_Line (GPRFile, "         ""-O0"","
                     & "            --  optimization level 0");
       TIO.Put_Line (GPRFile, "         ""-fstack-check"","
@@ -2673,7 +2704,7 @@ package body W2Gtk2Ada is
       TIO.Put_Line (GPRFile, "      for Switches (""Ada"") use (""-E"");");
       TIO.Put_Line (GPRFile, "   end Binder;");
       TIO.Put_Line (GPRFile, "   package Builder is");
-      TIO.Put_Line (GPRFile, "      for Switches (""Ada"") use (""-j4"");");
+      TIO.Put_Line (GPRFile, "      for Switches (""Ada"") use (""-j2"");");
       TIO.Put_Line (GPRFile, "   end Builder;");
       TIO.Put_Line (GPRFile, "end "
                     & Filename
@@ -2697,9 +2728,11 @@ package body W2Gtk2Ada is
                   Mode => TIO.Out_File,
                   Name => Ada_Path & "/" & Filename & ".css");
 
-      TIO.New_Line;
-      TIO.Put_Line ("/*  generated with w2gtk " & Version & " */");
-      TIO.New_Line;
+      TIO.New_Line (CSSFile);
+      TIO.Put_Line (CSSFile, "/********************************/");
+      TIO.Put_Line (CSSFile, "/*  generated with w2gtk " & Version & "  */");
+      TIO.Put_Line (CSSFile, "/********************************/");
+      TIO.New_Line (CSSFile);
       TIO.Put_Line (CSSFile, "/* Colors */");
       TIO.Put_Line (CSSFile, "");
       TIO.Put_Line (CSSFile, "@define-color bg_all        #CECECE;"
@@ -2883,7 +2916,7 @@ package body W2Gtk2Ada is
                               Filename : String) return Integer is
       Result : Integer;
    begin
-      if Main_Window then
+      if Main_Program then
          Get_Max_Gen (The_Path & "/" & Filename & ".gpr", Max_Gen);
          Get_Max_Gen (The_Path & "/" & Filename & ".adb", Max_Gen);
          Get_Max_Gen (The_Path & "/" & Filename & ".css", Max_Gen);
@@ -2905,7 +2938,7 @@ package body W2Gtk2Ada is
          Get_Max_Gen (The_Path & "/" & Filename & "_pkg-cell_renderers.adb", Max_Gen);
       end if;
 
-      if Main_Window then
+      if Main_Program then
          Make_Backup (Result, The_Path & "/" & Filename & ".gpr", Max_Gen);
          Make_Backup (Result, The_Path & "/" & Filename & ".adb", Max_Gen);
          Make_Backup (Result, The_Path & "/" & Filename & ".css", Max_Gen);
@@ -2924,7 +2957,7 @@ package body W2Gtk2Ada is
       if Have.TreeStores > 0 or Have.ListStores > 0 then
          Make_Backup (Result, The_Path & "/" & Filename & "_pkg-stores_enum.ads", Max_Gen);
          Make_Backup (Result, The_Path & "/" & Filename & "_pkg-cell_renderers.ads", Max_Gen);
-         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-cell_renderers.ads", Max_Gen);
+         Make_Backup (Result, The_Path & "/" & Filename & "_pkg-cell_renderers.adb", Max_Gen);
       end if;
       Debug (-1, "End of Generating Ada backups");
       return 0;
@@ -2940,10 +2973,13 @@ package body W2Gtk2Ada is
 
    function Generate_Ada_Packages (Ada_Path   : String;
                                    Glade_Path : String;
-                                   Filename   : String) return Integer is
+                                   Filename   : String;
+                                   Ada_Main   : String) return Integer is
       Status : Integer;
    begin
-      Set_TWin;
+      Now := Ada.Calendar.Clock;
+
+      Set_TWin (Ada_Main);
       if TWin = null then
          Debug (-1, "could not find a gtkwindow");
          return -1;
@@ -2966,11 +3002,11 @@ package body W2Gtk2Ada is
                   Name => Ada_Path & "/" & Filename & ".TempAda");
 
       TIO.Set_Output (AdaFile);
-      if Main_Window then
+      if Main_Program then
          Emit_Main_Program (Capitalize (Filename));
       end if;
       Emit_Main_Package (Capitalize (Filename));
-      Emit_Main_Window (Capitalize (Filename), Ada_Path, Glade_Path);
+      Emit_Main_Window (Capitalize (Filename), Filename, Ada_Path, Glade_Path);
       Emit_Object_Collection (Capitalize (Filename));
       if Signals then
          Emit_Signals (Capitalize (Filename));
@@ -2984,11 +3020,11 @@ package body W2Gtk2Ada is
 
       TIO.Close (AdaFile);
 
-      if Main_Window then
-            Debug (-1, "Generating gpr...");
+      if Main_Program then
+         Debug (-1, "Generating gpr...");
          Status := Emit_GPR (Ada_Path, To_Lower (Filename));
          if Status = 0 then
-               Debug (-1, "Generating css...");
+            Debug (-1, "Generating css...");
             Status := Emit_CSS (Ada_Path, To_Lower (Filename));
          end if;
       else
@@ -3007,81 +3043,81 @@ package body W2Gtk2Ada is
             Debug (-1, "");
             Debug (-1, "Obtaining patches");
 
-            if Main_Window then
+            if Main_Program then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & ".gpr",
                                        Max_Gen);
-               if Status = 0 or Status = 2 then
+               if Status = 0 or Status = 1 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & ".adb",
                                           Max_Gen);
                end if;
-               if Status = 0 or Status = 2 then
+               if Status = 0 or Status = 1 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & ".css",
                                           Max_Gen);
                end if;
             end if;
-            if Status = 0 or Status = 2 then
+            if Status = 0 or Status = 1 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg.ads",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 2 then
+            if Status = 0 or Status = 1 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-main_windows.ads",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 2 then
+            if Status = 0 or Status = 1 then
                Status := Perform_Diff (Ada_Path,
                                        Filename
                                        & "_pkg-main_windows.adb",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 2 then
+            if Status = 0 or Status = 1 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-object_collection.ads",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 2 then
+            if Status = 0 or Status = 1 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-object_collection.adb",
                                        Max_Gen);
             end if;
             if Signals then
-               if Status = 0 or Status = 2 then
+               if Status = 0 or Status = 1 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-register_signals.ads",
                                           Max_Gen);
                end if;
-               if Status = 0 or Status = 2 then
+               if Status = 0 or Status = 1 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-register_signals.adb",
                                           Max_Gen);
                end if;
-               if Status = 0 or Status = 2 then
+               if Status = 0 or Status = 1 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-signals.ads",
                                           Max_Gen);
                end if;
-               if Status = 0 or Status = 2 then
+               if Status = 0 or Status = 1 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-signals.adb",
                                           Max_Gen);
                end if;
             end if;
-            if Status = 0 or Status = 2 then
+            if Status = 0 or Status = 1 then
                if Have.TreeStores > 0 or Have.ListStores > 0 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
