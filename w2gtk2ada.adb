@@ -434,7 +434,7 @@ package body W2Gtk2Ada is
                                    & ".Set_Active (True);");
                      TIO.New_Line;
                   end if;
-                  if  Have.Date_Pickers > 0 then
+                  if Have.Date_Pickers + Have.Time_Pickers > 0 then
                      For_Each_Widget (Win_List, Emit_Init_Date_Time_Pickers'Access);
                      TIO.New_Line;
                   end if;
@@ -1956,7 +1956,7 @@ package body W2Gtk2Ada is
          Emit_With_Use ("Pango.Font");
          Emit_With_Use ("Pango.Enums");
       end if;
-      if Have.Column_Tooltips > 0 then
+      if Have.Column_Tooltips > 0 and then Have.Notebooks = 0 then
          Emit_With_Use ("Gtk.Widget");
       end if;
       Emit_Package_Body (Filename & "_Pkg.Object_Collection", True);
@@ -2448,9 +2448,9 @@ package body W2Gtk2Ada is
       if Main_Window then
          Emit_With_Use ("Gtk.Style_Provider");
          Emit_With_Use ("Gtkada.Style");
+         Emit_With_Use ("Gtk.Window");
       end if;
       Emit_With_Use ("Gtk.Widget");
-      Emit_With_Use ("Gtk.Window");
       Emit_With_Use ("Gtkada.Builder");
       Emit_With_Use ("Gtk.Dialog");
       Emit_With_Use ("Gtkada.Dialogs");

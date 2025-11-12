@@ -18,7 +18,6 @@ with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Integer_Text_IO;
 with Ada.Float_Text_IO;
-with Unchecked_Deallocation;
 with Symbol_Tables;
 
 package body W2gtk_Decls is
@@ -386,12 +385,6 @@ package body W2gtk_Decls is
 
    end Copy_Common_Attributes;
 
-   ----------
-   -- Free --
-   ----------
-
-   procedure Free is new Unchecked_Deallocation (Widget_Properties,
-                                                 Widget_Pointer);
    -------------
    -- Release --
    -------------

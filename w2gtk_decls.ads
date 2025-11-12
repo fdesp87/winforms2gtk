@@ -19,6 +19,7 @@ with Ada.Calendar;
 with GNAT.Strings; use GNAT.Strings;
 with GNATCOLL.Tribooleans;  use GNATCOLL.Tribooleans;
 with GNATCOLL.Utils;
+with Ada.Unchecked_Deallocation;
 
 package W2gtk_Decls is
 
@@ -104,7 +105,7 @@ package W2gtk_Decls is
       Name    : String_Access := null; --  original signal name
       GtkName : String_Access := null; --  gtk signal name
       Handler : String_Access := null; --  handler name
-      Line    : Integer;
+      Line    : Integer := -1;         --  -1 means synthetic signal
       Proc    : Boolean := True;       --  false means function
       After   : Boolean := False;      --  emit After if true
       Glade   : Boolean := True;       --  generate glade signal
@@ -842,4 +843,14 @@ package W2gtk_Decls is
    Line   : String (1 .. 1024);
    Len    : Natural;
    NLin   : Integer;
+
+   procedure Free is new Ada.Unchecked_Deallocation (Signal_Block,
+                                                     Signal_Pointer);
+   procedure Free is new Ada.Unchecked_Deallocation (Window_Properties,
+                                                     Window_Pointer);
+   procedure Free is new Ada.Unchecked_Deallocation (Widget_Properties,
+                                                     Widget_Pointer);
+   procedure Free is new Ada.Unchecked_Deallocation (DGVS_Array,
+                                                     DGVS_Array_Pointer);
+
 end W2gtk_Decls;

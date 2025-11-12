@@ -182,7 +182,6 @@ package body W2gtk_Pkg is
                                 new String'("On_"
                                             & Temp.Name.all
                                             & "_Toggled");
-                              TS.Line    := -1;
                               B := Insert_Signal (Temp, TS); --  Toggled
                               if B then
                                  Debug (0, Sp (3) & Temp.Name.all
@@ -1276,6 +1275,9 @@ package body W2gtk_Pkg is
                         & " [Gtk " & TS.GtkName.all & "] ");
                if TS.Handler /= null then
                   TIO.Put (LFile, " => " & TS.Name.all);
+               end if;
+               if TS.Line <= 0 then
+                  TIO.Put (LFile, ", synthetic");
                end if;
                TIO.New_Line (LFile);
                TS := TS.Next;
@@ -4961,10 +4963,10 @@ package body W2gtk_Pkg is
          end if;
       end loop;
 
-      Debug (0, "Creating synthetic signals");
+      Debug (0, "Creating synthetic signals for Date and Time pickers");
       declare
          TWin : Window_Pointer;
-         WS   : Signal_Pointer;
+         TS   : Signal_Pointer;
          B    : Boolean;
       begin
          TWin := Win_List;
@@ -4974,248 +4976,248 @@ package body W2gtk_Pkg is
                case WT.Widget_Type is
                when GtkCalendar =>
                   if WT.Is_DatePicker then
-                     WS := new Signal_Block;
-                     WS.Name := new String'("NextMonth");
-                     WS.Handler := new String'("On_Next_Month_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("NextMonth");
+                     TS.Handler := new String'("On_Next_Month_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all & ".NextMonth");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("PrevMonth");
-                     WS.Handler := new String'("On_Prev_Month_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("PrevMonth");
+                     TS.Handler := new String'("On_Prev_Month_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all & ".PrevMonth");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("NextYear");
-                     WS.Handler := new String'("On_Next_Year_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("NextYear");
+                     TS.Handler := new String'("On_Next_Year_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all & ".NextYear");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("PrevYear");
-                     WS.Handler := new String'("On_Prev_Year_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("PrevYear");
+                     TS.Handler := new String'("On_Prev_Year_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                                & WT.Name.all & ".PrevYear");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("DaySelectedDoubleClick");
-                     WS.Handler := new String'("On_Day_Selected_Double_Click_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("DaySelectedDoubleClick");
+                     TS.Handler := new String'("On_Day_Selected_Double_Click_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                                & WT.Name.all & ".day_selected_double_click");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("DaySelected");
-                     WS.Handler := new String'("On_Day_Selected_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("DaySelected");
+                     TS.Handler := new String'("On_Day_Selected_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                             & WT.Name.all & ".day_selected");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Click");
-                     WS.Handler := new String'("On_Button_Clicked_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Click");
+                     TS.Handler := new String'("On_Button_Clicked_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                                & WT.Name.all & ".clicked");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Activate");
-                     WS.Handler := new String'("On_Entry_Year_Activate_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Activate");
+                     TS.Handler := new String'("On_Entry_Year_Activate_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                                & WT.Name.all
                                & ".Year_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("LeaveFocus");
-                     WS.Handler := new String'("On_Entry_Year_Leavefocus_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("LeaveFocus");
+                     TS.Handler := new String'("On_Entry_Year_Leavefocus_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                                & WT.Name.all
                                & ".Year_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Activate");
-                     WS.Handler := new String'("On_Entry_Month_Activate_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Activate");
+                     TS.Handler := new String'("On_Entry_Month_Activate_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                                & WT.Name.all
                                & ".Month_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("LeaveFocus");
-                     WS.Handler := new String'("On_Entry_Month_Leavefocus_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("LeaveFocus");
+                     TS.Handler := new String'("On_Entry_Month_Leavefocus_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created  syntheticSignal "
                                & WT.Name.all
                                & ".Month_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Activate");
-                     WS.Handler := new String'("On_Entry_Day_Activate_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Activate");
+                     TS.Handler := new String'("On_Entry_Day_Activate_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Day_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("LeaveFocus");
-                     WS.Handler := new String'("On_Entry_Day_Leavefocus_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("LeaveFocus");
+                     TS.Handler := new String'("On_Entry_Day_Leavefocus_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Day_Activate");
 
                      end if;
                   else
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Click");
-                     WS.Handler := new String'("On_Sec_Button_Up_Clicked_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Click");
+                     TS.Handler := new String'("On_Sec_Button_Up_Clicked_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Sec_Clicked");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Click");
-                     WS.Handler := new String'("On_Sec_Button_Down_Clicked_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Click");
+                     TS.Handler := new String'("On_Sec_Button_Down_Clicked_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                             & ".Sec_Clicked");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Click");
-                     WS.Handler := new String'("On_Min_Button_Up_Clicked_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Click");
+                     TS.Handler := new String'("On_Min_Button_Up_Clicked_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Min_Clicked");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Click");
-                     WS.Handler := new String'("On_Min_Button_Down_Clicked_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Click");
+                     TS.Handler := new String'("On_Min_Button_Down_Clicked_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Min_Clicked");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Click");
-                     WS.Handler := new String'("On_Hour_Button_Up_Clicked_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Click");
+                     TS.Handler := new String'("On_Hour_Button_Up_Clicked_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Hour_Clicked");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Click");
-                     WS.Handler := new String'("On_Hour_Button_Down_Clicked_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Click");
+                     TS.Handler := new String'("On_Hour_Button_Down_Clicked_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Hour_Clicked");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Activate");
-                     WS.Handler := new String'("On_Entry_Hour_Activate_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Activate");
+                     TS.Handler := new String'("On_Entry_Hour_Activate_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Hour_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("LeaveFocus");
-                     WS.Handler := new String'("On_Entry_Hour_Leavefocus_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("LeaveFocus");
+                     TS.Handler := new String'("On_Entry_Hour_Leavefocus_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Hour_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Activate");
-                     WS.Handler := new String'("On_Entry_Min_Activate_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Activate");
+                     TS.Handler := new String'("On_Entry_Min_Activate_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Min_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("LeaveFocus");
-                     WS.Handler := new String'("On_Entry_Min_Leavefocus_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("LeaveFocus");
+                     TS.Handler := new String'("On_Entry_Min_Leavefocus_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Min_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("Activate");
-                     WS.Handler := new String'("On_Entry_Sec_Activate_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("Activate");
+                     TS.Handler := new String'("On_Entry_Sec_Activate_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Sec_Activate");
                      end if;
-                     WS := new Signal_Block;
-                     WS.Name := new String'("LeaveFocus");
-                     WS.Handler := new String'("On_Entry_Sec_Leavefocus_"
+                     TS := new Signal_Block;
+                     TS.Name := new String'("LeaveFocus");
+                     TS.Handler := new String'("On_Entry_Sec_Leavefocus_"
                                                & WT.Name.all);
-                     B := Insert_Signal (WT, WS);
+                     B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (NLin, Sp (3) & "Created synthetic Signal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Sec_Activate");
                      end if;
@@ -5225,6 +5227,39 @@ package body W2gtk_Pkg is
                end case;
                WT := WT.Next;
             end loop;
+            TWin := Next_Window (Win_List, TWin);
+         end loop;
+      end;
+
+      Debug (0, "Creating Load Handler for Windows with Date or Time pickers");
+      declare
+         TWin : Window_Pointer;
+         TS   : Signal_Pointer;
+         B    : Boolean;
+      begin
+         TWin := Win_List;
+         while TWin /= null loop
+            if TWin.Window_Type = GtkWindow then
+               if Have.Date_Pickers + Have.Time_Pickers > 0 then
+                  TS := new Signal_Block;
+                  TS.Name := new String'("Load");
+                  TS.Handler := new String'("On_Load_"
+                                            & TWin.Name.all);
+                  B := Insert_Signal (TWin, TS);
+                  if B then
+                     Debug (0, Sp (3) & "Created synthetic Signal "
+                            & TWin.Name.all & ".Load");
+                  else
+                     Free (TS.Name);
+                     Free (TS);
+                     Debug (0, Sp (3) & "Unable to create synthetic Signal "
+                            & "for "
+                            & TWin.Name.all & ".Load: "
+                            & " repeated handler "
+                            & "On_Load_" & TWin.Name.all);
+                  end if;
+               end if;
+            end if;
             TWin := Next_Window (Win_List, TWin);
          end loop;
       end;
