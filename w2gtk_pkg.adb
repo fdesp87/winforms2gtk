@@ -3236,7 +3236,9 @@ package body W2gtk_Pkg is
                 & " -ip " & Icon_Path
                 & " -ap " & Ada_Path);
          Debug (-1, "");
-         Debug (-1, "This is w2gtk " & Version);
+         Debug (-1, "This is w2gtk " & Version & " - " &
+                  GNAT.Calendar.Time_IO.Image
+                  (Ada.Calendar.Clock, GNAT.Calendar.Time_IO.ISO_Time));
          Debug (-1, "Processing " & Resx_Path & Resx_File_Name);
          Debug (-1, "");
          Debug (-1, "Generated log backup");
@@ -3280,7 +3282,9 @@ package body W2gtk_Pkg is
 
       if Do_Dump then
          Debug (-1, "");
-         Debug (-1, "Generating Dump backup");
+         Debug (-1, "Generating Dump backup" & " - " &
+                  GNAT.Calendar.Time_IO.Image
+                  (Ada.Calendar.Clock, GNAT.Calendar.Time_IO.ISO_Time));
          Generate_Backup (Result, Glade_Path,
                           Resx_File_Name & ".dump");
          if Result < 0 then
