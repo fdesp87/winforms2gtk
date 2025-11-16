@@ -49,13 +49,11 @@ package body W2Gtk2Ada is
    procedure Insert_Your_Code (Spaces    : Integer;
                                With_Null : Boolean := True) is
    begin
-      TIO.Put_Line (Sp (Spaces) & "--  INSERT YOUR CODE HERE"
-                    & " [w2gtk " & Version & "]");
+      TIO.Put_Line (Sp (Spaces) & "--  INSERT YOUR CODE HERE");
       if With_Null then
          TIO.Put_Line (Sp (Spaces) & "null;");
       end if;
-      TIO.Put_Line (Sp (Spaces) & "--  END OF INSERT YOUR CODE"
-                    & " [w2gtk " & Version & "]");
+      TIO.Put_Line (Sp (Spaces) & "--  END OF INSERT YOUR CODE");
    end Insert_Your_Code;
 
    --------------
@@ -1136,7 +1134,7 @@ package body W2Gtk2Ada is
          Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
       For_Each_Widget (Win_List, Emit_Signal_Specs'Access);
-      Emit_Package_End (Filename & "_Pkg.Signals");
+      Emit_Package_End (Filename & "_Pkg.Signals", False);
 
       Include_Banner;
       if With_Form_Closing and then Main_Window then
@@ -1210,7 +1208,7 @@ package body W2Gtk2Ada is
          Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
       For_Each_Widget (Win_List, Emit_Signal_Bodies'Access);
-      Emit_Package_End (Filename & "_Pkg.Signals");
+      Emit_Package_End (Filename & "_Pkg.Signals", False);
    end Emit_Signals;
 
    ---------------------------------
@@ -2426,14 +2424,13 @@ package body W2Gtk2Ada is
       if Main_Window then
          Emit_Package_Spec (Capitalized_Filename & "_Pkg.Main_Windows");
          TIO.Put_Line (Sp (3) & "procedure Initialize;");
-         Emit_Package_End (Capitalized_Filename & "_Pkg.Main_Windows");
       else
          Emit_With_Use ("Gtk.Window");
          Emit_Package_Spec (Capitalized_Filename & "_Pkg.Main_Windows");
          TIO.Put_Line (Sp (3) & "procedure Initialize "
                        & "(Parent : access Gtk_Window_Record'Class);");
-         Emit_Package_End (Capitalized_Filename & "_Pkg.Main_Windows");
       end if;
+      Emit_Package_End (Capitalized_Filename & "_Pkg.Main_Windows");
 
       Include_Banner;
       Emit_With_Use (Capitalized_Filename & "_Pkg.Object_Collection");
@@ -3048,88 +3045,86 @@ package body W2Gtk2Ada is
                                        To_Lower (Filename)
                                        & ".gpr",
                                        Max_Gen);
-               if Status = 0 or Status = 1 then
+               if Status in 0 .. 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & ".adb",
                                           Max_Gen);
                end if;
-               if Status = 0 or Status = 1 then
+               if Status in 0 .. 2 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & ".css",
                                           Max_Gen);
                end if;
             end if;
-            if Status = 0 or Status = 1 then
+            if Status in 0 .. 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg.ads",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 1 then
+            if Status in 0 .. 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-main_windows.ads",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 1 then
+            if Status in 0 .. 2 then
                Status := Perform_Diff (Ada_Path,
-                                       Filename
+                                       To_Lower (Filename)
                                        & "_pkg-main_windows.adb",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 1 then
+            if Status in 0 .. 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-object_collection.ads",
                                        Max_Gen);
             end if;
-            if Status = 0 or Status = 1 then
+            if Status in 0 .. 2 then
                Status := Perform_Diff (Ada_Path,
                                        To_Lower (Filename)
                                        & "_pkg-object_collection.adb",
                                        Max_Gen);
             end if;
-            if Signals then
-               if Status = 0 or Status = 1 then
-                  Status := Perform_Diff (Ada_Path,
-                                          To_Lower (Filename)
-                                          & "_pkg-register_signals.ads",
-                                          Max_Gen);
-               end if;
-               if Status = 0 or Status = 1 then
-                  Status := Perform_Diff (Ada_Path,
-                                          To_Lower (Filename)
-                                          & "_pkg-register_signals.adb",
-                                          Max_Gen);
-               end if;
-               if Status = 0 or Status = 1 then
-                  Status := Perform_Diff (Ada_Path,
-                                          To_Lower (Filename)
-                                          & "_pkg-signals.ads",
-                                          Max_Gen);
-               end if;
-               if Status = 0 or Status = 1 then
-                  Status := Perform_Diff (Ada_Path,
-                                          To_Lower (Filename)
-                                          & "_pkg-signals.adb",
-                                          Max_Gen);
-               end if;
+            if Status in 0 .. 2 then
+               Status := Perform_Diff (Ada_Path,
+                                       To_Lower (Filename)
+                                       & "_pkg-register_signals.ads",
+                                       Max_Gen);
             end if;
-            if Status = 0 or Status = 1 then
+            if Status in 0 .. 2 then
+               Status := Perform_Diff (Ada_Path,
+                                       To_Lower (Filename)
+                                       & "_pkg-register_signals.adb",
+                                       Max_Gen);
+            end if;
+            if Status in 0 .. 2 then
+               Status := Perform_Diff (Ada_Path,
+                                       To_Lower (Filename)
+                                       & "_pkg-signals.ads",
+                                       Max_Gen);
+            end if;
+            if Status in 0 .. 2 then
+               Status := Perform_Diff (Ada_Path,
+                                       To_Lower (Filename)
+                                       & "_pkg-signals.adb",
+                                       Max_Gen);
+            end if;
+            if Status in 0 .. 2 then
                if Have.TreeStores > 0 or Have.ListStores > 0 then
                   Status := Perform_Diff (Ada_Path,
                                           To_Lower (Filename)
                                           & "_pkg-stores_enum.ads",
                                           Max_Gen);
-                  if Status = 0 then
+                  if Status in 0 .. 2 then
                      Status := Perform_Diff (Ada_Path,
                                              To_Lower (Filename)
                                              & "_pkg-cell_renderers.ads",
                                              Max_Gen);
                   end if;
-                  if Status = 0 then
+                  if Status in 0 .. 2 then
                      Status := Perform_Diff (Ada_Path,
                                              To_Lower (Filename)
                                              & "_pkg-cell_renderers.adb",

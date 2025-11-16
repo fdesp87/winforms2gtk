@@ -1485,12 +1485,12 @@ package body W2gtk_Emit is
          Emit_Name (TWdg, Id + 8);
          Emit_Visible_And_Can_Focus (TWdg, Id + 8, False);
          Emit_Property (Id + 8, "has-focus", TWdg.Has_Focus);
+         Emit_Align (TWdg, Id + 8, Numeric => False);
          Emit_Label (TWdg, Id + 8, UnderLine => False, Selectable => True);
          if TWdg.MaxLength > 0 then
             Emit_Property (Id + 8, "width-chars", TWdg.MaxLength);
             Emit_Property (Id + 8, "max-width-chars", TWdg.MaxLength);
          end if;
-         Emit_Align (TWdg, Id + 8, Numeric => False);
          Emit_Attributes (TWdg, Id + 8);
          Emit_GtkSignal (TWdg, Id + 8);
 
@@ -3630,8 +3630,9 @@ package body W2gtk_Emit is
             when GtkImage =>
                Emit_GtkImage (TWdg, Id + 6);
             when GtkButton =>
-               if (TWin.Accept_Button /= TWdg
-                   and TWin.Cancel_Button /= TWdg)
+               if (TWin.Action_Buttons (OK_Response) /= TWdg)
+                 and (TWin.Action_Buttons (Cancel_Response) /= TWdg)
+                   and (TWin.Action_Buttons (Delete_Response) /= TWdg)
                then
                   Emit_GtkButton (TWdg, Id + 6, "GtkButton",
                                   Position    => -1,
@@ -3675,7 +3676,10 @@ package body W2gtk_Emit is
    end Emit_GtkDialog_Body;
 
    procedure Emit_GtkDialog (TWin : Window_Pointer; Id : Integer) is
-      Spacing : Integer := 0;
+      Spacing     : constant Integer := 0;
+      Num_Buttons : Integer := 0;
+      Position    : Integer := 0;
+      TWdg        : Widget_Pointer;
       --  assume TWin is a dialog
    begin
       if TWin.Name /= null and then TWin.Name.all /= "" then
@@ -3711,11 +3715,14 @@ package body W2gtk_Emit is
       Emit_Property (Id + 2, "gravity", "center");
       Emit_GtkSignal (TWin, Id + 2);
 
-      if TWin.Accept_Button /= null then
-         Spacing := Spacing + 1;
+      if TWin.Action_Buttons (OK_Response) /= null then
+         Num_Buttons := Num_Buttons + 1;
       end if;
-      if TWin.Cancel_Button /= null then
-         Spacing := Spacing + 1;
+      if TWin.Action_Buttons (Cancel_Response) /= null then
+         Num_Buttons := Num_Buttons + 1;
+      end if;
+      if TWin.Action_Buttons (Delete_Response) /= null then
+         Num_Buttons := Num_Buttons + 1;
       end if;
 
       Emit_Line (Sp (Id + 2) & "<child internal-child=""vbox"">");
@@ -3723,28 +3730,42 @@ package body W2gtk_Emit is
       Emit_Object (null, Id + 4, "GtkBox", "");
       Emit_Property (Id + 6, "can-focus", False);
       Emit_Property (Id + 6, "orientation", "vertical");
-      if Spacing > 0 then
-         Emit_Property (Id + 6, "spacing", Spacing);
+      if Num_Buttons > 0 then
+         if Spacing > 0 then
+            Emit_Property (Id + 6, "spacing", Spacing);
+         end if;
          Emit_Line (Sp (Id + 6) & "<child internal-child=""action_area"">");
          Debug (-1, Sp (Id + 6) & "internal-child=""action_area""");
          Emit_Object (null, Id + 8, "GtkButtonBox", "");
          Emit_Property (Id + 10, "can-focus", False);
          Emit_Line (Sp (Id + 10) & "<property name=""layout-style"">"
                     & "spread</property>");
-         if TWin.Cancel_Button /= null then
-            Emit_GtkButton (TWin.Cancel_Button, Id + 10, "GtkButton",
-                            Position    => 0,
-                            Has_Default => (TWin.Accept_Button = null),
+         TWdg := TWin.Action_Buttons (Delete_Response);
+         if TWdg /= null then
+            Emit_GtkButton (TWdg, Id + 10, "GtkButton",
+                            Position    => Position,
+                            Has_Default => False,
                             XY          => False,
                             Homog       => False);
+            Position := Position + 1;
          end if;
-         if TWin.Accept_Button /= null then
-            Emit_GtkButton (TWin.Accept_Button, Id + 10, "GtkButton",
-                            Position    =>
-                              (if TWin.Cancel_Button = null then 0 else 1),
+         TWdg := TWin.Action_Buttons (Cancel_Response);
+         if TWdg /= null then
+            Emit_GtkButton (TWdg, Id + 10, "GtkButton",
+                            Position    => Position,
+                            Has_Default => False,
+                            XY          => False,
+                            Homog       => False);
+            Position := Position + 1;
+         end if;
+         TWdg := TWin.Action_Buttons (OK_Response);
+         if TWdg /= null then
+            Emit_GtkButton (TWdg, Id + 10, "GtkButton",
+                            Position    => Position,
                             Has_Default => True,
                             XY          => False,
                             Homog       => False);
+            Position := Position + 1;
          end if;
          Emit_Line (Sp (Id + 8) & "</object>");
          Emit_Packing (Id + 8, Expand => False, Fill => False,
@@ -3760,24 +3781,35 @@ package body W2gtk_Emit is
       Emit_Line (Sp (Id + 4) & "</object>");
       Emit_Line (Sp (Id + 2) & "</child>");
 
-      if Spacing > 0 then
+      if Num_Buttons > 0 then
          Emit_Line (Sp (Id + 2) & "<action-widgets>");
          Debug (-1, Sp (Id + 2) & "action-widgets");
-         if TWin.Cancel_Button /= null then
+         TWdg := TWin.Action_Buttons (Delete_Response);
+         if TWdg /= null then
             Emit_Line (Sp (Id + 4) & "<action-widget response="""
-                       & To_Gtk (TWin.Cancel_Button.Dialog_Result)
+                       & To_Gtk (TWdg.Dialog_Result)
                        & """>"
-                       & TWin.Cancel_Button.Name.all
+                       & TWdg.Name.all
                        & "</action-widget>");
-            Debug (-1, Sp (Id + 4) & "action-widget response for Cancel_Button");
+            Debug (-1, Sp (Id + 4) & "action-widget response for Delete Button");
          end if;
-         if TWin.Accept_Button /= null then
+         TWdg := TWin.Action_Buttons (Cancel_Response);
+         if TWdg /= null then
             Emit_Line (Sp (Id + 4) & "<action-widget response="""
-                       & To_Gtk (TWin.Accept_Button.Dialog_Result)
+                       & To_Gtk (TWdg.Dialog_Result)
                        & """>"
-                       & TWin.Accept_Button.Name.all
+                       & TWdg.Name.all
                        & "</action-widget>");
-            Debug (-1, Sp (Id + 4) & "action-widget response for Accept_Button");
+            Debug (-1, Sp (Id + 4) & "action-widget response for Cancel Button");
+         end if;
+         TWdg := TWin.Action_Buttons (OK_Response);
+         if TWdg /= null then
+            Emit_Line (Sp (Id + 4) & "<action-widget response="""
+                       & To_Gtk (TWdg.Dialog_Result)
+                       & """>"
+                       & TWdg.Name.all
+                       & "</action-widget>");
+            Debug (-1, Sp (Id + 4) & "action-widget response for Accept Button");
          end if;
          Emit_Line (Sp (Id + 2) & "</action-widgets>");
       end if;

@@ -29,8 +29,21 @@ package W2gtk_Decls is
    Default_Font_Size : constant := -9;
    Default_Font_Name : constant String := "Calibri";
 
-   type DialogResult_Enum is (None, OK, Cancel, Aborted, Retry, Ignore,
-                              Yes, No, TryAgain, Continue);
+   type DialogResult_Enum is (None_Response,
+                              Reject_Response,
+                              Accept_Response,
+                              Delete_Event_Response,
+                              OK_Response,
+                              Cancel_Response,
+                              Close_Response,
+                              Yes_Response,
+                              No_Response,
+                              Apply_Response,
+                              Help_Response,
+                              Delete_Response,
+                              Retry_Response,
+                              Ignore_Response,
+                              TryAgain_Response);
 
    type Margin_Array is array (Integer range 1 .. 4) of Integer;
    Null_Margin : constant Margin_Array := (others => -1);
@@ -254,11 +267,12 @@ package W2gtk_Decls is
       Tooltips           : Integer := 0;
       Column_Tooltips    : Integer := 0;
    end record;
+
    Have : Have_Block;
 
    --  windows
-   type Window_Enum is (GtkWindow,
-                        GtkFileChooserDialog,
+   type Window_Enum is (GtkWindow,            --  top level
+                        GtkFileChooserDialog, --  top level
                         GtkFileFilter,
                         GtkEntryBuffer,
                         GtkListStore,
@@ -270,6 +284,8 @@ package W2gtk_Decls is
    type Window_Pointer is access all Window_Properties;
    type Widget_Properties;
    type Widget_Pointer is access all Widget_Properties;
+
+   type Action_Buttons_Array is array (DialogResult_Enum) of Widget_Pointer;
 
    type Window_Property_Enum is (No_Property,
                                  Str_ClientSize,
@@ -293,6 +309,7 @@ package W2gtk_Decls is
       Name           : String_Access  := null; --  it is id
       Original_Name  : String_Access  := null;
       Title          : String_Access  := null;
+      Top_Level      : Boolean := False;
       Signal_List    : Signal_Pointer;
       case Window_Type is
          when GtkWindow =>
@@ -326,8 +343,7 @@ package W2gtk_Decls is
             BgColor           : String_Access := null;
             FgColor           : String_Access := null;
             Widget_List       : Widget_Pointer := null;
-            Accept_Button     : Widget_Pointer := null; --  implies is_dialog true
-            Cancel_Button     : Widget_Pointer := null; --  implies is_dialog true
+            Action_Buttons    : Action_Buttons_Array;
             TabFocusList      : Widget_Pointer := null;
          when GtkFileChooserDialog =>
             FilterName        : String_Access := null;
@@ -714,7 +730,7 @@ package W2gtk_Decls is
 
                   case Widget_Type is
                      when GtkButton =>
-                        Dialog_Result : DialogResult_Enum := None;
+                        Dialog_Result : DialogResult_Enum := None_Response;
                         Associated_ColorButton : Widget_Pointer;
 
                      when GtkCheckButton =>
@@ -727,7 +743,8 @@ package W2gtk_Decls is
 
          when GtkFrame => null;
 
-         when GtkBox => null;
+         when GtkBox =>
+            Spacing : Integer := 0;
 
          when Chart =>
             Anchor : String_Access := null;
@@ -795,6 +812,8 @@ package W2gtk_Decls is
    procedure Insert_Window (Root  : in out Window_Pointer;
                             After : Window_Pointer;
                             TWin  : Window_Pointer);
+   procedure Join_Roots (Root1 : in out Window_Pointer;
+                         Root2 : in out Window_Pointer);
    procedure Set_Have (WP : Window_Pointer);
 
    function Contains (Source : String; Pattern : String) return Boolean;

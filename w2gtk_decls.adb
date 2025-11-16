@@ -1353,6 +1353,31 @@ package body W2gtk_Decls is
       end if;
    end Insert_Window;
 
+   ----------------
+   -- Join_Roots --
+   ----------------
+
+   procedure Join_Roots (Root1 : in out Window_Pointer;
+                         Root2 : in out Window_Pointer) is
+      Temp : Window_Pointer;
+   begin
+      if Root2 = null then
+         return;
+      end if;
+      if Root1 = null then
+         Root1 := Root2;
+         return;
+      end if;
+
+      Root1.Prev.Next := Root2;
+      Temp := Root1.Prev;
+      Root1.Prev      := Root2.Prev;
+
+      Root2.Prev.Next := Root1;
+      Root2.Prev      := Temp;
+      Root2 := null;
+   end Join_Roots;
+
    -------------------------------
    -- Relink_Children_To_Parent --
    -------------------------------
@@ -1871,18 +1896,23 @@ package body W2gtk_Decls is
    function To_Gtk (D : DialogResult_Enum) return String is
    begin
       case D is
-         when None     => return "-1";  --  None
-         when OK       => return "-5";  --  OK
-         when Cancel   => return "-6";  --  Cancel
-         when Aborted  => return "-7";  --  Close
-         when Retry    => return "-97"; --  invented
-         when Ignore   => return "-98"; --  invented
-         when Yes      => return "-8";  --  Yes
-         when No       => return "-9";  --  No
-         when TryAgain => return "-99"; --  invented
-         when Continue => return "-10"; --  Apply
+         when None_Response         => return "-1";
+         when Reject_Response       => return "-2";
+         when Accept_Response       => return "-3";
+         when Delete_Event_Response => return "-4";
+         when OK_Response           => return "-5";
+         when Cancel_Response       => return "-6";
+         when Close_Response        => return "-7";
+         when Yes_Response          => return "-8";
+         when No_Response           => return "-9";
+         when Apply_Response        => return "-10";
+         when Help_Response         => return "-11";
+         when Delete_Response       => return "-96"; --  invented
+         when Retry_Response        => return "-97"; --  invented
+         when Ignore_Response       => return "-98"; --  invented
+         when TryAgain_Response     => return "-99"; --  invented
       end case;
-      --  others in gtk: Reject=-2, Accept=-3, Delete (from titlebar) = -3
+      --  others in gtk: Reject=-2, Accept=-3, Delete (from titlebar) = -4
       --                 Help = -11
    end To_Gtk;
 end W2gtk_Decls;
