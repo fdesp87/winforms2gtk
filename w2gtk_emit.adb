@@ -2708,11 +2708,11 @@ package body W2gtk_Emit is
    exception
       when others =>
          if TWin.Name /= null and then TWin.Name.all /= "" then
-            TIO.Put_Line ("Emit_GtkDialog_Body: " & TWin.Name.all);
+            TIO.Put_Line ("Emit_Fixed: " & TWin.Name.all);
          else
-            TIO.Put_Line ("Emit_GtkDialog_Body");
+            TIO.Put_Line ("Emit_Fixed");
          end if;
-         TIO.Put_Line ("Emit_GtkDialog_Body: " & Child.Name.all);
+         TIO.Put_Line ("Emit_Fixed: " & Child.Name.all);
          raise;
    end Emit_GtkFixed;
 
@@ -3741,11 +3741,11 @@ package body W2gtk_Emit is
                             Homog       => False);
             Position := Position + 1;
          end if;
-         Emit_Line (Sp (Id + 8) & "</object>");
+         Emit_Line (Sp (Id + 8) & "</object>");  --  buttonbox
          Emit_Packing (Id + 8, Expand => False, Fill => False,
                        Padding => 0,
                        Position => 0, Pack_Start => True);
-         Emit_Line (Sp (Id + 6) & "</child>");
+         Emit_Line (Sp (Id + 6) & "</child>");  --  action area
       end Emit_Action_Area;
 
       procedure Emit_GtkVbox;
