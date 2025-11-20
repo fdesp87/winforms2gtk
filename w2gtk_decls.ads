@@ -64,6 +64,10 @@ package W2gtk_Decls is
       Two : Integer;
    end record;
 
+   type Baseline_Enum is (Top, Center, Bottom);
+
+   type Orientation_Enum is (Horizontal, Vertical);
+
    type FlowDirection_Enum is (LeftToRight, RightToLeft, TopDown, BottomUp);
 
    type Window_Position_Enum is (None, CenterParent);
@@ -99,6 +103,11 @@ package W2gtk_Decls is
                                        None);
 
    type BorderStyle_Enum is (None, FixedSingle, Fixed3D);
+
+   type Frame_Shadow_Enum is (No_Shadow, In_Shadow, Out_Shadow,
+                              Etched_In, Etched_Out);
+
+   type Layout_Style_Enum is (Edge, Spread, Start_Row, End_Row, Center, Expand);
 
    type SortMode_Enum is (NotSortable, Automatic, Programmatic);
 
@@ -311,6 +320,7 @@ package W2gtk_Decls is
       Title          : String_Access  := null;
       Top_Level      : Boolean := False;
       Signal_List    : Signal_Pointer;
+      Num_Children   : Integer := 1000;
       case Window_Type is
          when GtkWindow =>
             Resizable         : Boolean       := True;
@@ -340,8 +350,8 @@ package W2gtk_Decls is
             MaxTabIndex       : Integer := 0;
             MinTabIndex       : Integer := -1;
             Has_Focus_Widget  : Widget_Pointer := null;
-            BgColor           : String_Access := null;
-            FgColor           : String_Access := null;
+            BgColor           : String_Access  := null;
+            FgColor           : String_Access  := null;
             Widget_List       : Widget_Pointer := null;
             Action_Buttons    : Action_Buttons_Array;
             TabFocusList      : Widget_Pointer := null;
@@ -378,14 +388,14 @@ package W2gtk_Decls is
       GtkStatusBar, GtkFileChooserButton,
       --
       GtkToolTip, GtkCalendar, GtkColorButton,
-      GtkListBox,
+      GtkListBox, GtkAspectFrame,
       --
       GtkMenuBar, GtkSubMenu,
       GtkMenuItem, GtkMenuNormalItem, GtkMenuImageItem,
       GtkMenuRadioItem, GtkMenuCheckItem,
       GtkSeparatorMenuItem,
       --
-      GtkToolBar, GtkSeparatorToolItem,
+      GtkFixed, GtkButtonBox, GtkToolBar, GtkSeparatorToolItem,
       --
       GtkDataGridView, GtkTreeGridView,
       ExpandableColumn, DataGridViewTextBoxColumn,
@@ -397,7 +407,12 @@ package W2gtk_Decls is
       Chart, BackgroundWorker,
       FolderBrowserDialog,
       ToolStripStatusLabel,
-      BindingNavigator);
+      BindingNavigator,
+
+      --  for dialogs
+      Internal_Child_VBox,
+      Internal_Child_Action_Area,
+      Action_Widgets);
 
    type Widget_Attribute_Enum is (No_Attribute, Attr_Ignored,
                                   Attr_Anchor, Attr_ZOrder,
@@ -479,15 +494,15 @@ package W2gtk_Decls is
                                   Attr_FlowDirection);
 
    type Widget_Properties (Widget_Type  : Widget_Enum) is record
-      Next           : Widget_Pointer := null;
-      Prev           : Widget_Pointer := null;
+      Next           : Widget_Pointer := null; -- non circular list
+      Prev           : Widget_Pointer := null; -- non circular list
       Child_List     : Widget_Pointer := null; --  only for containers
       Num_Children   : Integer        := 0;    --  only for containers
 
       Parent_Name    : String_Access  := null;
       WParent        : Window_Pointer := null; --  parent is a window
       GParent        : Widget_Pointer := null; --  parent is a widget
-      Child_Num      : Integer        := 0;    --  order in parent's child list
+      Child_Number   : Integer        := 0;    --  order in parent's child list
 
       Windows_Type   : String_Access  := null; --  this is the Windows type
 
@@ -631,6 +646,8 @@ package W2gtk_Decls is
                   Has_Frame    : Boolean        := True;
                   PasswordChar : String_Access  := null;
                   case Widget_Type is
+                     when GtkEntry =>
+                        Activates_Default : Boolean := True;
                      when GtkComboTextBox =>
                         Sorted : Boolean := False;
                      when others => null;
@@ -708,6 +725,15 @@ package W2gtk_Decls is
             MultiSelect : Boolean := False;
             ListStore   : Window_Pointer := null;
 
+         when GtkAspectFrame =>
+            H_Alignment      : Float   := 0.5;
+            V_Alignment      : Float   := 0.5;
+            Ratio_If_No_Obey : Float   := 1.0;
+            Obey             : Boolean := True;
+            Label_Xalign     : Float   := 0.0;
+            Label_Yalign     : Float   := 0.0;
+            Frame_Shadow     : Frame_Shadow_Enum := No_Shadow;
+
          when GtkImage =>
             Image : String_Access := null;
 
@@ -743,13 +769,26 @@ package W2gtk_Decls is
 
          when GtkFrame => null;
 
-         when GtkBox =>
-            Spacing : Integer := 0;
+         when GtkBox | GtkButtonBox | Internal_Child_VBox =>
+            Spacing     : Integer := 0;
+            Orientation : Orientation_Enum := Horizontal;
+            Homogeneus  : Boolean := False;
+            Baseline    : Baseline_Enum := Center;
+            case Widget_Type is
+               when GtkButtonBox =>
+                  Layout_Style : Layout_Style_Enum := Edge;
+               when others => null;
+            end case;
 
          when Chart =>
             Anchor : String_Access := null;
 
          when GtkSeparatorToolItem => null;
+
+         when GtkFixed  => null;
+
+         when Internal_Child_Action_Area => null;
+         when Action_Widgets => null;
 
       end case;
    end record;
@@ -785,6 +824,10 @@ package W2gtk_Decls is
                       NewWdg : Widget_Pointer);
    procedure Insert_Widget_By_Tail (Parent : Window_Pointer;
                                     WT     : Widget_Pointer);
+   procedure Unlink_Widget (Parent : Window_Pointer;
+                            WT     : Widget_Pointer);
+   procedure Unlink_Widget (TWdg : Widget_Pointer;
+                            WT   : Widget_Pointer);
    procedure Set_Have (WT : Widget_Pointer);
    function Insert_Signal (TWin : Window_Pointer;
                            TS   : Signal_Pointer) return Boolean;

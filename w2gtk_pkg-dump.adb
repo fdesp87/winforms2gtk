@@ -16,7 +16,7 @@
 ------------------------------------------------------------------------------
 separate (W2gtk_Pkg)
 
-procedure Dump (Path : String; File_Name : String) is
+procedure Dump (Path : String; File_Name : String; Instant : String) is
    TWin  : Window_Pointer;
 
    use GNAT.Calendar.Time_IO;
@@ -230,6 +230,9 @@ procedure Dump (Path : String; File_Name : String) is
          when GtkWindow =>
             Put_Property ("Title");
             Put_String_Access (TWin.Title, True);
+
+            Put_Property ("Number of Children");
+            Put_Integer (TWin.Num_Children);
 
             Put_Property ("Resizable");
             Put_Boolean (TWin.Resizable);
@@ -517,7 +520,7 @@ procedure Dump (Path : String; File_Name : String) is
       Put_Property ("Number of Children");
       Put_Integer (TWdgP.Num_Children);
 
-      Put_Property ("Parent");
+      Put_Property ("Parent Name");
       if TWdgP.Parent_Name /= null then
          Put_String_Access (TWdgP.Parent_Name);
       elsif TWdgP.GParent /= null
@@ -526,13 +529,12 @@ procedure Dump (Path : String; File_Name : String) is
          TIO.Put (LFile, To_Gtk (TWdgP.GParent));
          TIO.New_Line (LFile);
       elsif TWdgP.WParent /= null then
-         --  WinIO.Put (LFile, TWdgP.WParent.Window_Type);
          TIO.Put (LFile, To_Gtk (TWdgP.WParent));
          TIO.New_Line (LFile);
       end if;
 
       Put_Property ("Child Number");
-      Put_Integer (TWdgP.Child_Num);
+      Put_Integer (TWdgP.Child_Number);
 
       if TWdgP.Widget_Type /= GtkTabChild then
          Put_Property ("Location");
@@ -627,12 +629,25 @@ procedure Dump (Path : String; File_Name : String) is
          TIO.New_Line (LFile);
       end if;
 
-      Put_Property ("----");
-      TIO.New_Line (LFile);
-
       case TWdgP.Widget_Type is
          when No_Widget =>
             null;
+         when GtkAspectFrame =>
+            Put_Property ("H_Alignment");
+            TIO.Put_Line (LFile, Img (TWdgP.H_Alignment, 0));
+            Put_Property ("V_Alignment");
+            TIO.Put_Line (LFile, Img (TWdgP.V_Alignment, 0));
+            Put_Property ("Ratio");
+            TIO.Put_Line (LFile, Img (TWdgP.Ratio_If_No_Obey, 0));
+            Put_Property ("Obey");
+            Put_Boolean (TWdgP.Obey);
+            Put_Property ("Label_Xalign");
+            TIO.Put_Line (LFile, Img (TWdgP.Label_Xalign, 0));
+            Put_Property ("Label_Yalign");
+            TIO.Put_Line (LFile, Img (TWdgP.Label_Yalign, 0));
+            Put_Property ("Frame_Shadow");
+            FSEIO.Put (LFile, TWdgP.Frame_Shadow);
+            TIO.New_Line (LFile);
 
          when GtkMenuItem | GtkSubMenu => null;
 
@@ -1059,24 +1074,52 @@ procedure Dump (Path : String; File_Name : String) is
          when GtkFrame =>
             null;
 
-         when GtkBox =>
-            null;
-
          when GtkSeparatorToolItem =>
             null;
 
+         when GtkBox | GtkButtonBox | Internal_Child_VBox =>
+            Put_Property ("Spacing");
+            Put_Integer (TWdgP.Spacing);
+            Put_Property ("Orientation");
+            if TWdgP.Orientation = Horizontal then
+               TIO.Put (LFile, "Horizontal");
+            else
+               TIO.Put (LFile, "Vertical");
+            end if;
+            TIO.New_Line (LFile);
+            Put_Property ("Homogeneus");
+            Put_Boolean (TWdgP.Homogeneus);
+            Put_Property ("Baseline");
+            BEIO.Put (LFile, TWdgP.Baseline);
+            TIO.New_Line (LFile);
+
+            case TWdgP.Widget_Type is
+               when GtkButtonBox =>
+                  Put_Property ("Layout_Style");
+                  LSEIO.Put (LFile, TWdgP.Layout_Style);
+                  TIO.New_Line (LFile);
+               when others => null;
+            end case;
+
+         when GtkFixed  => null;
+         when Internal_Child_Action_Area => null;
+         when Action_Widgets => null;
       end case;
+
+      Put_Property ("----");
+      TIO.New_Line (LFile);
 
       Dump_Signals;
       Dump_Children;
 
    end Dump_Widget;
+
 begin
-   Debug (-1, "Generating Dump");
    TIO.Create (File => LFile,
                Mode => TIO.Out_File,
                Name => Path & "/" & File_Name & ".dump");
-   TIO.Put_Line (LFile, "Generating Dump by w2gtk " & Version);
+   TIO.Put_Line (LFile, "Generating Dump by w2gtk " & Version &
+                " - " & Instant);
    Dump_DGVS;
    TWin := Win_List;
    while TWin /= null loop

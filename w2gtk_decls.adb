@@ -340,10 +340,10 @@ package body W2gtk_Decls is
       To.Child_List := From.Child_List;
       To.Num_Children := From.Num_Children;
 
-      To.Parent_Name := New_String (From.Parent_Name);
-      To.WParent     := From.WParent;
-      To.GParent     := From.GParent;
-      To.Child_Num   := From.Child_Num;
+      To.Parent_Name  := New_String (From.Parent_Name);
+      To.WParent      := From.WParent;
+      To.GParent      := From.GParent;
+      To.Child_Number := From.Child_Number;
 
       To.Windows_Type := New_String (From.Windows_Type);
 
@@ -415,6 +415,8 @@ package body W2gtk_Decls is
       case WT.Widget_Type is
          when No_Widget =>
             null;
+
+         when GtkAspectFrame => null;
 
          when GtkMenuItem | GtkSubMenu => null;
          when GtkSeparatorMenuItem => null;
@@ -551,6 +553,12 @@ package body W2gtk_Decls is
             Free (WT.Anchor);
 
          when GtkSeparatorToolItem => null;
+
+         when GtkFixed  => null;
+         when GtkButtonBox => null;
+         when Internal_Child_VBox => null;
+         when Internal_Child_Action_Area => null;
+         when Action_Widgets => null;
       end case;
       Free (WT);
    end Release;
@@ -559,18 +567,16 @@ package body W2gtk_Decls is
    -- Unlink  --
    -------------
 
-   procedure Unlink_Widget (TWin : Window_Pointer;
-                            WT   : Widget_Pointer);
-   procedure Unlink_Widget (TWin : Window_Pointer;
-                            WT   : Widget_Pointer) is
+   procedure Unlink_Widget (Parent : Window_Pointer;
+                            WT     : Widget_Pointer) is
    begin
-      if TWin.Widget_List = WT then       --  first item
+      if Parent.Widget_List = WT then       --  first item
          if WT.Next = null then           --  and last item
-            TWin.Widget_List := null;
+            Parent.Widget_List := null;
          else                             --  first but more items
             WT.Next.Prev := null;
-            TWin.Widget_List := WT.Next;
-            TWin.Widget_List.Prev := null;
+            Parent.Widget_List := WT.Next;
+            Parent.Widget_List.Prev := null;
          end if;
       elsif WT.Next = null then           --  last item (cannot be first)
          WT.Prev.Next := null;
@@ -586,8 +592,6 @@ package body W2gtk_Decls is
    -- Unlink  --
    -------------
 
-   procedure Unlink_Widget (TWdg : Widget_Pointer;
-                            WT   : Widget_Pointer);
    procedure Unlink_Widget (TWdg : Widget_Pointer;
                             WT   : Widget_Pointer) is
    begin
@@ -628,7 +632,7 @@ package body W2gtk_Decls is
       end if;
 
       --  check if WT should be in front
-      if Parent.Child_List.Child_Num > WT.Child_Num then
+      if Parent.Child_List.Child_Number > WT.Child_Number then
          WT.Next := Parent.Child_List;
          WT.Prev := null;
          Parent.Child_List.Prev := WT;
@@ -636,13 +640,13 @@ package body W2gtk_Decls is
          return;
       end if;
 
-      --  check if WT should be the current last
+      --  check if WT sould be inserted by the tail
       Temp := Parent.Child_List;
       loop
          exit when Temp.Next = null;
          Temp := Temp.Next;
       end loop;
-      if Temp.Child_Num < WT.Child_Num then
+      if Temp.Child_Number < WT.Child_Number then
          Temp.Next := WT;
          WT.Prev := Temp;
          WT.Next := null;
@@ -652,7 +656,7 @@ package body W2gtk_Decls is
       --  WT in the midle. Detect it
       Temp := Parent.Child_List;
       loop
-         exit when Temp.Child_Num > WT.Child_Num;
+         exit when Temp.Child_Number > WT.Child_Number;
          Temp := Temp.Next;
       end loop;
       WT.Next := Temp;
@@ -672,15 +676,10 @@ package body W2gtk_Decls is
       Child.GParent       := GParent;
       Child.Parent_Name   := new String'(Parent.Parent_Name.all);
       Child.FlowDirection := Parent.FlowDirection;
-      Child.Child_Num     := Parent.Child_Num;
+      Child.Child_Number  := Parent.Child_Number;
 
       if Parent.GParent = null then  --  first level widget
-
-
-
          Unlink_Widget (Parent.WParent, Parent);
-
-
       else
          Unlink_Widget (GParent, Parent);
          Insert_Widget_By_Order (GParent, Child);
@@ -739,6 +738,7 @@ package body W2gtk_Decls is
    --------------
    -- Set Have --
    --------------
+
    procedure Set_Have (WP : Window_Pointer) is
    begin
       case WP.Window_Type is
@@ -833,6 +833,9 @@ package body W2gtk_Decls is
       Temp0 : Widget_Pointer; --  the last widget in the list
       Temp1 : Widget_Pointer; --  the first date picker in the list
    begin
+      WT.Child_Number := Parent.Num_Children;
+      Parent.Num_Children := Parent.Num_Children + 1;
+
       --  if list if empty, insert WT
       if Parent.Widget_List = null then
          Parent.Widget_List := WT;
@@ -1387,8 +1390,6 @@ package body W2gtk_Decls is
    --  as indicated in widget's child_num
 
    procedure Relink_Children_To_Parent (TWin : Window_Pointer) is
-
-      -----------------------------------------
       TWdg : Widget_Pointer := TWin.Widget_List;
       Temp : Widget_Pointer;
    begin
@@ -1400,11 +1401,43 @@ package body W2gtk_Decls is
             TWdg := TWdg.Next;
             Unlink_Widget (TWin, Temp);
             Insert_Widget_By_Order (Temp.GParent, Temp);
-            Debug (0, Sp (3) & "Widget "
-                   & Temp.Name.all
-                   & " (Child Number " & Img (Temp.Child_Num) & ")"
-                   & " linked to Parent " & Temp.GParent.Name.all);
+            if Temp.Name /= null then
+               if Temp.GParent.Name /= null then
+                  Debug (0, Sp (3)
+                         & Temp.Name.all
+                         & " linked to parent widget "
+                         & Temp.GParent.Name.all);
+               else
+                  Debug (0, Sp (3)
+                         & Temp.Name.all
+                         & " linked to parent widget "
+                         & Temp.GParent.Widget_Type'Image);
+               end if;
+            else
+               if Temp.GParent.Name /= null then
+                  Debug (0, Sp (3)
+                         & "No_Name"
+                         & " linked to parent widget "
+                         & Temp.GParent.Name.all);
+               else
+                  Debug (0, Sp (3)
+                         & "No_Name"
+                         & " linked to parent widget "
+                         & Temp.GParent.Widget_Type'Image);
+               end if;
+            end if;
          else
+            if TWdg.Name /= null then
+               Debug (0, Sp (3)
+                      & TWdg.Name.all
+                      & " linked to Parent Window "
+                      & TWin.Name.all);
+            else
+               Debug (0, Sp (3) & "Widget "
+                      & "No_Name"
+                      & " linked to Parent Window "
+                      & TWin.Window_Type'Image);
+            end if;
             TWdg := TWdg.Next;
          end if;
       end loop;
@@ -1845,6 +1878,8 @@ package body W2gtk_Decls is
       end if;
 
       case T.Widget_Type is
+         when No_Widget => return "No Widget";
+         when GtkAspectFrame => return "Gtk_AspectFrame";
          when GtkLabel => return "Gtk_Label";
          when GtkNoteBook => return "Gtk_Notebook";
          when GtkTabPage => return "tab";
@@ -1869,6 +1904,7 @@ package body W2gtk_Decls is
          when GtkMenuImageItem => return "Gtk_Image_Menu_Item";
          when GtkMenuRadioItem => return "Gtk_Radio_Menu_Item";
          when GtkMenuCheckItem => return "Gtk_Check_Menu_Item";
+         when GtkSubMenu => return "Gtk_SubMenu";
          when GtkSeparatorMenuItem => return "Gtk_Separator_Menu_Item";
          when GtkColorButton => return "Gtk_Color_Button";
          when GtkCalendar => return "Gtk_Calendar";
@@ -1889,7 +1925,11 @@ package body W2gtk_Decls is
          when Chart => return "Integer";
          when FolderBrowserDialog => return "Integer";
          when PageSetupDialog => return "Integer";
-         when others => return "";
+         when Internal_Child_VBox => return "Internal_Child_VBox";
+         when Internal_Child_Action_Area => return "Internal_Child_Action_Area";
+         when Action_Widgets => return "Action_Widgets";
+         when GtkFixed => return "Gtk_Fixed";
+         when GtkButtonBox => return "Gtk_ButtonBox";
       end case;
    end To_Gtk;
 

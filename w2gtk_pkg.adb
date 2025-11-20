@@ -27,7 +27,7 @@ with W2gtk_Decls;             use W2gtk_Decls;
 with W2gtk_Emit;              use W2gtk_Emit;
 with Symbol_Tables;
 with W2gtk_Backups;           use W2gtk_Backups;
-with W2gtk_Version;              use W2gtk_Version;
+with W2gtk_Version;           use W2gtk_Version;
 
 package body W2gtk_Pkg is
 
@@ -50,6 +50,9 @@ package body W2gtk_Pkg is
    package SBIO is new Ada.Text_IO.Enumeration_IO (ScrollBars_Enum);
    package DRIO is new Ada.Text_IO.Enumeration_IO (DialogResult_Enum);
    package CSIO is new Ada.Text_IO.Enumeration_IO (Cell_Style_Enum);
+   package LSEIO is new Ada.Text_IO.Enumeration_IO (Layout_Style_Enum);
+   package FSEIO is new Ada.Text_IO.Enumeration_IO (Frame_Shadow_Enum);
+   package BEIO is new Ada.Text_IO.Enumeration_IO (Baseline_Enum);
 
    Max_Gen : Integer := 1;
 
@@ -88,14 +91,14 @@ package body W2gtk_Pkg is
                                   Resx_File_Name : String) return Integer;
    function Parse_VB_File (Resx_Path      : String;
                            Resx_File_Name : String) return Integer;
-   procedure Dump (Path : String; File_Name : String);
+   procedure Dump (Path : String; File_Name : String; Instant : String);
    --  end of specs
 
    -------------------------------------------------------------------------
    function Adjust_To_Gtk return Integer is separate;
 
    -------------------------------------------------------------------------
-   procedure Dump (Path : String; File_Name : String) is separate;
+   procedure Dump (Path : String; File_Name : String; Instant : String) is separate;
 
    -------------------------------------------------------------------------
    function Parse_Resource_File (TWin           : Window_Pointer;
@@ -558,8 +561,7 @@ package body W2gtk_Pkg is
                         end if;
 
                      when Attr_Parent =>
-                        WT.Parent_Name :=
-                          new String'(+Get_String (RFile));
+                        WT.Parent_Name := new String'(+Get_String (RFile));
                         if WT.Parent_Name.all = "_This" then
                            WT.Parent_Name.all := "$this";
                         end if;
@@ -790,7 +792,7 @@ package body W2gtk_Pkg is
             end if;
             Child.Parent_Name := new String'(Parent.Name.all);
             Parent.Num_Children := Parent.Num_Children + 1;
-            Child.Child_Num := Parent.Num_Children;
+            Child.Child_Number := Parent.Num_Children;
             if Parent.Widget_Type = GtkDataGridView
               and then Child.Widget_Type = ExpandableColumn
             then
@@ -800,7 +802,7 @@ package body W2gtk_Pkg is
                    & Child.Name.all
                    & ".Parent_Name "
                    & Parent.Name.all
-                   & ", child number=" & Img (Child.Child_Num));
+                   & ", child number=" & Img (Child.Child_Number));
             Idx0 := Idx1 + 1; -- skip semicolon
             exit when Line (Idx0) = ')';
          end loop;
@@ -878,7 +880,7 @@ package body W2gtk_Pkg is
             end if;
             Child.Parent_Name := new String'(Parent.Name.all);
             Parent.Num_Children := Parent.Num_Children + 1;
-            Child.Child_Num := Parent.Num_Children;
+            Child.Child_Number := Parent.Num_Children;
             Debug (NLin, Sp (3) & "Set Widget Property "
                    & Child.Name.all
                    & ".Parent_Name "
@@ -1197,12 +1199,24 @@ package body W2gtk_Pkg is
                when Attr_FlowDirection =>
                   if Contains (Line (Idx1 .. Len), "TopDown") then
                      WT.FlowDirection := TopDown;
+                     if WT.Widget_Type = GtkBox then
+                        WT.Orientation := Vertical;
+                     end if;
                   elsif Contains (Line (Idx1 .. Len), "RightToLeft") then
                      WT.FlowDirection := RightToLeft;
+                     if WT.Widget_Type = GtkBox then
+                        WT.Orientation := Horizontal;
+                     end if;
                   elsif Contains (Line (Idx1 .. Len), "LeftToRight") then
                      WT.FlowDirection := LeftToRight;
+                     if WT.Widget_Type = GtkBox then
+                        WT.Orientation := Horizontal;
+                     end if;
                   elsif Contains (Line (Idx1 .. Len), "BottomUp") then
                      WT.FlowDirection := BottomUp;
+                     if WT.Widget_Type = GtkBox then
+                        WT.Orientation := Vertical;
+                     end if;
                   end if;
                   Debug (NLin, Sp (3) & "Set Widget Property "
                          & WT.Name.all
@@ -2469,6 +2483,7 @@ package body W2gtk_Pkg is
          end if;
 
          Insert_Widget_By_Tail (TWin, WT);
+
          Debug (NLin, Sp (3) & "Created "
                 & WT.Widget_Type'Image & " "
                 & WT.Name.all & " from"
@@ -3215,6 +3230,8 @@ package body W2gtk_Pkg is
                            Icon_Path      : String;
                            Ada_Path       : String) return Integer is
       Result : Integer;
+      Instant : constant String := GNAT.Calendar.Time_IO.Image
+        (Ada.Calendar.Clock, GNAT.Calendar.Time_IO.ISO_Time);
    begin
       W2gtk_Decls.Log := Log_Switch;
 
@@ -3236,9 +3253,7 @@ package body W2gtk_Pkg is
                 & " -ip " & Icon_Path
                 & " -ap " & Ada_Path);
          Debug (-1, "");
-         Debug (-1, "This is w2gtk " & Version & " - " &
-                  GNAT.Calendar.Time_IO.Image
-                  (Ada.Calendar.Clock, GNAT.Calendar.Time_IO.ISO_Time));
+         Debug (-1, "This is w2gtk " & Version & " - " & Instant);
          Debug (-1, "Processing " & Resx_Path & Resx_File_Name);
          Debug (-1, "");
          Debug (-1, "Generated log backup");
@@ -3282,15 +3297,14 @@ package body W2gtk_Pkg is
 
       if Do_Dump then
          Debug (-1, "");
-         Debug (-1, "Generating Dump backup" & " - " &
-                  GNAT.Calendar.Time_IO.Image
-                  (Ada.Calendar.Clock, GNAT.Calendar.Time_IO.ISO_Time));
+         Debug (-1, "Generating Dump backup" & " - " & Instant);
+
          Generate_Backup (Result, Glade_Path,
                           Resx_File_Name & ".dump");
          if Result < 0 then
             return Result;
          end if;
-         Dump (Glade_Path, Resx_File_Name);
+         Dump (Glade_Path, Resx_File_Name, Instant);
       end if;
 
       return Result;

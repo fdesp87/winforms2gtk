@@ -14,19 +14,20 @@
 -- a copy of the GCC Runtime Library Exception along with this program;     --
 -- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --
 ------------------------------------------------------------------------------
+with W2gtk_Decls;
 separate (W2gtk_Pkg)
 
 function Adjust_To_Gtk return Integer is
-   TWin  : Window_Pointer;
-   TWdg  : Widget_Pointer;
-   TWdgP : Widget_Pointer;
-   Temp  : Widget_Pointer;
-   NWin0 : Window_Pointer;
-   NWin1 : Window_Pointer;
-   NWin2 : Window_Pointer;
-   NCol  : Widget_Pointer;
-   TS    : Signal_Pointer;
-   Found : Boolean;
+   TWin    : Window_Pointer;
+   TWdg    : Widget_Pointer;
+   TWdg0   : Widget_Pointer;
+   Temp    : Widget_Pointer;
+   NWin0   : Window_Pointer;
+   NWin1   : Window_Pointer;
+   NWin2   : Window_Pointer;
+   NCol    : Widget_Pointer;
+   TS      : Signal_Pointer;
+   Found   : Boolean;
    Counter : Integer;
    Result  : Integer;
    Win_List_Aux : Window_Pointer := null;
@@ -210,6 +211,32 @@ function Adjust_To_Gtk return Integer is
       Visit_Use_Sort (TWdg.Next);
       Visit_Use_Sort (TWdg.Child_List);
    end Visit_Use_Sort;
+
+   procedure Visit_Renumber_Children (TWdg : in Widget_Pointer);
+   procedure Visit_Renumber_Children (TWdg : in Widget_Pointer) is
+      TWdg0 : Widget_Pointer;
+   begin
+      if TWdg = null then
+         return;
+      end if;
+
+      TWdg.Num_Children := 0;
+      TWdg0 := TWdg.Child_List;
+      while TWdg0 /= null loop
+         TWdg0.Child_Number := TWdg.Num_Children;
+         TWdg.Num_Children  := TWdg.Num_Children + 1;
+         if TWdg0.Name /= null then
+            Debug (0, Sp (3) & TWdg0.Name.all
+                   & " renumbered to" & TWdg0.Child_Number'Image);
+         else
+            Debug (0, Sp (3) & TWdg0.Widget_Type'Image
+                   & " renumbered to" & TWdg0.Child_Number'Image);
+         end if;
+         TWdg0 := TWdg0.Next;
+      end loop;
+      Visit_Renumber_Children (TWdg.Child_List);
+      Visit_Renumber_Children (TWdg.Next);
+   end Visit_Renumber_Children;
 
    procedure Generate_Auxiliary_Windows;
    procedure Generate_Auxiliary_Windows is
@@ -429,9 +456,9 @@ function Adjust_To_Gtk return Integer is
                   Wdg0 := new Widget_Properties (GtkTabChild);
                   Wdg0.Name := new String'(TWdg.Name.all & "_Box");
                   Wdg0.Parent_Name := new String'(TWdg.Name.all);
+
                   Insert_Widget_By_Tail (TWin, Wdg0);
-                  TWdg.Num_Children := TWdg.Num_Children + 1;
-                  Wdg0.Child_Num := TWdg.Num_Children;
+
                   Debug (0, Sp (3) & "Generated tab box "
                          & Wdg0.Name.all
                          & " for " & TWdg.Name.all);
@@ -443,9 +470,9 @@ function Adjust_To_Gtk return Integer is
                     new String'("System.Windows.Forms.Label");
                   Wdg1.Parent_Name := new String'(Wdg0.Name.all);
                   Wdg1.Text := new String'(TWdg.Text.all);
+
                   Insert_Widget_By_Tail (TWin, Wdg1);
-                  Wdg0.Num_Children := Wdg0.Num_Children + 1;
-                  Wdg1.Child_Num := Wdg0.Num_Children;
+
                   TWdg.The_Label := Wdg1;
                   Debug (0, Sp (3) & "Generated gtklabel for "
                          & Wdg1.Name.all & " from "
@@ -455,9 +482,9 @@ function Adjust_To_Gtk return Integer is
                   Wdg1 := new Widget_Properties (GtkButton);
                   Wdg1.Name := new String'(TWdg.Name.all & "_Button");
                   Wdg1.Parent_Name := new String'(Wdg0.Name.all);
+
                   Insert_Widget_By_Tail (TWin, Wdg1);
-                  Wdg0.Num_Children := Wdg0.Num_Children + 1;
-                  Wdg1.Child_Num := Wdg0.Num_Children;
+
                   TWdg.The_Button := Wdg1;
                   Debug (0, Sp (3) & "Generated gtkbutton for "
                          & Wdg1.Name.all & " from "
@@ -657,18 +684,18 @@ function Adjust_To_Gtk return Integer is
                      Debug (0, Sp (3) & "Reparenting Widget " & TWdg.Name.all
                             & " to Window " & TWdg.WParent.Name.all);
                   else
-                     TWdgP := Find_Widget (TWin.Widget_List,
+                     TWdg0 := Find_Widget (TWin.Widget_List,
                                            TWdg.Parent_Name.all);
-                     if TWdgP = null then
+                     if TWdg0 = null then
                         Debug (0, Sp (3) & ("Widget " & TWdg.Name.all
                                & " without parent, "
                                & " tried " & TWdg.Parent_Name.all));
                         return -1;
                      end if;
-                     TWdg.GParent := TWdgP;
+                     TWdg.GParent := TWdg0;
                      Debug (0, Sp (3) & "Reparenting Widget "
                             & TWdg.Name.all
-                            & " to "
+                            & " to widget "
                             & TWdg.GParent.Name.all);
                   end if;
                else
@@ -849,12 +876,11 @@ function Adjust_To_Gtk return Integer is
       Debug (0, "Inserting focus handler (only for dialogs)");
       TWin := Win_List;
       while TWin /= null loop
-         if TWin.Window_Type = GtkWindow then
-            if TWin.Is_Dialog then
-               TWdg := TWin.Widget_List;
-               while TWdg /= null loop
-                  if GNATCOLL.Tribooleans."=" (TWdg.TabStop, True) then
-                     case TWdg.Widget_Type is
+         if TWin.Window_Type = GtkWindow and then TWin.Is_Dialog then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if GNATCOLL.Tribooleans."=" (TWdg.TabStop, True) then
+                  case TWdg.Widget_Type is
                      when GtkLabel | GtkEntry | GtkComboTextBox
                         | GtkButton | GtkRadioButton
                         | GtkCheckButton | GtkToggleButton
@@ -874,11 +900,10 @@ function Adjust_To_Gtk return Integer is
                            end if;
                         end if;
                      when others => null;
-                     end case;
-                  end if;
-                  TWdg := TWdg.Next;
-               end loop;
-            end if;
+                  end case;
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
          end if;
          TWin := Next_Window (Win_List, TWin);
       end loop;
@@ -971,6 +996,188 @@ function Adjust_To_Gtk return Integer is
          TWin := Next_Window (Win_List, TWin);
       end loop;
    end Inheritable_Attributes;
+
+   procedure Processing_Labels_With_Aspect_Frame;
+   procedure Processing_Labels_With_Aspect_Frame is
+   begin
+      Debug (-1, "");
+      Debug (0, "Processing Labels With Aspect Frame");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.Widget_Type = GtkLabel and then TWdg.BorderStyle /= None
+               then
+                  TWdg0 := new Widget_Properties (GtkAspectFrame);
+                  TWdg0.Frame_Shadow := In_Shadow;
+                  TWdg0.Name := new String'(TWdg.Name.all);
+                  TWdg0.Parent_Name := new String'(TWdg.Name.all);
+                  TWdg0.GParent := TWdg.GParent;
+                  TWdg0.WParent := TWin;
+                  TWdg.GParent  := TWdg0;
+                  TWdg0.Size    := TWdg.Size;
+                  TWdg0.Location := TWdg.Location;
+                  TWdg0.Child_Number := TWdg.Child_Number;
+                  TWdg.Size     := (-1, -1);
+
+                  Insert_Widget_By_Tail (TWin, TWdg0);
+
+                  Debug (0, Sp (3) & "Creating AspectFrame for label "
+                         & TWdg.Name.all);
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+   end Processing_Labels_With_Aspect_Frame;
+
+   procedure Preparing_Action_Area;
+   procedure Preparing_Action_Area is
+   begin
+      Debug (-1, "");
+      Debug (0, "Preparing action area");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            if TWin.Action_Buttons (OK_Response) /= null or
+              TWin.Action_Buttons (Cancel_Response) /= null
+            then
+               if TWin.Action_Buttons (OK_Response) /= null then
+                  From_Top := TWin.Action_Buttons (OK_Response).Location.From_Top;
+               elsif TWin.Action_Buttons (Cancel_Response) /= null then
+                  From_Top := TWin.Action_Buttons (Cancel_Response).Location.From_Top;
+               else
+                  Debug (0, "OK and Cancel Buttons not found for action area, exiting");
+                  exit;
+               end if;
+               TWdg := TWin.Widget_List;
+               while TWdg /= null loop
+                  if TWdg.Widget_Type = GtkButton then
+                     if TWdg.Location.From_Top = From_Top then
+                        if TWdg.Text.all = "Delete" then
+                           TWin.Action_Buttons (Delete_Response) := TWdg;
+                           if TWdg.Dialog_Result = None_Response then
+                              TWdg.Dialog_Result := Delete_Response;
+                           end if;
+                           Debug (0, "Delete button included in action area");
+                           exit;
+                        end if;
+                     end if;
+                  end if;
+                  TWdg := TWdg.Next;
+               end loop;
+            end if;
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+   end Preparing_Action_Area;
+
+   procedure Preparing_Dialogs;
+   procedure Preparing_Dialogs is
+      WP_Internal_Child_Vbox        : Widget_Pointer;
+      WP_GtkBox                     : Widget_Pointer;
+      WP_Internal_Child_Action_Area : Widget_Pointer;
+      WP_GtkButtonBox               : Widget_Pointer;
+      WP_GtkFixed                   : Widget_Pointer;
+      WP_Action_Widgets             : Widget_Pointer;
+   begin
+      Debug (-1, "");
+      Debug (0, "Preparing_Dialogs");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow and then TWin.Is_Dialog then
+            WP_Internal_Child_Vbox := new Widget_Properties
+              (Widget_Type => Internal_Child_VBox);
+            WP_Internal_Child_Vbox.WParent := TWin;
+            WP_Internal_Child_Vbox.GParent := null;
+            WP_Internal_Child_Vbox.Parent_Name := TWin.Name;
+            WP_Internal_Child_Vbox.Orientation := Vertical;
+            WP_Internal_Child_Vbox.Spacing := 2;
+            WP_Internal_Child_Vbox.Visible := False;
+            --  WP_Internal_Child_Vbox.Name := new String'("Internal Vbox");
+
+            WP_GtkBox := new Widget_Properties (GtkBox);
+            WP_GtkBox.WParent := TWin;
+            WP_GtkBox.GParent := WP_Internal_Child_Vbox;
+            WP_GtkBox.Parent_Name := WP_Internal_Child_Vbox.Name;
+            WP_GtkBox.Orientation := Vertical;
+            WP_GtkBox.Spacing := 2;
+            WP_GtkBox.Visible := False;
+            --  WP_GtkBox.Name := new String'("Internal Gtkbox");
+
+            WP_Internal_Child_Action_Area :=
+              new Widget_Properties (Internal_Child_Action_Area);
+            WP_Internal_Child_Action_Area.WParent := TWin;
+            WP_Internal_Child_Action_Area.GParent := WP_GtkBox;
+            WP_Internal_Child_Action_Area.Parent_Name := WP_GtkBox.Name;
+            --  WP_Internal_Child_Action_Area.Name :=
+            --    new String'("Internal_Child_Action_Area");
+
+            WP_GtkButtonBox := new Widget_Properties (GtkButtonBox);
+            WP_GtkButtonBox.WParent := TWin;
+            WP_GtkButtonBox.GParent := WP_Internal_Child_Action_Area;
+            WP_GtkButtonBox.Parent_Name := WP_Internal_Child_Action_Area.Name;
+            WP_GtkButtonBox.Layout_Style := Spread;
+            WP_GtkButtonBox.Orientation := Vertical;
+            WP_GtkButtonBox.Spacing := 0;
+            WP_GtkButtonBox.Visible := False;
+            --  WP_GtkButtonBox.Name := new String'("Internal GtkButtonbox");
+
+            WP_GtkFixed := new Widget_Properties (GtkFixed);
+            WP_GtkFixed.Name := new String'(TWin.Name.all);
+            WP_GtkFixed.WParent := TWin;
+            WP_GtkFixed.GParent := WP_GtkBox;
+            WP_GtkFixed.Visible := True;
+            WP_GtkFixed.Margins := TWin.Margins;
+
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.GParent = null then
+                  TWdg.GParent := WP_GtkFixed;
+                  Free (TWdg.Parent_Name);
+                  TWdg.Parent_Name := new String'(WP_GtkFixed.Name.all);
+               end if;
+               TWdg := TWdg. Next;
+            end loop;
+
+            WP_Action_Widgets := new Widget_Properties (Action_Widgets);
+            WP_Action_Widgets.WParent := TWin;
+            WP_Action_Widgets.GParent := null;
+            WP_Action_Widgets.Parent_Name := TWin.Name;
+            WP_Internal_Child_Vbox.GParent := null;
+
+            if TWin.Action_Buttons (Delete_Response) /= null then
+               Unlink_Widget (TWin, TWin.Action_Buttons (Delete_Response));
+               TWin.Action_Buttons (Delete_Response).GParent := WP_GtkButtonBox;
+               Insert_Widget_By_Tail (TWin, TWin.Action_Buttons (Delete_Response));
+            end if;
+
+            if TWin.Action_Buttons (Cancel_Response) /= null then
+               Unlink_Widget (TWin, TWin.Action_Buttons (Cancel_Response));
+               TWin.Action_Buttons (Cancel_Response).GParent := WP_GtkButtonBox;
+               Insert_Widget_By_Tail (TWin, TWin.Action_Buttons (Cancel_Response));
+            end if;
+
+            if TWin.Action_Buttons (OK_Response) /= null then
+               Unlink_Widget (TWin, TWin.Action_Buttons (OK_Response));
+               TWin.Action_Buttons (OK_Response).GParent := WP_GtkButtonBox;
+               Insert_Widget_By_Tail (TWin, TWin.Action_Buttons (OK_Response));
+            end if;
+
+            TWin.Num_Children := 0;
+            Insert_Widget_By_Tail (TWin, WP_Internal_Child_Vbox);
+            Insert_Widget_By_Tail (TWin, WP_GtkBox);
+            Insert_Widget_By_Tail (TWin, WP_Internal_Child_Action_Area);
+            Insert_Widget_By_Tail (TWin, WP_GtkButtonBox);
+            Insert_Widget_By_Tail (TWin, WP_GtkFixed);
+            Insert_Widget_By_Tail (TWin, WP_Action_Widgets);
+
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+   end Preparing_Dialogs;
 
    ---------------------------------------------------------
    --  until now, each gtkwindow had a linear widget list --
@@ -1091,43 +1298,33 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Use_Sort_For_Datagrids_And_Treegrids;
 
-   procedure Preparing_Action_Area;
-   procedure Preparing_Action_Area is
+   procedure Renumber_All;
+   procedure Renumber_All is
    begin
       Debug (-1, "");
-      Debug (0, "Preparing action area");
+      Debug (0, "Renumbering");
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
-            if TWin.Action_Buttons (OK_Response) /= null or
-              TWin.Action_Buttons (Cancel_Response) /= null
-            then
-               if TWin.Action_Buttons (OK_Response) /= null then
-                  From_Top := TWin.Action_Buttons (OK_Response).Location.From_Top;
-               elsif TWin.Action_Buttons (Cancel_Response) /= null then
-                  From_Top := TWin.Action_Buttons (Cancel_Response).Location.From_Top;
+            TWin.Num_Children := 0;
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               TWdg.Child_Number := TWin.Num_Children;
+               if TWdg.Name /= null then
+                  Debug (0, Sp (3) & TWdg.Name.all
+                         & " renumbered to" & TWdg.Child_Number'Image);
                else
-                  Debug (0, "OK and Cancel Buttons not found for action area, exiting");
-                  exit;
+                  Debug (0, TWdg.Widget_Type'Image
+                         & " renumbered to" & TWdg.Child_Number'Image);
                end if;
-               TWdg := TWin.Widget_List;
-               while TWdg /= null loop
-                  if TWdg.Widget_Type = GtkButton then
-                     if TWdg.Location.From_Top = From_Top then
-                        if TWdg.Text.all = "Delete" then
-                           TWin.Action_Buttons (Delete_Response) := TWdg;
-                           TWdg.Dialog_Result := Delete_Response;
-                           Debug (0, "Delete button included in action area");
-                        end if;
-                     end if;
-                  end if;
-                  TWdg := TWdg.Next;
-               end loop;
-            end if;
+               TWin.Num_Children := TWin.Num_Children + 1;
+               Visit_Renumber_Children (TWin.Widget_List);
+               TWdg := TWdg.Next;
+            end loop;
          end if;
          TWin := Next_Window (Win_List, TWin);
       end loop;
-   end Preparing_Action_Area;
+   end Renumber_All;
 
 begin
    if Win_List = null then
@@ -1179,6 +1376,12 @@ begin
 
    Inheritable_Attributes;
 
+   Processing_Labels_With_Aspect_Frame;
+
+   Preparing_Action_Area;
+
+   Preparing_Dialogs;
+
    ---------------------------------------------------------
    --  until now, each gtkwindow had a linear widget list --
    ---------------------------------------------------------
@@ -1197,7 +1400,7 @@ begin
 
    Use_Sort_For_Datagrids_And_Treegrids;
 
-   Preparing_Action_Area;
+   Renumber_All;
 
    Debug (-1, "End of Adjusting to GTK");
    return 0;
