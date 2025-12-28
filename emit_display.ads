@@ -18,20 +18,18 @@ with W2gtk_Decls;     use W2gtk_Decls;
 
 package Emit_Display is
 
-   procedure Emit_GtkLabel (TWdg    : Widget_Pointer;
+   procedure Emit_GtkLabel (Me    : Widget_Pointer;
                             Id      : Integer;
                             Packing : Boolean);
-   procedure Emit_GtkImage (TWdg : Widget_Pointer;
-                            Id   : Integer);
-   procedure Emit_GtkTreeView (TWdg : Widget_Pointer;
-                               Id   : Integer;
-                               Pos  : Integer);
-   procedure Emit_GtkDataGridView (TWdg : Widget_Pointer;
-                                   Id   : Integer;
-                                   Pos  : Integer);
-   procedure Emit_DatePicker (TWdg : Widget_Pointer;
-                              Id   : Integer);
-   procedure Emit_TimePicker (TWdg : Widget_Pointer;
-                              Id   : Integer);
+   procedure Emit_GtkImage (Me : Widget_Pointer;
+                            Id : Integer);
+   procedure Emit_GtkTreeView (Me : Widget_Pointer;
+                               Id : Integer);
+   procedure Emit_GtkDataGridView (Me : Widget_Pointer;
+                                   Id : Integer);
+   procedure Emit_DatePicker (Me : Widget_Pointer;
+                              Id : Integer);
+   procedure Emit_TimePicker (Me : Widget_Pointer;
+                              Id : Integer);
 
 end Emit_Display;

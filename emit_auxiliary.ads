@@ -14,23 +14,17 @@
 -- with this program; see the file COPYING3.                                --
 -- If not, see <http://www.gnu.org/licenses/>.                              --
 ------------------------------------------------------------------------------
-with W2gtk_Decls;     use W2gtk_Decls;
+with W2gtk_Decls; use W2gtk_Decls;
 
 package Emit_Auxiliary is
 
-   procedure Emit_GtkNotebookTab (TWdg : Widget_Pointer;
-                                  Id   : Integer);
-   procedure Emit_GtkSubmenu (TWdg : Widget_Pointer;
-                              Id : Integer);
-   procedure Emit_GtkMenuNormalItem (TWdg : Widget_Pointer;
-                                     Id   : Integer);
-   procedure Emit_GtkMenuImageItem (TWdg : Widget_Pointer;
-                                    Id   : Integer);
-   procedure Emit_GtkSepMenuItem (TWdg : Widget_Pointer;
-                                  Id   : Integer);
-   procedure Emit_GtkMenuItem (TWdg : Widget_Pointer;
-                               Id   : Integer);
-   procedure Emit_GtkGridView (TWdg : Widget_Pointer;
-                               Id   : Integer);
+   procedure Emit_GtkTabChild (Me : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkNotebookTabPage (Me : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkSubmenu (Me : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkMenuNormalItem (Me : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkMenuImageItem (Me : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkSepMenuItem (Me : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkMenuItem (Me : Widget_Pointer; Id : Integer);
+   procedure Emit_GtkGridView (Me : Widget_Pointer; Id : Integer);
 
 end Emit_Auxiliary;

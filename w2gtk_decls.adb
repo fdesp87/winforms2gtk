@@ -318,22 +318,24 @@ package body W2gtk_Decls is
       return null;
    end Find_Widget;
 
+   ----------------
+   -- New_String --
+   ----------------
+   function New_String (K : String_Access) return String_Access is
+   begin
+      if K /= null then
+         return new String'(K.all);
+      else
+         return null;
+      end if;
+   end New_String;
+
    ----------------------------
    -- Copy_Common_Attributes --
    ----------------------------
 
    procedure Copy_Common_Attributes (From : Widget_Pointer;
                                      To   : Widget_Pointer) is
-      function New_String (K : String_Access) return String_Access;
-      function New_String (K : String_Access) return String_Access is
-      begin
-         if K /= null then
-            return new String'(K.all);
-         else
-            return null;
-         end if;
-      end New_String;
-
    begin
       To.Next := From.Next;
       To.Prev := From.Next;
@@ -341,8 +343,8 @@ package body W2gtk_Decls is
       To.Num_Children := From.Num_Children;
 
       To.Parent_Name  := New_String (From.Parent_Name);
-      To.WParent      := From.WParent;
-      To.GParent      := From.GParent;
+      To.Win_Parent      := From.Win_Parent;
+      To.Wdg_Parent      := From.Wdg_Parent;
       To.Child_Number := From.Child_Number;
 
       To.Windows_Type := New_String (From.Windows_Type);
@@ -416,7 +418,10 @@ package body W2gtk_Decls is
          when No_Widget =>
             null;
 
+         when GtkAlignment => null;
          when GtkAspectFrame => null;
+         when GtkScrolledWindow => null;
+
 
          when GtkMenuItem | GtkSubMenu => null;
          when GtkSeparatorMenuItem => null;
@@ -671,15 +676,15 @@ package body W2gtk_Decls is
 
    procedure Replace_Parent_By_Child (Parent : in out Widget_Pointer;
                                       Child  : Widget_Pointer) is
-      GParent : constant Widget_Pointer := Parent.GParent;
+      GParent : constant Widget_Pointer := Parent.Wdg_Parent;
    begin
-      Child.GParent       := GParent;
+      Child.Wdg_Parent       := GParent;
       Child.Parent_Name   := new String'(Parent.Parent_Name.all);
       Child.FlowDirection := Parent.FlowDirection;
       Child.Child_Number  := Parent.Child_Number;
 
-      if Parent.GParent = null then  --  first level widget
-         Unlink_Widget (Parent.WParent, Parent);
+      if Parent.Wdg_Parent = null then  --  first level widget
+         Unlink_Widget (Parent.Win_Parent, Parent);
       else
          Unlink_Widget (GParent, Parent);
          Insert_Widget_By_Order (GParent, Child);
@@ -832,9 +837,35 @@ package body W2gtk_Decls is
                                     WT     : Widget_Pointer) is
       Temp0 : Widget_Pointer; --  the last widget in the list
       Temp1 : Widget_Pointer; --  the first date picker in the list
+      Count : Integer := 0;
    begin
+      if WT.Name = null or else WT.Name.all = "" then
+         raise Widget_Name_Not_Assigned;
+      else
+         declare
+            Name  : constant String := WT.Name.all;
+         begin
+            loop
+               Temp0 := Find_Widget (Parent.Widget_List, WT.Name.all);
+               exit when Temp0 = null;
+               if Count = Integer'Last then
+                  raise Duplicated_Widget_Name;
+               end if;
+               Free (WT.Name);
+               Count := Count + 1;
+               WT.Name := new String'(Name & Img (Count));
+            end loop;
+            if Count /= 0 then
+               Debug (0, Sp (3) & "WARNING "
+                      & "widget " & Name & " renamed to "
+                      & WT.Name.all);
+            end if;
+         end;
+      end if;
+
       WT.Child_Number := Parent.Num_Children;
       Parent.Num_Children := Parent.Num_Children + 1;
+      WT.Win_Parent := Parent;
 
       --  if list if empty, insert WT
       if Parent.Widget_List = null then
@@ -850,7 +881,7 @@ package body W2gtk_Decls is
       loop
          if Temp1 = null
            and then Temp0.Widget_Type = GtkCalendar
-           and then Temp0.Is_DatePicker
+           --  and then Temp0.Is_DatePicker
          then
             Temp1 := Temp0;
          end if;
@@ -858,7 +889,7 @@ package body W2gtk_Decls is
          Temp0 := Temp0.Next;
       end loop;
 
-      if Temp1 = null then    --  no date pickers in the list
+      if Temp1 = null then    --  no calendars in the list
          Temp0.Next := WT;    --  insert WT by the end
          WT.Next    := null;
          WT.Prev    := Temp0;
@@ -886,19 +917,18 @@ package body W2gtk_Decls is
    --------------------
 
    --  ensure no duplicated Ada signal handlers
-   function Not_Duplicated (TS : Signal_Pointer) return Boolean;
-   function Not_Duplicated (TS : Signal_Pointer) return Boolean is
+   function Not_Duplicated (TS : Signal_Pointer;
+                           Ignore_Dup : Boolean) return Boolean;
+   function Not_Duplicated (TS : Signal_Pointer;
+                           Ignore_Dup : Boolean) return Boolean is
       B : Boolean;
    begin
       B := Symbol_Tables.Insert_In_Handler_Map (TS);
-      if not B then
+      if not B and then not Ignore_Dup then
          TS.GAda  := False;
          TS.Glade := False;
-         Debug (0, "Warning"
-                & ": repeated handler " & TS.Handler.all
-                & ": No Glade, No Ada will be generated for this signal");
       end if;
-      return not B;
+      return B;
    end Not_Duplicated;
 
    -------------------
@@ -906,7 +936,8 @@ package body W2gtk_Decls is
    -------------------
    --  insert in alphabetic order
    function Insert_Signal (TWin : Window_Pointer;
-                           TS   : Signal_Pointer) return Boolean is
+                           TS   : Signal_Pointer;
+                           Ignore_Dup : Boolean := False) return Boolean is
       Temp, Temp_Prev : Signal_Pointer;
    begin
       TS.GtkName := new String'(Symbol_Tables.Convert_Signal_To_Gtk (TWin, TS));
@@ -914,14 +945,14 @@ package body W2gtk_Decls is
          --  insert by the front
          TS.Next := null;
          TWin.Signal_List := TS;
-         return Not_Duplicated (TS);
+         return Not_Duplicated (TS, Ignore_Dup);
       end if;
 
       if TS.GtkName.all <= TWin.Signal_List.GtkName.all then
          --  insert by the front
          TS.Next := TWin.Signal_List;
          TWin.Signal_List := TS;
-         return Not_Duplicated (TS);
+         return Not_Duplicated (TS, Ignore_Dup);
       end if;
 
       Temp_Prev := TWin.Signal_List;
@@ -930,7 +961,7 @@ package body W2gtk_Decls is
          if TS.GtkName.all <= Temp.GtkName.all then
             TS.Next := Temp;
             Temp_Prev.Next := TS;
-            return Not_Duplicated (TS);
+            return Not_Duplicated (TS, Ignore_Dup);
          end if;
          Temp_Prev := Temp;
          Temp := Temp.Next;
@@ -938,7 +969,7 @@ package body W2gtk_Decls is
       --  insert at the end
       TS.Next   := null;
       Temp_Prev.Next := TS;
-      return Not_Duplicated (TS);
+      return Not_Duplicated (TS, Ignore_Dup);
    exception
       when Symbol_Tables.Unknown_Signal => return False;
    end Insert_Signal;
@@ -948,7 +979,8 @@ package body W2gtk_Decls is
    -------------------
    --  insert in alphabetic order
    function  Insert_Signal (TWdg : Widget_Pointer;
-                            TS   : Signal_Pointer) return Boolean is
+                            TS   : Signal_Pointer;
+                            Ignore_Dup : Boolean := False) return Boolean is
       Temp, Temp_Prev : Signal_Pointer;
    begin
       TS.GtkName := new String '(Symbol_Tables.Convert_Signal_To_Gtk (TWdg, TS));
@@ -956,14 +988,14 @@ package body W2gtk_Decls is
          --  insert by the front
          TS.Next := null;
          TWdg.Signal_List := TS;
-         return Not_Duplicated (TS);
+         return Not_Duplicated (TS, Ignore_Dup);
       end if;
 
       if TS.GtkName.all <= TWdg.Signal_List.GtkName.all then
          --  insert by the front
          TS.Next := TWdg.Signal_List;
          TWdg.Signal_List := TS;
-         return Not_Duplicated (TS);
+         return Not_Duplicated (TS, Ignore_Dup);
       end if;
 
       Temp_Prev := TWdg.Signal_List;
@@ -972,7 +1004,7 @@ package body W2gtk_Decls is
          if TS.GtkName.all <= Temp.GtkName.all then
             TS.Next := Temp;
             Temp_Prev.Next := TS;
-            return Not_Duplicated (TS);
+            return Not_Duplicated (TS, Ignore_Dup);
          end if;
          Temp_Prev := Temp;
          Temp := Temp.Next;
@@ -980,7 +1012,7 @@ package body W2gtk_Decls is
       --  insert at the end
       TS.Next   := null;
       Temp_Prev.Next := TS;
-      return Not_Duplicated (TS);
+      return Not_Duplicated (TS, Ignore_Dup);
    exception
       when Symbol_Tables.Unknown_Signal => return False;
    end Insert_Signal;
@@ -1176,6 +1208,32 @@ package body W2gtk_Decls is
       return Temp /= null;
    end Is_Duplicate;
 
+   ---------------------------
+   -- Insert_Window_By_Tail --
+   ---------------------------
+   --  insert by the tail
+   procedure Insert_Window_By_Tail (Root : in out Window_Pointer;
+                                    TWin : Window_Pointer);
+   procedure Insert_Window_By_Tail (Root : in out Window_Pointer;
+                                    TWin : Window_Pointer) is
+      Last : Window_Pointer;
+   begin
+      if Is_Duplicate (Root, TWin) then
+         raise Duplicated_Window_Name;
+      end if;
+      if Root = null then
+         Root := TWin;
+         TWin.Prev := TWin;
+         TWin.Next := TWin;
+      else
+         Last := Root.Prev;
+         TWin.Next := Root;
+         TWin.Prev := Last;
+         Last.Next := TWin;
+         Root.Prev := TWin;
+      end if;
+   end Insert_Window_By_Tail;
+
    ----------------------------
    -- Insert_Window_By_Order --
    ----------------------------
@@ -1186,7 +1244,7 @@ package body W2gtk_Decls is
       Temp : Window_Pointer;
    begin
       if Is_Duplicate (Root, TWin) then
-         raise Duplicate_Window_Name;
+         raise Duplicated_Window_Name;
       end if;
       if Root = null then --  list empty
          Insert_Window_By_Front (Root, TWin);
@@ -1217,39 +1275,19 @@ package body W2gtk_Decls is
       raise Program_Error;
    end Insert_Window_By_Order;
 
-   ---------------------------
-   -- Insert_Window_By_Tail --
-   ---------------------------
-   --  insert by the tail
-   procedure Insert_Window_By_Tail (Root : in out Window_Pointer;
-                                    TWin : Window_Pointer) is
-      Last : Window_Pointer;
-   begin
-      if Is_Duplicate (Root, TWin) then
-         raise Duplicate_Window_Name;
-      end if;
-      if Root = null then
-         Root := TWin;
-         TWin.Prev := TWin;
-         TWin.Next := TWin;
-      else
-         Last := Root.Prev;
-         TWin.Next := Root;
-         TWin.Prev := Last;
-         Last.Next := TWin;
-         Root.Prev := TWin;
-      end if;
-   end Insert_Window_By_Tail;
-
    ----------------------------
    -- Insert_Window_By_Front --
    ----------------------------
-   --  insert by the front
+
    procedure Insert_Window_By_Front (Root : in out Window_Pointer;
                                      TWin : Window_Pointer) is
    begin
+      if TWin.Name = null or else TWin.Name.all = "" then
+         raise Window_Name_Not_Assigned;
+      end if;
       if Is_Duplicate (Root, TWin) then
-         raise Duplicate_Window_Name;
+         Debug (0, "Duplicated Window Name " & TWin.Name.all);
+         raise Duplicated_Window_Name;
       end if;
       if Root = null then
          Root := TWin;
@@ -1392,51 +1430,65 @@ package body W2gtk_Decls is
    procedure Relink_Children_To_Parent (TWin : Window_Pointer) is
       TWdg : Widget_Pointer := TWin.Widget_List;
       Temp : Widget_Pointer;
+      Counter : Integer := 0;
    begin
       --  upon start, all widgets in a window are linked in just the
       --  window's widget_list, as their first appearence in the Designer
       while TWdg /= null loop
-         if TWdg.GParent /= null then
+         if TWdg.Wdg_Parent /= null then
             Temp := TWdg;
             TWdg := TWdg.Next;
             Unlink_Widget (TWin, Temp);
-            Insert_Widget_By_Order (Temp.GParent, Temp);
+            Insert_Widget_By_Order (Temp.Wdg_Parent, Temp);
+            Counter := Counter + 1;
             if Temp.Name /= null then
-               if Temp.GParent.Name /= null then
-                  Debug (0, Sp (3)
+               if Temp.Wdg_Parent.Name /= null then
+                  Debug (0, Sp (3) & Counter'Image & " "
                          & Temp.Name.all
+                         & " [" & Temp.Widget_Type'Image & "]"
                          & " linked to parent widget "
-                         & Temp.GParent.Name.all);
+                         & Temp.Wdg_Parent.Name.all
+                         & " [" & Temp.Wdg_Parent.Widget_Type'Image & "]");
                else
-                  Debug (0, Sp (3)
+                  Debug (0, Sp (3) & Counter'Image & " "
                          & Temp.Name.all
                          & " linked to parent widget "
-                         & Temp.GParent.Widget_Type'Image);
+                         & Temp.Wdg_Parent.Widget_Type'Image
+                         & " [" & Temp.Wdg_Parent.Widget_Type'Image & "]");
                end if;
             else
-               if Temp.GParent.Name /= null then
-                  Debug (0, Sp (3)
-                         & "No_Name"
+               if Temp.Wdg_Parent.Name /= null then
+                  Debug (0, "WARNING:" & Sp (3) & "Widget "
+                         & "NO NAME" & Counter'Image & " "
+                         & " [" & Temp.Widget_Type'Image & "]"
                          & " linked to parent widget "
-                         & Temp.GParent.Name.all);
+                         & Temp.Wdg_Parent.Name.all
+                         & " [" & Temp.Wdg_Parent.Widget_Type'Image & "]");
                else
-                  Debug (0, Sp (3)
-                         & "No_Name"
-                         & " linked to parent widget "
-                         & Temp.GParent.Widget_Type'Image);
+                  Debug (0, "WARNING:" & Sp (3) & "Widget "
+                         & "NO NAME" & Counter'Image & " "
+                         & " [" & Temp.Widget_Type'Image & "]"
+                         & " linked to parent window or widget "
+                         & Temp.Wdg_Parent.Widget_Type'Image
+                         & " [" & Temp.Wdg_Parent.Widget_Type'Image & "]");
                end if;
             end if;
          else
-            if TWdg.Name /= null then
-               Debug (0, Sp (3)
+            Counter := Counter + 1;
+            if TWdg /= null and then TWdg.Name /= null then
+               Debug (0, Sp (3) & Counter'Image & " "
                       & TWdg.Name.all
-                      & " linked to Parent Window "
-                      & TWin.Name.all);
+                      & " [" & TWdg.Widget_Type'Image & "]"
+                      & " linked to parent Window "
+                      & TWin.Name.all
+                      & " [" & TWin.Window_Type'Image & "]");
             else
-               Debug (0, Sp (3) & "Widget "
-                      & "No_Name"
-                      & " linked to Parent Window "
-                      & TWin.Window_Type'Image);
+               Debug (0, "WARNING:" & Sp (3) & "Widget "
+                      & "NO NAME" & Counter'Image & " "
+                      & " [" & TWdg.Widget_Type'Image & "]"
+                      & " linked to parent Window "
+                      & TWin.Name.all
+                      & " [" & TWin.Window_Type'Image & "]");
             end if;
             TWdg := TWdg.Next;
          end if;
@@ -1820,6 +1872,9 @@ package body W2gtk_Decls is
          Num := Num + 1;
          Temp := Temp.Next;
       end loop;
+      if Num /= TWdg.Num_Children then
+         raise Program_Error;
+      end if;
       return Num;
    end Num_Children;
 
@@ -1880,6 +1935,7 @@ package body W2gtk_Decls is
       case T.Widget_Type is
          when No_Widget => return "No Widget";
          when GtkAspectFrame => return "Gtk_AspectFrame";
+         when GtkAlignment => return "Gtk_Alignment";
          when GtkLabel => return "Gtk_Label";
          when GtkNoteBook => return "Gtk_Notebook";
          when GtkTabPage => return "tab";
@@ -1909,6 +1965,7 @@ package body W2gtk_Decls is
          when GtkColorButton => return "Gtk_Color_Button";
          when GtkCalendar => return "Gtk_Calendar";
          when GtkToolTip => return "Gtk_Tooltip";
+         when GtkScrolledWindow => return "Gtk_ScrolledWindow";
          when GtkFileChooserButton => return "Gtk_File_Chooser_Button";
          when GtkStatusBar => return "Gtk_Status_Bar";
          when GtkBox => return "Gtk_Box";
@@ -1955,4 +2012,35 @@ package body W2gtk_Decls is
       --  others in gtk: Reject=-2, Accept=-3, Delete (from titlebar) = -4
       --                 Help = -11
    end To_Gtk;
+
+   --------------------
+   --  Iterate       --
+   --------------------
+   procedure Iterate
+     (TWdg     : Widget_Pointer;
+      Callback : access procedure (TWdg : Widget_Pointer)) is
+   begin
+      if TWdg = null then
+         return;
+      end if;
+
+      Callback (TWdg);
+
+      Iterate (TWdg.Child_List, Callback);
+      Iterate (TWdg.Next, Callback);
+   end Iterate;
+
+   procedure Iterate
+     (TWin : Window_Pointer;
+      Callback : access procedure (TWdg : Widget_Pointer)) is
+      Temp_Win : Window_Pointer := TWin;
+   begin
+      while Temp_Win /= null loop
+         if Temp_Win.Window_Type = GtkWindow then
+            Iterate (Temp_Win.Widget_List, Callback);
+         end if;
+         Temp_Win := Next_Window (Win_List, Temp_Win);
+      end loop;
+   end Iterate;
+
 end W2gtk_Decls;

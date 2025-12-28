@@ -67,6 +67,14 @@ package body Emit_Tools is
    end To_Hex;
 
    ----------------------------------------------------------------------
+   procedure Emit_Placeholder (Id : Integer) is
+   begin
+      Emit_Line (Sp (Id) & "<child>");
+      Emit_Line (Sp (Id + 2) & "<placeholder/>");
+      Emit_Line (Sp (Id) & "</child>");
+   end Emit_Placeholder;
+
+   ----------------------------------------------------------------------
    procedure Emit_Property (Id     : Integer;
                             PName  : String;
                             PValue : String;
@@ -127,8 +135,9 @@ package body Emit_Tools is
    end Emit_Line;
 
    ----------------------------------------------------------------------
-   procedure Emit_GtkSignal (TWin : Window_Pointer; Id : Integer) is
-      TS : Signal_Pointer := TWin.Signal_List;
+   procedure Emit_GtkSignals (Me : Window_Pointer;
+                              Id : Integer) is
+      TS : Signal_Pointer := Me.Signal_List;
    begin
       while TS /= null loop
          if TS.Glade then
@@ -154,8 +163,8 @@ package body Emit_Tools is
          TIO.Put_Line ("Line" & TS.Line'Image
                        & ": Convert to Glade: Unknown signal: "
                        & TS.Name.all
-                       & " (Window " & TWin.Name.all & ")");
-   end Emit_GtkSignal;
+                       & " (Window " & Me.Name.all & ")");
+   end Emit_GtkSignals;
 
    ----------------------------------------------------------------------
    procedure Emit_One_GtkSignal (TS   : Signal_Pointer;
@@ -179,11 +188,11 @@ package body Emit_Tools is
    end Emit_One_GtkSignal;
 
    ----------------------------------------------------------------------
-   procedure Emit_GtkSignal (TWdg     : Widget_Pointer;
+   procedure Emit_GtkSignal (Me       : Widget_Pointer;
                              Id       : Integer;
                              Except   : String := "";
                              Only_For : String := "") is
-      TS   : Signal_Pointer := TWdg.Signal_List;
+      TS   : Signal_Pointer := Me.Signal_List;
       Emit : Boolean;
    begin
       if Except /= "" and then Only_For /= "" then
@@ -191,7 +200,7 @@ package body Emit_Tools is
                        & "Except and Only_For cannot be both /= """"");
          raise Program_Error;
       end if;
-      if TWdg.Name = null or else TWdg.Name.all = "" then
+      if Me.Name = null or else Me.Name.all = "" then
          TIO.Put_Line ("Emit_GtkSignal: "
                        & "Widget has no ID (name)");
          raise Program_Error;
@@ -212,14 +221,14 @@ package body Emit_Tools is
                   Emit_Line (Sp (Id) & "<signal name="""
                              & TS.GtkName.all
                              & """ handler=""" & TS.Handler.all & """"
-                             & " object=""" & TWdg.Name.all & """"
+                             & " object=""" & Me.Name.all & """"
                              & " after=""yes"""
                              & " swapped=""no""/>");
                else
                   Emit_Line (Sp (Id) & "<signal name="""
                              & TS.GtkName.all
                              & """ handler=""" & TS.Handler.all & """"
-                             & " object=""" & TWdg.Name.all & """"
+                             & " object=""" & Me.Name.all & """"
                              & " swapped=""no""/>");
                end if;
             end if;
@@ -231,58 +240,63 @@ package body Emit_Tools is
          TIO.Put_Line ("Line " & Img (TS.Line)
                        & ": Convert to Glade: Unknown signal: "
                        & TS.Name.all
-                       & " (Widget " & TWdg.Name.all & ")");
+                       & " (Widget " & Me.Name.all & ")");
    end Emit_GtkSignal;
 
    ----------------------------------------------------------------------
-   procedure Emit_Has_Frame (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_Has_Frame (Me : Widget_Pointer;
+                             Id : Integer) is
    begin
-      if TWdg.Widget_Type = GtkEntry or
-        TWdg.Widget_Type = GtkComboTextBox
+      if Me.Widget_Type = GtkEntry or
+        Me.Widget_Type = GtkComboTextBox
       then
-         if not TWdg.Has_Frame then
+         if not Me.Has_Frame then
             Emit_Property (Id, "has-frame", False);
          end if;
       end if;
    end Emit_Has_Frame;
 
    ----------------------------------------------------------------------
-   procedure Emit_Margin (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_Margin (Me : Widget_Pointer;
+                          Id : Integer) is
    begin
-      if TWdg.Margins (1) > 0 then
-         Emit_Property (Id, "margin-start", TWdg.Margins (1));
+      if Me.Margins (1) > 0 then
+         Emit_Property (Id, "margin-start", Me.Margins (1));
       end if;
-      if TWdg.Margins (3) > 0 then
-         Emit_Property (Id, "margin-end", TWdg.Margins (3));
+      if Me.Margins (3) > 0 then
+         Emit_Property (Id, "margin-end", Me.Margins (3));
       end if;
-      if TWdg.Margins (2) > 0 then
-         Emit_Property (Id, "margin-top", TWdg.Margins (2));
+      if Me.Margins (2) > 0 then
+         Emit_Property (Id, "margin-top", Me.Margins (2));
       end if;
-      if TWdg.Margins (4) > 0 then
-         Emit_Property (Id, "margin-bottom", TWdg.Margins (4));
+      if Me.Margins (4) > 0 then
+         Emit_Property (Id, "margin-bottom", Me.Margins (4));
       end if;
    end Emit_Margin;
-   --  procedure Emit_Margin (TWin : Window_Pointer; Id : Integer) is
-   --  begin
-   --     if TWin.Margins (2) /= -1 then
-   --        Emit_Property (Id, "margin-start", TWin.Margins (1));
-   --     end if;
-   --     if TWin.Margins (4) /= -1 then
-   --        Emit_Property (Id, "margin-end", TWin.Margins (2));
-   --     end if;
-   --     if TWin.Margins (1) /= -1 then
-   --        Emit_Property (Id, "margin-top", TWin.Margins (3));
-   --     end if;
-   --     if TWin.Margins (3) /= -1 then
-   --        Emit_Property (Id, "margin-bottom", TWin.Margins (4));
-   --     end if;
-   --  end Emit_Margin;
 
    ----------------------------------------------------------------------
-   procedure Emit_Child (TWdg : Widget_Pointer;
-                         Id     : Integer;
+   procedure Emit_Padding (Me : Widget_Pointer;
+                           Id : Integer) is
+   begin
+      if Me.Paddings (1) > 0 then
+         Emit_Property (Id, "left-padding", Me.Paddings (1));
+      end if;
+      if Me.Paddings (3) > 0 then
+         Emit_Property (Id, "right-padding", Me.Paddings (3));
+      end if;
+      if Me.Paddings (2) > 0 then
+         Emit_Property (Id, "top-padding", Me.Paddings (2));
+      end if;
+      if Me.Paddings (4) > 0 then
+         Emit_Property (Id, "bottom-padding", Me.Paddings (4));
+      end if;
+   end Emit_Padding;
+
+   ----------------------------------------------------------------------
+   procedure Emit_Child (Me : Widget_Pointer;
+                         Id : Integer;
                          Emit_Type_Label : Boolean) is
-      pragma Unreferenced (TWdg);
+      pragma Unreferenced (Me);
    begin
       if Emit_Type_Label then
          Emit_Line (Sp (Id) & "<child type=""label"">");
@@ -292,12 +306,12 @@ package body Emit_Tools is
    end Emit_Child;
 
    ----------------------------------------------------------------------
-   procedure Emit_Object (TWdg   : Widget_Pointer;
+   procedure Emit_Object (Me     : Widget_Pointer;
                           Id     : Integer; --  identation
                           Wdg    : String;  --  gtk widget
                           WId    : String;  --  Widget_Id
                           Finish : Boolean := False) is
-      pragma Unreferenced (TWdg);
+      pragma Unreferenced (Me);
    begin
       if WId /= "" then
          Emit_Line (Sp (Id) & "<object class="""
@@ -312,87 +326,91 @@ package body Emit_Tools is
    end Emit_Object;
 
    ----------------------------------------------------------------------
-   procedure Emit_Name (TWin : Window_Pointer; Id : Integer) is
+   procedure Emit_Name (Me : Window_Pointer;
+                        Id : Integer) is
    begin
-      if TWin.Name /= null then
-         Emit_Property (Id, "name", TWin.Name.all);
+      if Me.Name /= null and then Me.Name.all /= "" then
+         Emit_Property (Id, "name", Me.Name.all);
       end if;
    end Emit_Name;
 
    ----------------------------------------------------------------------
-   procedure Emit_Name (Name : String; Id : Integer) is
+   procedure Emit_Name (Name : String;
+                        Id : Integer) is
    begin
       Emit_Property (Id, "name", Name);
    end Emit_Name;
 
    ----------------------------------------------------------------------
-   procedure Emit_Name (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_Name (Me : Widget_Pointer;
+                        Id : Integer) is
    begin
-      if TWdg.Name /= null then
-         Emit_Property (Id, "name", TWdg.Name.all);
+      if Me.Name /= null then
+         Emit_Property (Id, "name", Me.Name.all);
       end if;
    end Emit_Name;
 
    ----------------------------------------------------------------------
-   procedure Emit_WH_Request (TWdg : Widget_Pointer;
-                              Id   : Integer) is
+   procedure Emit_WH_Request (Me : Widget_Pointer;
+                              Id : Integer) is
    begin
-      if TWdg.Size.Horiz > 0 then
-         Emit_Property (Id, "width-request", TWdg.Size.Horiz);
+      if Me.Size.Horiz > 0 then
+         Emit_Property (Id, "width-request", Me.Size.Horiz);
       end if;
-      if TWdg.Size.Vert > 0 then
-         Emit_Property (Id, "height-request", TWdg.Size.Vert);
+      if Me.Size.Vert > 0 then
+         Emit_Property (Id, "height-request", Me.Size.Vert);
       end if;
    end Emit_WH_Request;
 
    ----------------------------------------------------------------------
-   procedure Emit_Visible_And_Can_Focus (TWdg  : Widget_Pointer;
+   procedure Emit_Visible_And_Can_Focus (Me    : Widget_Pointer;
                                          Id    : Integer;
                                          Focus : Boolean) is
    begin
-      Emit_Property (Id, "visible", TWdg.Visible);
-      if not TWdg.Enabled then
+      Emit_Property (Id, "visible", Me.Visible);
+      if not Me.Enabled then
          Emit_Property (Id, "sensitive", False);
       end if;
       Emit_Property (Id, "can-focus", Focus);
    end Emit_Visible_And_Can_Focus;
 
    ----------------------------------------------------------------------
-   procedure Emit_Button_Image (TWdg        : Widget_Pointer;
+   procedure Emit_Button_Image (Me        : Widget_Pointer;
                                 Id          : Integer;
                                 Icon_Widget : Boolean) is
    begin
-      if TWdg.Win_Image /= null then
+      if Me.Win_Image /= null then
          if Icon_Widget then
-            Emit_Property (Id, "icon-widget", TWdg.Win_Image.Name.all);
+            Emit_Property (Id, "icon-widget", Me.Win_Image.Name.all);
          else
-            Emit_Property (Id, "image", TWdg.Win_Image.Name.all);
+            Emit_Property (Id, "image", Me.Win_Image.Name.all);
             Emit_Property (Id, "always-show-image", True);
          end if;
       end if;
    end Emit_Button_Image;
 
    ----------------------------------------------------------------------
-   procedure Emit_Password (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_Password (Me : Widget_Pointer;
+                            Id : Integer) is
    begin
-      if TWdg.PasswordChar /= null then
+      if Me.PasswordChar /= null then
          Emit_Property (Id, "visibility", False);
-         if TWdg.PasswordChar.all /= "" then
+         if Me.PasswordChar.all /= "" then
             Emit_Line (Sp (Id) & "<property name=""invisible-char"">"
-                       & TWdg.PasswordChar.all (TWdg.PasswordChar.all'First)
+                       & Me.PasswordChar.all (Me.PasswordChar.all'First)
                        & "</property>");
          end if;
       end if;
    end Emit_Password;
 
    ----------------------------------------------------------------------
-   procedure Emit_Label (TWdg       : Widget_Pointer;
+   procedure Emit_Label (Me         : Widget_Pointer;
                          Id         : Integer;
                          UnderLine  : Boolean;
                          Selectable : Boolean) is
    begin
-      if TWdg.Text /= null and then TWdg.Text.all /= "" then
-         Emit_Property (Id, "label", TWdg.Text.all, True);
+      if Me.Text /= null and then Me.Text.all /= "" then
+         Emit_Property (Id, "label", Me.Text.all, True);
          if UnderLine then
             Emit_Property (Id, "visible", True);
             Emit_Property (Id, "use-underline", True);
@@ -409,58 +427,75 @@ package body Emit_Tools is
                            Expand     : Boolean;
                            Fill       : Boolean;
                            Padding    : Integer;
-                           Pack_Start : Boolean) is
+                           Pack_Start : Boolean;
+                           Force      : Boolean := False) is
    begin
-      Emit_Line (Sp (Id) & "<packing>");
-      Emit_Property (Id + 2, "expand", Expand);
-      Emit_Property (Id + 2, "fill", Fill);
-      if Padding > 0 then
-         Emit_Property (Id + 2, "padding", Padding);
+      if Expand
+        or (not Fill)
+        or (Padding > 0)
+        or (not Pack_Start)
+        or (Position > 0)
+        or Force
+      then
+         Emit_Line (Sp (Id) & "<packing>");
+         if Expand or Force then
+            Emit_Property (Id + 2, "expand", Expand);
+         end if;
+         if (not Fill) or Force then
+            Emit_Property (Id + 2, "fill", Fill);
+         end if;
+         if Padding > 0 then
+            Emit_Property (Id + 2, "padding", Padding);
+         end if;
+         if not Pack_Start then
+            Emit_Property (Id + 2, "pack-type", "end");
+         end if;
+         if (Position > 0) or Force then
+            Emit_Property (Id + 2, "position", Position);
+         end if;
+         Emit_Line (Sp (Id) & "</packing>");
       end if;
-      if not Pack_Start then
-         Emit_Property (Id + 2, "pack-type", "end");
-      end if;
-      Emit_Property (Id + 2, "position", Position);
-      Emit_Line (Sp (Id) & "</packing>");
    end Emit_Packing;
 
    ----------------------------------------------------------------------
-   procedure Emit_Packing_Child (TWdg    : Widget_Pointer;
+   procedure Emit_Packing_Child (Me      : Widget_Pointer;
                                  Id      : Integer;
                                  Packing : Boolean;
                                  XY      : Boolean;
                                  Homog   : Boolean) is
-      procedure Emit_Packing (TWdg  : Widget_Pointer;
-                              Id    : Integer;
+      procedure Emit_Packing (Id    : Integer;
                               XY    : Boolean;
                               Homog : Boolean);
-      procedure Emit_Packing (TWdg  : Widget_Pointer;
-                              Id    : Integer;
+      procedure Emit_Packing (Id    : Integer;
                               XY    : Boolean;
                               Homog : Boolean) is
       begin
-         case TWdg.Widget_Type is
+         case Me.Widget_Type is
             when GtkFileChooserButton =>
-               if TWdg.TrayLocation.From_Left <= 0 and then
-                 TWdg.TrayLocation.From_Top + TWdg.WParent.TrayHeight <= 0
+               if Me.TrayLocation.From_Left <= 0 and then
+                 Me.TrayLocation.From_Top + Me.Win_Parent.TrayHeight <= 0
                then
                   return;
                end if;
                Emit_Line (Sp (Id) & "<packing>");
-               Emit_Property (Id + 2, "x", TWdg.TrayLocation.From_Left);
-               Emit_Property (Id + 2, "y", TWdg.TrayLocation.From_Top +
-                                TWdg.WParent.TrayHeight);
+               Emit_Property (Id + 2, "x", Me.TrayLocation.From_Left);
+               Emit_Property (Id + 2, "y", Me.TrayLocation.From_Top +
+                                Me.Win_Parent.TrayHeight);
                Emit_Line (Sp (Id) & "</packing>");
             when others =>
                if XY then
-                  if TWdg.Location.From_Left <= 0 and then
-                    TWdg.Location.From_Top <= 0
+                  if Me.Location.From_Left <= 0 and then
+                    Me.Location.From_Top <= 0
                   then
                      return;
                   end if;
                   Emit_Line (Sp (Id) & "<packing>");
-                  Emit_Property (Id + 2, "x", TWdg.Location.From_Left);
-                  Emit_Property (Id + 2, "y", TWdg.Location.From_Top);
+                  if Me.Location.From_Left /= 0 then
+                     Emit_Property (Id + 2, "x", Me.Location.From_Left);
+                  end if;
+                  if Me.Location.From_Top /= 0 then
+                     Emit_Property (Id + 2, "y", Me.Location.From_Top);
+                  end if;
                   Emit_Line (Sp (Id) & "</packing>");
                elsif Homog then
                   Emit_Line (Sp (Id) & "<packing>");
@@ -477,20 +512,33 @@ package body Emit_Tools is
       end Emit_Packing;
    begin
       if Packing then
-         Emit_Packing (TWdg, Id + 2, XY, Homog);
+         Emit_Packing (Id + 2, XY, Homog);
       end if;
    end Emit_Packing_Child;
 
    ----------------------------------------------------------------------
-   procedure Emit_Align (TWdg    : Widget_Pointer;
+   procedure Emit_Packing_Tabchild (Id       : Integer;
+                                    Position : Integer;
+                                    Tab_Fill : Boolean) is
+   begin
+      Emit_Line (Sp (Id) & "<packing>");
+      if Position > 0 then
+         Emit_Property (Id + 2, "position", Position);
+      end if;
+      Emit_Property (Id + 2, "tab-fill", Tab_Fill);
+      Emit_Line (Sp (Id) & "</packing>");
+   end Emit_Packing_Tabchild;
+
+   ----------------------------------------------------------------------
+   procedure Emit_Align (Me      : Widget_Pointer;
                          Id      : Integer;
                          Numeric : Boolean) is
    begin
-      case TWdg.TextAlign is
+      case Me.TextAlign is
          when TopLeft =>
             if Numeric then
                Emit_Property (Id, "xalign", 0.0);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 0.0);
                end if;
             else
@@ -500,7 +548,7 @@ package body Emit_Tools is
          when TopCenter =>
             if Numeric then
                Emit_Property (Id, "xalign", 0.5);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 0.0);
                end if;
             else
@@ -510,7 +558,7 @@ package body Emit_Tools is
          when TopRight =>
             if Numeric then
                Emit_Property (Id, "xalign", 1.0);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 0.0);
                end if;
             else
@@ -520,7 +568,7 @@ package body Emit_Tools is
          when MiddleLeft =>
             if Numeric then
                Emit_Property (Id, "xalign", 0.0);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 0.5);
                end if;
             else
@@ -530,7 +578,7 @@ package body Emit_Tools is
          when MiddleCenter =>
             if Numeric then
                Emit_Property (Id, "xalign", 0.5);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 0.5);
                end if;
             else
@@ -540,7 +588,7 @@ package body Emit_Tools is
          when MiddleRight =>
             if Numeric then
                Emit_Property (Id, "xalign", 1.0);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 0.5);
                end if;
             else
@@ -550,7 +598,7 @@ package body Emit_Tools is
          when BottomLeft =>
             if Numeric then
                Emit_Property (Id, "xalign", 0.0);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 1.0);
                end if;
             else
@@ -560,7 +608,7 @@ package body Emit_Tools is
          when BottomCenter =>
             if Numeric then
                Emit_Property (Id, "xalign", 0.5);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 1.0);
                end if;
             else
@@ -570,7 +618,7 @@ package body Emit_Tools is
          when BottomRight =>
             if Numeric then
                Emit_Property (Id, "xalign", 1.0);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 1.0);
                end if;
             else
@@ -604,7 +652,7 @@ package body Emit_Tools is
          when Center =>
             if Numeric then
                Emit_Property (Id, "xalign", 0.5);
-               if TWdg.Widget_Type /= GtkEntry then
+               if Me.Widget_Type /= GtkEntry then
                   Emit_Property (Id, "yalign", 0.5);
                end if;
             else
@@ -616,34 +664,35 @@ package body Emit_Tools is
    end Emit_Align;
 
    ----------------------------------------------------------------------
-   procedure Emit_CheckAlign (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_CheckAlign (Me : Widget_Pointer;
+                              Id : Integer) is
    begin
-      if TWdg.CheckAlign /= null then
-         if TWdg.CheckAlign.all = "TopLeft" then
+      if Me.CheckAlign /= null then
+         if Me.CheckAlign.all = "TopLeft" then
             Emit_Property (Id, "xalign", 0.0);
             Emit_Property (Id, "yalign", 0.0);
-         elsif TWdg.CheckAlign.all = "TopCenter" then
+         elsif Me.CheckAlign.all = "TopCenter" then
             Emit_Property (Id, "xalign", 0.5);
             Emit_Property (Id, "yalign", 0.0);
-         elsif TWdg.CheckAlign.all = "TopRight" then
+         elsif Me.CheckAlign.all = "TopRight" then
             Emit_Property (Id, "xalign", 1.0);
             Emit_Property (Id, "yalign", 0.0);
-         elsif TWdg.CheckAlign.all = "MiddleLeft" then
+         elsif Me.CheckAlign.all = "MiddleLeft" then
             Emit_Property (Id, "xalign", 0.0);
             Emit_Property (Id, "yalign", 0.5);
-         elsif TWdg.CheckAlign.all = "MiddleCenter" then
+         elsif Me.CheckAlign.all = "MiddleCenter" then
             Emit_Property (Id, "xalign", 0.5);
             Emit_Property (Id, "yalign", 0.5);
-         elsif TWdg.CheckAlign.all = "MiddleRight" then
+         elsif Me.CheckAlign.all = "MiddleRight" then
             Emit_Property (Id, "xalign", 1.0);
             Emit_Property (Id, "yalign", 0.5);
-         elsif TWdg.CheckAlign.all = "BottomLeft" then
+         elsif Me.CheckAlign.all = "BottomLeft" then
             Emit_Property (Id, "xalign", 0.0);
             Emit_Property (Id, "yalign", 1.0);
-         elsif TWdg.CheckAlign.all = "BottomCenter" then
+         elsif Me.CheckAlign.all = "BottomCenter" then
             Emit_Property (Id, "xalign", 0.5);
             Emit_Property (Id, "yalign", 1.0);
-         elsif TWdg.CheckAlign.all = "BottomRight" then
+         elsif Me.CheckAlign.all = "BottomRight" then
             Emit_Property (Id, "xalign", 1.0);
             Emit_Property (Id, "yalign", 1.0);
          end if;
@@ -651,76 +700,104 @@ package body Emit_Tools is
    end Emit_CheckAlign;
 
    ----------------------------------------------------------------------
-   procedure Emit_ToolTip (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_Scrollbars_Policy (Me : Widget_Pointer;
+                                     Id : Integer) is
    begin
-      if TWdg.ToolTip /= null and then TWdg.ToolTip.all /= "" then
-         case TWdg.Widget_Type is
+      case Me.H_ScrollBar is
+         when Always =>
+            Emit_Property (Id, "hscrollbar-policy", "always");
+         when Automatic =>
+            null;
+         when Never =>
+            Emit_Property (Id, "hscrollbar-policy", "never");
+         when External =>
+            null;
+      end case;
+      case Me.V_ScrollBar is
+         when Always =>
+            Emit_Property (Id, "vscrollbar-policy", "always");
+         when Automatic =>
+            null;
+         when Never =>
+            Emit_Property (Id, "vscrollbar-policy", "never");
+         when External =>
+            null;
+      end case;
+   end Emit_Scrollbars_Policy;
+
+   ----------------------------------------------------------------------
+   procedure Emit_ToolTip (Me : Widget_Pointer;
+                           Id : Integer) is
+   begin
+      if Me.ToolTip /= null and then Me.ToolTip.all /= "" then
+         case Me.Widget_Type is
             when GtkLabel | GtkEntry | GtkImage | GtkButton |
                  GtkCheckButton | GtkRadioButton | GtkFrame =>
-               Emit_Property (Id, "tooltip-text", TWdg.ToolTip.all, True);
+               Emit_Property (Id, "tooltip-text", Me.ToolTip.all, True);
             when GtkSpinButton =>
                Emit_Property (Id, "primary-icon-tooltip-text",
-                              TWdg.ToolTip.all, True);
+                              Me.ToolTip.all, True);
             when others => null;
          end case;
       end if;
    end Emit_ToolTip;
 
    ----------------------------------------------------------------------
-   procedure Emit_Attributes (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_Attributes (Me : Widget_Pointer;
+                              Id : Integer) is
    begin
-      if (TWdg.Font_Name = null or else TWdg.Font_Name.all = "") and
-        (TWdg.BgColor = null or else TWdg.BgColor.all = "") and
-        (TWdg.FgColor = null or else TWdg.FgColor.all = "") and
-        (TWdg.UlColor = null or else TWdg.UlColor.all = "")
+      if (Me.Font_Name = null or else Me.Font_Name.all = "") and
+        (Me.BgColor = null or else Me.BgColor.all = "") and
+        (Me.FgColor = null or else Me.FgColor.all = "") and
+        (Me.UlColor = null or else Me.UlColor.all = "")
       then
          return;
       end if;
       Emit_Line (Sp (Id) & "<attributes>");
 
-      if TWdg.Font_Name /= null and then TWdg.Font_Name.all /= "" then
+      if Me.Font_Name /= null and then Me.Font_Name.all /= "" then
          Emit_Line (Sp (Id + 2)
                     & "<attribute name=""font-desc"" value="""
-                    & TWdg.Font_Name.all & " "
-                    & Img (TWdg.Font_Size)
+                    & Me.Font_Name.all & " "
+                    & Img (Me.Font_Size)
                     & """/>");
-         if TWdg.Font_Weight /= null
-           and then (TWdg.Font_Weight.all /= ""
-                     and then TWdg.Font_Weight.all /= "none")
+         if Me.Font_Weight /= null
+           and then (Me.Font_Weight.all /= ""
+                     and then Me.Font_Weight.all /= "none")
          then
             Emit_Line (Sp (Id + 2)
                        & "<attribute name=""weight"" value="""
-                       & TWdg.Font_Weight.all & """/>");
+                       & Me.Font_Weight.all & """/>");
          end if;
       end if;
 
-      if TWdg.FgColor /= null and then TWdg.FgColor.all /= "" then
+      if Me.FgColor /= null and then Me.FgColor.all /= "" then
          Emit_Line (Sp (Id + 2)
                     & "<attribute name=""foreground"" value="""
-                    & "#" & To_Hex (TWdg.FgColor.all)
+                    & "#" & To_Hex (Me.FgColor.all)
                     & """/>");
       end if;
 
-      if not TWdg.UseVisualStyleBackColor then
-         if TWdg.BgColor /= null and then TWdg.BgColor.all /= "" then
+      if not Me.UseVisualStyleBackColor then
+         if Me.BgColor /= null and then Me.BgColor.all /= "" then
             Emit_Line (Sp (Id + 2)
                        & "<attribute name=""background"" value="""
-                       & "#" & To_Hex (TWdg.BgColor.all)
+                       & "#" & To_Hex (Me.BgColor.all)
                        & """/>");
          end if;
       end if;
 
-      if TWdg.Font_Underline then
+      if Me.Font_Underline then
          Emit_Line (Sp (Id + 2)
                     & "<attribute name=""underline"" value="""
                     & "True"
                     & """/>");
       end if;
 
-      if TWdg.UlColor /= null and then TWdg.UlColor.all /= "" then
+      if Me.UlColor /= null and then Me.UlColor.all /= "" then
          Emit_Line (Sp (Id + 2)
                     & "<attribute name=""underline-color"" value="""
-                    & "#" & To_Hex (TWdg.UlColor.all)
+                    & "#" & To_Hex (Me.UlColor.all)
                     & """/>");
       end if;
 

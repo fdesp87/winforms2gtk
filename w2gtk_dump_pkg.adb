@@ -14,16 +14,23 @@
 -- a copy of the GCC Runtime Library Exception along with this program;     --
 -- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --
 ------------------------------------------------------------------------------
-separate (W2gtk_Pkg)
+with W2gtk_Decls;             use W2gtk_Decls;
+with GNAT.Calendar.Time_IO;   use GNAT.Calendar.Time_IO;
+with GNAT.Strings;            use GNAT.Strings;
+with GNATCOLL.Tribooleans;    use GNATCOLL.Tribooleans;
+with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
+with W2gtk_Version;           use W2gtk_Version;
 
-procedure Dump (Path : String; File_Name : String; Instant : String) is
-   TWin  : Window_Pointer;
+package body W2gtk_Dump_Pkg is
 
-   use GNAT.Calendar.Time_IO;
+   TWin : Window_Pointer;
+
+   ----------------------------------------------------------------
    procedure Dump_DGVS;
    procedure Dump_Window (TWin  : Window_Pointer; Id : Integer);
    procedure Dump_Widget (TWdgP : Widget_Pointer; Id : Integer);
 
+   ----------------------------------------------------------------
    procedure Put_Property (PName : String);
    procedure Put_Property (PName : String) is
    begin
@@ -32,6 +39,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
                & Sp (24 - PName'Length));
    end Put_Property;
 
+   ----------------------------------------------------------------
    procedure Put_Integer (N : Integer);
    procedure Put_Integer (N : Integer) is
    begin
@@ -39,6 +47,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       TIO.New_Line (LFile);
    end Put_Integer;
 
+   ----------------------------------------------------------------
    procedure Put_String_Access (SA : String_Access;
                                 Quoted : Boolean := False);
    procedure Put_String_Access (SA : String_Access;
@@ -54,6 +63,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       TIO.New_Line (LFile);
    end Put_String_Access;
 
+   ----------------------------------------------------------------
    procedure Put_Boolean (B : Boolean);
    procedure Put_Boolean (B : Boolean) is
    begin
@@ -65,6 +75,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       TIO.New_Line (LFile);
    end Put_Boolean;
 
+   ----------------------------------------------------------------
    procedure Put_Triboolean (B : Triboolean);
    procedure Put_Triboolean (B : Triboolean) is
    begin
@@ -78,6 +89,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       TIO.New_Line (LFile);
    end Put_Triboolean;
 
+   ----------------------------------------------------------------
    procedure Dump_DGVS is
    begin
       if DGVS = null then
@@ -97,8 +109,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
          Put_Integer (DGVS (I).Num);
 
          Put_Property ("Style_For");
-         CSIO.Put (LFile, DGVS (I).Style_For);
-         TIO.New_Line (LFile);
+         TIO.Put_Line (LFile, DGVS (I).Style_For'Image);
 
          Put_Property ("Alignment");
          Put_String_Access (DGVS (I).Alignment);
@@ -147,6 +158,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       end loop;
    end Dump_DGVS;
 
+   ----------------------------------------------------------------
    procedure Dump_Window (TWin  : Window_Pointer; Id : Integer) is
 
       procedure Put_Property (PName : String);
@@ -263,8 +275,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
             Put_String_Access (TWin.ToolTip, True);
 
             Put_Property ("Position");
-            PIO.Put (LFile, TWin.Start_Position);
-            TIO.New_Line (LFile);
+            TIO.Put_Line (LFile, TWin.Start_Position'Image);
 
             Put_Property ("Size");
             TIO.Put (LFile, "H=" & Img (TWin.Client_Size.Horiz));
@@ -426,6 +437,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       end case;
    end Dump_Window;
 
+   ----------------------------------------------------------------
    procedure Dump_Widget (TWdgP : Widget_Pointer; Id : Integer) is
 
       procedure Put_Property (PName : String);
@@ -506,8 +518,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       TIO.New_Line (LFile);
 
       --  common fields
-      TIO.Put (LFile, Sp (Id) & To_Gtk (TWdgP));
-      TIO.New_Line (LFile);
+      TIO.Put_Line (LFile, Sp (Id) & To_Gtk (TWdgP));
 
       Put_Property ("Name");
       Put_String_Access (TWdgP.Name);
@@ -523,14 +534,12 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
       Put_Property ("Parent Name");
       if TWdgP.Parent_Name /= null then
          Put_String_Access (TWdgP.Parent_Name);
-      elsif TWdgP.GParent /= null
-        and then TWdgP.GParent.Windows_Type /= null
+      elsif TWdgP.Wdg_Parent /= null
+        and then TWdgP.Wdg_Parent.Windows_Type /= null
       then
-         TIO.Put (LFile, To_Gtk (TWdgP.GParent));
-         TIO.New_Line (LFile);
-      elsif TWdgP.WParent /= null then
-         TIO.Put (LFile, To_Gtk (TWdgP.WParent));
-         TIO.New_Line (LFile);
+         TIO.Put_Line (LFile, To_Gtk (TWdgP.Wdg_Parent));
+      elsif TWdgP.Win_Parent /= null then
+         TIO.Put_Line (LFile, To_Gtk (TWdgP.Win_Parent));
       end if;
 
       Put_Property ("Child Number");
@@ -567,15 +576,19 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
          Put_String_Access (TWdgP.Text, True);
 
          Put_Property ("TextAlign");
-         TAIO.Put (LFile, TWdgP.TextAlign);
-         TIO.New_Line (LFile);
+         TIO.Put_Line (LFile, TWdgP.TextAlign'Image);
 
          Put_Property ("AutoSize");
          Put_Boolean (TWdgP.AutoSize);
 
          Put_Property ("AutoSizeMode");
-         ASMIO.Put (LFile, TWdgP.AutoSizeMode);
-         TIO.New_Line (LFile);
+         TIO.Put_Line (LFile, TWdgP.AutoSizeMode'Image);
+
+         Put_Property ("HScrollBar");
+         TIO.Put_Line (LFile, TWdgP.H_ScrollBar'Image);
+
+         Put_Property ("VScrollBar");
+         TIO.Put_Line (LFile, TWdgP.V_ScrollBar'Image);
 
          Put_Property ("Font");
          if TWdgP.Font_Name /= null then
@@ -600,8 +613,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
          Put_Integer (TWdgP.Padding);
 
          Put_Property ("DisplayStyle");
-         DSIO.Put (LFile, TWdgP.DStyle);
-         TIO.New_Line (LFile);
+         TIO.Put_Line (LFile, TWdgP.DStyle'Image);
 
          Put_Property ("MaxLength");
          Put_Integer (TWdgP.MaxLength);
@@ -625,13 +637,29 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
          Put_String_Access (TWdgP.UlColor);
 
          Put_Property ("Flow Direction");
-         FDIO.Put (LFile, TWdgP.FlowDirection);
-         TIO.New_Line (LFile);
+         TIO.Put_Line (LFile, TWdgP.FlowDirection'Image);
       end if;
 
       case TWdgP.Widget_Type is
          when No_Widget =>
             null;
+
+         when GtkAlignment =>
+            Put_Property ("Halign");
+            TIO.Put_Line (LFile, Img (TWdgP.Halign, 0));
+            Put_Property ("Valign");
+            TIO.Put_Line (LFile, Img (TWdgP.Valign, 0));
+            Put_Property ("HScale");
+            TIO.Put_Line (LFile, Img (TWdgP.HScale, 0));
+            Put_Property ("VScale");
+            TIO.Put_Line (LFile, Img (TWdgP.VScale, 0));
+            Put_Property ("Padding");
+            TIO.Put (LFile, "Start " & Img (TWdgP.Paddings (1))
+                     & ", Top " & Img (TWdgP.Paddings (2))
+                     & ", End " & Img (TWdgP.Paddings (3))
+                     & ", Bottom " & Img (TWdgP.Paddings (4)));
+            TIO.New_Line (LFile);
+
          when GtkAspectFrame =>
             Put_Property ("H_Alignment");
             TIO.Put_Line (LFile, Img (TWdgP.H_Alignment, 0));
@@ -646,8 +674,19 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
             Put_Property ("Label_Yalign");
             TIO.Put_Line (LFile, Img (TWdgP.Label_Yalign, 0));
             Put_Property ("Frame_Shadow");
-            FSEIO.Put (LFile, TWdgP.Frame_Shadow);
-            TIO.New_Line (LFile);
+            TIO.Put_Line (LFile, TWdgP.Frame_Shadow'Image);
+
+         when GtkFrame =>
+            Put_Property ("Label_Xalign");
+            TIO.Put_Line (LFile, Img (TWdgP.Label_Xalign, 0));
+            Put_Property ("Label_Yalign");
+            TIO.Put_Line (LFile, Img (TWdgP.Label_Yalign, 0));
+            Put_Property ("Frame_Shadow");
+            TIO.Put_Line (LFile, TWdgP.Frame_Shadow'Image);
+
+         when GtkScrolledWindow =>
+            Put_Property ("Frame_Shadow");
+            TIO.Put (LFile, TWdgP.Frame_Shadow'Image);
 
          when GtkMenuItem | GtkSubMenu => null;
 
@@ -720,8 +759,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
                   end if;
 
                   Put_Property ("Col. H. HeightSizeMode");
-                  CHHSMIO.Put (LFile, TWdgP.ColumnHeadersHeightSizeMode);
-                  TIO.New_Line (LFile);
+                  TIO.Put_Line (LFile, TWdgP.ColumnHeadersHeightSizeMode'Image);
 
                   Put_Property ("AllowUserToAddRows");
                   Put_Boolean (TWdgP.AllowUserToAddRows);
@@ -748,16 +786,10 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
                   Put_Widget_Pointer_Name (TWdgP.ImageList);
 
                   Put_Property ("RowHeadersWidthSizeMode");
-                  RHWSMIO.Put (LFile, TWdgP.RowHeadersWidthSizeMode);
-                  TIO.New_Line (LFile);
+                  TIO.Put_Line (LFile, TWdgP.RowHeadersWidthSizeMode'Image);
 
                   Put_Property ("RowHeadersBorderStyle");
-                  RHBSIO.Put (LFile, TWdgP.RowHeadersBorderStyle);
-                  TIO.New_Line (LFile);
-
-                  Put_Property ("ScrollBars");
-                  SBIO.Put (LFile, TWdgP.ScrollBars);
-                  TIO.New_Line (LFile);
+                  TIO.Put (LFile, TWdgP.RowHeadersBorderStyle'Image);
 
                   Put_Property ("Model");
                   Put_Window_Pointer_Name (TWdgP.Model);
@@ -790,12 +822,10 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
                   Put_Boolean (TWdgP.Resizable);
 
                   Put_Property ("SortMode");
-                  SMIO.Put (LFile, TWdgP.SortMode);
-                  TIO.New_Line (LFile);
+                  TIO.Put_Line (LFile, TWdgP.SortMode'Image);
 
                   Put_Property ("AutoSizeColumnMode");
-                  ASCMIO.Put (LFile, TWdgP.AutoSizeColumnMode);
-                  TIO.New_Line (LFile);
+                  TIO.Put_Line (LFile, TWdgP.AutoSizeColumnMode'Image);
 
                   Put_Property ("DefaultNodeImage");
                   Put_Widget_Pointer_Name (TWdgP.DefaultNodeImage);
@@ -1029,8 +1059,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
             case TWdgP.Widget_Type is
                when GtkLabel | ToolStripStatusLabel =>
                   Put_Property ("BorderStyle");
-                  BSIO.Put (LFile, TWdgP.BorderStyle);
-                  TIO.New_Line (LFile);
+                  TIO.Put_Line (LFile, TWdgP.BorderStyle'Image);
 
                when GtkButton | GtkRadioButton
                   | GtkCheckButton | GtkToggleButton
@@ -1042,8 +1071,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
                   Put_String_Access (TWdgP.ImagePath);
 
                   Put_Property ("ImageAlign");
-                  IPIO.Put (LFile, TWdgP.ImageAlign);
-                  TIO.New_Line (LFile);
+                  TIO.Put_Line (LFile, TWdgP.ImageAlign'Image);
 
                   Put_Property ("Windows Image");
                   Put_Window_Pointer_Name (TWdgP.Win_Image);
@@ -1051,8 +1079,7 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
                   case TWdgP.Widget_Type is
                      when GtkButton =>
                         Put_Property ("Dialog Result");
-                        DRIO.Put (LFile, TWdgP.Dialog_Result);
-                        TIO.New_Line (LFile);
+                        TIO.Put_Line (LFile, TWdgP.Dialog_Result'Image);
 
                         Put_Property ("Associated ColorButton");
                         Put_Widget_Pointer_Name
@@ -1071,9 +1098,6 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
             Put_Property ("Anchor");
             Put_String_Access (TWdgP.Anchor);
 
-         when GtkFrame =>
-            null;
-
          when GtkSeparatorToolItem =>
             null;
 
@@ -1082,22 +1106,20 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
             Put_Integer (TWdgP.Spacing);
             Put_Property ("Orientation");
             if TWdgP.Orientation = Horizontal then
-               TIO.Put (LFile, "Horizontal");
+               TIO.Put_Line (LFile, "Horizontal");
             else
-               TIO.Put (LFile, "Vertical");
+               TIO.Put_Line (LFile, "Vertical");
             end if;
-            TIO.New_Line (LFile);
+
             Put_Property ("Homogeneus");
             Put_Boolean (TWdgP.Homogeneus);
             Put_Property ("Baseline");
-            BEIO.Put (LFile, TWdgP.Baseline);
-            TIO.New_Line (LFile);
+            TIO.Put_Line (LFile, TWdgP.Baseline'Image);
 
             case TWdgP.Widget_Type is
                when GtkButtonBox =>
                   Put_Property ("Layout_Style");
-                  LSEIO.Put (LFile, TWdgP.Layout_Style);
-                  TIO.New_Line (LFile);
+                  TIO.Put_Line (LFile, TWdgP.Layout_Style'Image);
                when others => null;
             end case;
 
@@ -1114,20 +1136,24 @@ procedure Dump (Path : String; File_Name : String; Instant : String) is
 
    end Dump_Widget;
 
-begin
-   TIO.Create (File => LFile,
-               Mode => TIO.Out_File,
-               Name => Path & "/" & File_Name & ".dump");
-   TIO.Put_Line (LFile, "Generating Dump by w2gtk " & Version &
-                " - " & Instant);
-   Dump_DGVS;
-   TWin := Win_List;
-   while TWin /= null loop
-      Dump_Window (TWin, 0);
-      TWin := Next_Window (Win_List, TWin);
-   end loop;
+   ----------------------------------------------------------------
+   procedure Dump (Path : String; File_Name : String; Instant : String) is
+   begin
+      TIO.Create (File => LFile,
+                  Mode => TIO.Out_File,
+                  Name => Path & "/" & File_Name & ".dump");
+      TIO.Put_Line (LFile, "Generating Dump by w2gtk " & Version &
+                      " - " & Instant);
+      Dump_DGVS;
+      TWin := Win_List;
+      while TWin /= null loop
+         Dump_Window (TWin, 0);
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
 
-   TIO.Close (LFile);
-   Debug (-1, "End of generating Dump");
+      TIO.Close (LFile);
+      Debug (-1, "End of generating Dump");
 
-end Dump;
+   end Dump;
+
+end W2gtk_Dump_Pkg;

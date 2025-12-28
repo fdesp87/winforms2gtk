@@ -22,157 +22,144 @@ package body Emit_Display is
    ---------------------------------------------------------------------------
    -- Emit_GtkLabel --
    ---------------------------------------------------------------------------
-   procedure Emit_GtkLabel (TWdg    : Widget_Pointer;
-                            Id      : Integer;
+   procedure Emit_GtkLabel (Me : Widget_Pointer;
+                            Id : Integer;
                             Packing : Boolean) is
    begin
-      if TWdg.BorderStyle /= None then
+      if Me.BorderStyle /= None then
 
-         Emit_Child (TWdg, Id + 4, False);
-         Emit_Object (TWdg, Id + 6, "GtkLabel", TWdg.Name.all);
-         Emit_Name (TWdg, Id + 8);
-         Emit_Visible_And_Can_Focus (TWdg, Id + 8, False);
-         Emit_Property (Id + 8, "has-focus", TWdg.Has_Focus);
-         Emit_Align (TWdg, Id + 8, Numeric => False);
-         Emit_Label (TWdg, Id + 8, UnderLine => False, Selectable => True);
-         if TWdg.MaxLength > 0 then
-            Emit_Property (Id + 8, "width-chars", TWdg.MaxLength);
-            Emit_Property (Id + 8, "max-width-chars", TWdg.MaxLength);
+         Emit_Child (Me, Id + 4, False);
+         Emit_Object (Me, Id + 6, "GtkLabel", Me.Name.all);
+         Emit_Name (Me, Id + 8);
+         Emit_Visible_And_Can_Focus (Me, Id + 8, False);
+         Emit_Property (Id + 8, "has-focus", Me.Has_Focus);
+         Emit_Align (Me, Id + 8, Numeric => False);
+         Emit_Label (Me, Id + 8,
+                     UnderLine => Me.Underline,
+                     Selectable => True);
+         if Me.MaxLength > 0 then
+            Emit_Property (Id + 8, "width-chars", Me.MaxLength);
+            Emit_Property (Id + 8, "max-width-chars", Me.MaxLength);
          end if;
-         Emit_Attributes (TWdg, Id + 8);
-         Emit_GtkSignal (TWdg, Id + 8);
+         Emit_Attributes (Me, Id + 8);
+         Emit_GtkSignal (Me, Id + 8);
 
          Emit_Line (Sp (Id + 6) & "</object>");
-         Emit_Packing_Child (TWdg, Id + 4,
+         Emit_Packing_Child (Me, Id + 4,
                              Packing => False,
                              XY      => True,
                              Homog   => False);
          Emit_Line (Sp (Id + 4) & "</child>");
 
       else
-         Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id + 2, "GtkLabel", TWdg.Name.all);
-         Emit_Name (TWdg, Id + 4);
-         Emit_WH_Request (TWdg, Id + 4);
-         Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-         Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
-         Emit_Margin (TWdg, Id + 4);
-         Emit_ToolTip (TWdg, Id + 4);
-         Emit_Label (TWdg, Id + 4, UnderLine => False, Selectable => True);
-         Emit_Align (TWdg, Id + 4, Numeric => True);
-         Emit_Attributes (TWdg, Id + 4);
-         Emit_GtkSignal (TWdg, Id + 4);
+         Emit_Child (Me, Id, False);
+         Emit_Object (Me, Id + 2, "GtkLabel", Me.Name.all);
+         Emit_Name (Me, Id + 4);
+         Emit_WH_Request (Me, Id + 4);
+         Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+         Emit_Property (Id + 4, "has-focus", Me.Has_Focus);
+         Emit_Margin (Me, Id + 4);
+         Emit_ToolTip (Me, Id + 4);
+         Emit_Label (Me, Id + 4,
+                     UnderLine => Me.Underline,
+                     Selectable => True);
+         Emit_Align (Me, Id + 4, Numeric => True);
+         Emit_Attributes (Me, Id + 4);
+         Emit_GtkSignal (Me, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing_Child (TWdg, Id,
-                             Packing => Packing,
-                             XY => True,
-                             Homog => False);
+         if Me.Wdg_Parent /= null and then
+           Me.Wdg_Parent.Widget_Type = GtkTabChild
+         then
+            Emit_Packing (Id + 2,
+                          Position   => Me.Child_Number,
+                          Expand     => False,
+                          Fill       => True,
+                          Padding    => Me.Padding,
+                          Pack_Start => True,
+                          Force      => True);
+         else
+            Emit_Packing_Child (Me, Id,
+                                Packing => Packing,
+                                XY      => True,
+                                Homog   => False);
+         end if;
          Emit_Line (Sp (Id) & "</child>");
       end if;
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkLabel: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkLabel: " & Me.Name.all);
          raise;
    end Emit_GtkLabel;
 
    ---------------------------------------------------------------------------
    -- Emit_GtkImage --
    ---------------------------------------------------------------------------
-   procedure Emit_GtkImage (TWdg : Widget_Pointer;
-                            Id   : Integer) is
+   procedure Emit_GtkImage (Me : Widget_Pointer;
+                            Id : Integer) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkImage", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, Focus => False);
-      Emit_Line (Sp (Id + 4) & "<property name=""pixbuf"">"
-                 & TWdg.Image.all
-                 & "</property>");
-      Emit_Align (TWdg, Id + 4, Numeric => True);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkImage", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, Focus => False);
+      if Me.Stock then
+         Emit_Line (Sp (Id + 4) & "<property name=""stock"">"
+                    & Me.Image.all
+                    & "</property>");
+      else
+         Emit_Line (Sp (Id + 4) & "<property name=""pixbuf"">"
+                    & Me.Image.all
+                    & "</property>");
+      end if;
+      Emit_Align (Me, Id + 4, Numeric => True);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
-                                     Packing => True,
-                                     XY => True,
-                                     Homog => False);
       Emit_Line (Sp (Id) & "</child>");
+      --  if Me.Wdg_Parent.Widget_Type = GtkButton then
+      --     Emit_Packing (Id + 2,
+      --                   Position   => Me.Child_Number,
+      --                   Expand     => False,
+      --                   Fill       => True,
+      --                   Padding    => Me.Padding,
+      --                   Pack_Start => True,
+      --                   Force      => True);
+      --  else
+      Emit_Packing_Child (Me, Id,
+                          Packing => True,
+                          XY      => True,
+                          Homog   => False);
+      --  end if;
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkImage: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkImage: " & Me.Name.all);
          raise;
    end Emit_GtkImage;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkTreeView
    ---------------------------------------------------------------------------
-   procedure Emit_GtkTreeView (TWdg : Widget_Pointer;
-                               Id   : Integer;
-                               Pos  : Integer) is
+   procedure Emit_GtkTreeView (Me : Widget_Pointer;
+                               Id : Integer) is
    begin
-      if TWdg.ScrollBars /= None then
-         Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id + 2, "GtkScrolledWindow",
-                      "GtkScrolledWindow_" & TWdg.Name.all);
-         Emit_Property (Id + 4, "name", "GtkScrolledWindow_" & TWdg.Name.all);
-         Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-         case TWdg.ScrollBars is
-            when None => raise Program_Error;
-            when Vertical =>
-               Emit_Property (Id + 4, "hscrollbar-policy", "never");
-            when Horizontal =>
-               Emit_Property (Id + 4, "vscrollbar-policy", "never");
-            when Both =>
-               null;
-         end case;
-         Emit_Property (Id + 4, "shadow-type", "in");
-
-         Emit_GtkGridView (TWdg, Id + 4);
-
-         Emit_Line (Sp (Id + 2) & "</object>");
-         if Pos > 0 then
-            Emit_Line (Sp (Id + 2) & "<packing>");
-            Emit_Property (Id + 4, "position", Pos);
-            Emit_Line (Sp (Id + 2) & "</packing>");
-
-         end if;
-         Emit_Line (Sp (Id) & "</child>");
-      else
-         Emit_GtkGridView (TWdg, Id + 4);
-      end if;
+      Emit_GtkGridView (Me, Id);
    end Emit_GtkTreeView;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkDataGridView
    ---------------------------------------------------------------------------
-   procedure Emit_GtkDataGridView (TWdg : Widget_Pointer;
-                                   Id   : Integer;
-                                   Pos  : Integer) is
+   procedure Emit_GtkDataGridView (Me : Widget_Pointer;
+                                   Id : Integer) is
    begin
-      Emit_GtkTreeView (TWdg, Id, Pos);
+      Emit_GtkGridView (Me, Id);
    end Emit_GtkDataGridView;
 
    ---------------------------------------------------------------------------
    -- Emit_DatePicker --
    ---------------------------------------------------------------------------
-   procedure Emit_DatePicker (TWdg : Widget_Pointer; Id : Integer) is
-      procedure Emit_Packing (Id     : Integer;
-                              Expand : Boolean;
-                              Fill   : Boolean;
-                              Pos    : Integer);
-      procedure Emit_Packing (Id     : Integer;
-                              Expand : Boolean;
-                              Fill   : Boolean;
-                              Pos    : Integer) is
-      begin
-         Emit_Line (Sp (Id) & "<packing>");
-         Emit_Property (Id + 2, "expand", Expand);
-         Emit_Property (Id + 2, "fill", Fill);
-         Emit_Property (Id + 2, "position", Pos);
-         Emit_Line (Sp (Id) & "</packing>");
-      end Emit_Packing;
+   procedure Emit_DatePicker (Me : Widget_Pointer;
+                              Id : Integer) is
 
       procedure Emit_Entry (TWdg   : Widget_Pointer;
                             Id     : Integer;
@@ -220,7 +207,7 @@ package body Emit_Display is
                     & """ object=""" & TWdg.Name.all & "_Calendar"
                     & """ swapped=""no""/>");
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, False, False, Pos);
+         Emit_Packing (Id + 2, Pos, False, False, 0, True);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -240,10 +227,6 @@ package body Emit_Display is
                     & "office-calendar"
                     & "</property>");
          Emit_Line (Sp (Id + 2) & "</object>");
-         --  Emit_Packing_Child (TWdg, Id,
-         --                      Packing => False,
-         --                      XY => True,
-         --                      Homog => False);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -272,7 +255,7 @@ package body Emit_Display is
          Emit_Image (TWdg, Id + 4);
 
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, True, True, Pos);
+         Emit_Packing (Id + 2, Pos, True, True, 0, True);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -321,7 +304,7 @@ package body Emit_Display is
                     & """ object=""" & TWdg.Name.all & "_Button"
                     & """ swapped=""no""/>");
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id => Id + 2, Expand => False, Fill => True, Pos => 1);
+         Emit_Packing (Id + 2, 1, False, False, 0, True);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -359,8 +342,8 @@ package body Emit_Display is
       begin
          Emit_Child (TWdg, Id, False);
          Emit_Object (TWdg, Id + 2, "GtkAspectFrame",
-                      TWdg.Name.all & "_Aspectframe");
-         Emit_Name (TWdg.Name.all & "_Aspectframe", Id + 4);
+                      TWdg.Name.all & "_AspectFrame");
+         Emit_Name (TWdg.Name.all & "_AspectFrame", Id + 4);
          Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
          Emit_Line (Sp (Id + 4) & "<property name=""label-xalign"">0"
                     & "</property>");
@@ -369,7 +352,7 @@ package body Emit_Display is
          Emit_Property (Id + 4, "xalign", 0.0);
          Emit_HBox (TWdg, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, False, True, 0);
+         Emit_Packing (Id + 2, 0, False, True, 0, True);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -402,26 +385,18 @@ package body Emit_Display is
       end Emit_VBox;
 
    begin
-      Emit_VBox (TWdg, Id);
+      Emit_VBox (Me, Id);
    exception
       when others =>
-         TIO.Put_Line ("Emit DatePicker: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit DatePicker: " & Me.Name.all);
          raise;
    end Emit_DatePicker;
 
    ---------------------------------------------------------------------------
    -- Emit_TimePicker --
    ---------------------------------------------------------------------------
-   procedure Emit_TimePicker (TWdg : Widget_Pointer; Id : Integer) is
-      procedure Emit_Packing (Id : Integer; Pos : Integer);
-      procedure Emit_Packing (Id : Integer; Pos : Integer) is
-      begin
-         Emit_Line (Sp (Id) & "<packing>");
-         Emit_Property (Id + 2, "expand", False);
-         Emit_Property (Id + 2, "fill", False);
-         Emit_Property (Id + 2, "position", Pos);
-         Emit_Line (Sp (Id) & "</packing>");
-      end Emit_Packing;
+   procedure Emit_TimePicker (Me : Widget_Pointer;
+                              Id : Integer) is
 
       procedure Emit_Image (TWdg : Widget_Pointer;
                             Id   : Integer;
@@ -495,7 +470,7 @@ package body Emit_Display is
          end if;
 
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, Pos);
+         Emit_Packing (Id + 2, Pos, False, False, 0, True);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -545,7 +520,7 @@ package body Emit_Display is
                     & """ swapped=""no""/>");
          Emit_ToolTip (TWdg, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, Pos);
+         Emit_Packing (Id + 2, Pos, False, False, 0, True);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -573,7 +548,7 @@ package body Emit_Display is
          Emit_Button (TWdg, Id + 4, 1, Name);
 
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing (Id + 2, Pos);
+         Emit_Packing (Id + 2, Pos, False, False, 0, True);
          Emit_Line (Sp (Id) & "</child>");
       exception
          when others =>
@@ -610,7 +585,7 @@ package body Emit_Display is
       begin
          Emit_Child (TWdg, Id, False);
          Emit_Object (TWdg, Id + 2, "GtkAspectFrame",
-                      TWdg.Name.all & "_Aspectframe");
+                      TWdg.Name.all & "_AspectFrame");
          Emit_Name (TWdg.Name.all & "_Aspectframe", Id + 4);
          Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
          Emit_Line (Sp (Id + 4) & "<property name=""label-xalign"">0"
@@ -631,10 +606,10 @@ package body Emit_Display is
       end Emit_Aspectframe;
 
    begin
-      Emit_Aspectframe (TWdg, Id);
+      Emit_Aspectframe (Me, Id);
    exception
       when others =>
-         TIO.Put_Line ("Emit TimePicker: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit TimePicker: " & Me.Name.all);
          raise;
    end Emit_TimePicker;
 

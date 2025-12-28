@@ -102,47 +102,6 @@ package body W2Gtk2Ada is
       end loop;
    end Set_TWin;
 
-   --------------------
-   --  Visit Widget  --
-   --------------------
-
-   procedure Visit_Widget
-     (TWdg     : Widget_Pointer;
-      Callback : access procedure (TWdg : Widget_Pointer));
-   procedure Visit_Widget
-     (TWdg     : Widget_Pointer;
-      Callback : access procedure (TWdg : Widget_Pointer)) is
-   begin
-      if TWdg = null then
-         return;
-      end if;
-
-      Callback (TWdg);
-
-      Visit_Widget (TWdg.Child_List, Callback);
-      Visit_Widget (TWdg.Next, Callback);
-   end Visit_Widget;
-
-   --------------------
-   --  For Each Widget  --
-   --------------------
-
-   procedure For_Each_Widget
-     (TWin : Window_Pointer;
-      Callback : access procedure (TWdg : Widget_Pointer));
-   procedure For_Each_Widget
-     (TWin : Window_Pointer;
-      Callback : access procedure (TWdg : Widget_Pointer)) is
-      Temp_Win : Window_Pointer := TWin;
-   begin
-      while Temp_Win /= null loop
-         if Temp_Win.Window_Type = GtkWindow then
-            Visit_Widget (Temp_Win.Widget_List, Callback);
-         end if;
-         Temp_Win := Next_Window (Win_List, Temp_Win);
-      end loop;
-   end For_Each_Widget;
-
    ------------------------
    --  Emit_Package Spec --
    ------------------------
@@ -241,7 +200,7 @@ package body W2Gtk2Ada is
       if Signals then
          return;
       end if;
-      For_Each_Widget (Win_List, Check_Signals'Access);
+      Iterate (Win_List, Check_Signals'Access);
    end Set_Signals;
 
    -------------------------
@@ -379,7 +338,7 @@ package body W2Gtk2Ada is
                           & "Load_From_Data (CSS_" & TWdg.Name.all & ", "
                           & "Error'Access) then");
             TIO.Put_Line (Sp (9) & "Apply_Css (Me."
-                          & TWdg.WParent.Name.all & ", "
+                          & TWdg.Win_Parent.Name.all & ", "
                           & "+Provider_" & TWdg.Name.all & ");");
             TIO.Put_Line (Sp (6) & "end if;");
             TIO.New_Line;
@@ -421,19 +380,19 @@ package body W2Gtk2Ada is
                   end if;
                   if Have.Time_Pickers > 0 then
                      TIO.Put_Line (Sp (6) & "Error : aliased Glib.Error.GError;");
-                     For_Each_Widget (Win_List, Emit_Time_Picker_CSS'Access);
+                     Iterate (Win_List, Emit_Time_Picker_CSS'Access);
                   end if;
                end if;
                TIO.Put_Line (Sp (3) & "begin");
                if TS.Name.all = "Load" then
                   if Have.Radio_Buttons > 0 then
-                     For_Each_Widget (Win_List, Emit_RB_Group'Access);
+                     Iterate (Win_List, Emit_RB_Group'Access);
                      TIO.Put_Line (Sp (6) & "Me." & First_Radio_Button.Name.all
                                    & ".Set_Active (True);");
                      TIO.New_Line;
                   end if;
                   if Have.Date_Pickers + Have.Time_Pickers > 0 then
-                     For_Each_Widget (Win_List, Emit_Init_Date_Time_Pickers'Access);
+                     Iterate (Win_List, Emit_Init_Date_Time_Pickers'Access);
                      TIO.New_Line;
                   end if;
                end if;
@@ -1133,7 +1092,7 @@ package body W2Gtk2Ada is
          Emit_Signal_Specs (Temp_Win);
          Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
-      For_Each_Widget (Win_List, Emit_Signal_Specs'Access);
+      Iterate (Win_List, Emit_Signal_Specs'Access);
       Emit_Package_End (Filename & "_Pkg.Signals", False);
 
       Include_Banner;
@@ -1200,14 +1159,14 @@ package body W2Gtk2Ada is
          TIO.Put_Line (Sp (3) & "end Img;");
          TIO.New_Line;
       end if;
-      For_Each_Widget (Win_List, Emit_Declare_Set_Date_Time_Pickers'Access);
+      Iterate (Win_List, Emit_Declare_Set_Date_Time_Pickers'Access);
 
       Temp_Win := Win_List;
       while Temp_Win /= null loop
          Emit_Signal_Bodies (Temp_Win);
          Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
-      For_Each_Widget (Win_List, Emit_Signal_Bodies'Access);
+      Iterate (Win_List, Emit_Signal_Bodies'Access);
       Emit_Package_End (Filename & "_Pkg.Signals", False);
    end Emit_Signals;
 
@@ -1280,7 +1239,7 @@ package body W2Gtk2Ada is
          Emit_Register_All_Signals (Temp_Win);
          Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
-      For_Each_Widget (Win_List, Emit_Register_All_Signals'Access);
+      Iterate (Win_List, Emit_Register_All_Signals'Access);
       TIO.Put_Line (Sp (3) & "end Register;");
       Emit_Package_End (Filename & "_Pkg.Register_Signals");
    end Emit_Register_Signals;
@@ -1890,10 +1849,10 @@ package body W2Gtk2Ada is
                        & To_Gtk (Temp_Win) & ";");
          Temp_Win := Next_Window (Win_List, Temp_Win);
       end loop;
-      For_Each_Widget (Win_List, Emit_Object'Access);
+      Iterate (Win_List, Emit_Object'Access);
       TIO.Put_Line (Sp (3) & "end record;");
       TIO.New_Line;
-      For_Each_Widget (Win_List, Emit_ALT_Color'Access);
+      Iterate (Win_List, Emit_ALT_Color'Access);
       TIO.New_Line;
       TIO.Put_Line (Sp (3) & "type Widget_Collection is access all "
                     & "Widget_Collection_Record'Class;");
@@ -1930,11 +1889,11 @@ package body W2Gtk2Ada is
 
       if Have.Date_Pickers > 0 then
          TIO.New_Line;
-         For_Each_Widget (Win_List, Emit_Date_Picker_Methods_Spec'Access);
+         Iterate (Win_List, Emit_Date_Picker_Methods_Spec'Access);
       end if;
       if Have.Time_Pickers > 0 then
          TIO.New_Line;
-         For_Each_Widget (Win_List, Emit_Time_Picker_Methods_Spec'Access);
+         Iterate (Win_List, Emit_Time_Picker_Methods_Spec'Access);
       end if;
       Emit_Package_End (Filename & "_Pkg.Object_Collection");
 
@@ -1985,7 +1944,7 @@ package body W2Gtk2Ada is
             TIO.Put_Line (Sp (8) & Quoted (Temp_Win.Name.all) & "));");
             Temp_Win := Next_Window (Win_List, Temp_Win);
          end loop;
-         For_Each_Widget (Win_List, Initialize_Object'Access);
+         Iterate (Win_List, Initialize_Object'Access);
       end if;
       TIO.Put_Line (Sp (3) & "end Initialize;");
 
@@ -2091,7 +2050,7 @@ package body W2Gtk2Ada is
          TIO.New_Line;
          TIO.Put_Line (Sp (3) & "procedure Set_Treeviews_Header_Style is");
          TIO.Put_Line (Sp (3) & "begin");
-         For_Each_Widget (TWin, Set_TreeView_Header_Style'Access);
+         Iterate (TWin, Set_TreeView_Header_Style'Access);
          TIO.Put_Line (Sp (3) & "end Set_Treeviews_Header_Style;");
       end if;
 
@@ -2108,10 +2067,10 @@ package body W2Gtk2Ada is
       TIO.Put_Line (Sp (3) & "end New_Widget_Collection;");
 
       if Have.Date_Pickers > 0 then
-         For_Each_Widget (Win_List, Emit_Date_Picker_Methods_Body'Access);
+         Iterate (Win_List, Emit_Date_Picker_Methods_Body'Access);
       end if;
       if Have.Time_Pickers > 0 then
-         For_Each_Widget (Win_List, Emit_Time_Picker_Methods_Body'Access);
+         Iterate (Win_List, Emit_Time_Picker_Methods_Body'Access);
       end if;
       Emit_Package_End (Filename & "_Pkg.Object_Collection");
    end Emit_Object_Collection;
@@ -2333,13 +2292,13 @@ package body W2Gtk2Ada is
                   if DGVS (I).SelBgColor /= null then
                      null; --  pending
                   end if;
-                  if DGVS (I).Padding (1) /= -1 then
+                  if DGVS (I).Padding (1) >= 0 then
                      TIO.Put_Line (Sp (6) & "Set_Property (Me."
                                    & DGVS (I).Name.all & ", "
                                    & "Xpad_Property,"
                                    & DGVS (I).Padding (1)'Image & ");");
                   end if;
-                  if DGVS (I).Padding (2) /= -1 then
+                  if DGVS (I).Padding (2) >= 0 then
                      TIO.Put_Line (Sp (6) & "Set_Property (Me."
                                    & DGVS (I).Name.all & ", "
                                    & "Ypad_Property,"

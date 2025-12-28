@@ -28,31 +28,15 @@ with W2gtk_Emit;              use W2gtk_Emit;
 with Symbol_Tables;
 with W2gtk_Backups;           use W2gtk_Backups;
 with W2gtk_Version;           use W2gtk_Version;
+with W2gtk_Adjust_To_Gtk_Pkg;
+with W2gtk_Dump_Pkg;
+with Emit_Additional_Information;
 
 package body W2gtk_Pkg is
 
    package TIO renames Ada.Text_IO;
-   package DSIO is new Ada.Text_IO.Enumeration_IO (Display_Style_Enum);
-   package FDIO is new Ada.Text_IO.Enumeration_IO (FlowDirection_Enum);
-   package PIO is new Ada.Text_IO.Enumeration_IO (Window_Position_Enum);
-   package IPIO is new Ada.Text_IO.Enumeration_IO (Image_Position_Enum);
    package TAIO is new Ada.Text_IO.Enumeration_IO (TextAlign_Enum);
-   package CHHSMIO is new Ada.Text_IO.Enumeration_IO
-     (ColumnHeadersHeightSizeMode_Enum);
-   package RHWSMIO is new Ada.Text_IO.Enumeration_IO
-     (RowHeadersWidthSizeMode_Enum);
-   package RHBSIO is new Ada.Text_IO.Enumeration_IO
-     (RowHeadersBorderStyle_Enum);
-   package BSIO is new Ada.Text_IO.Enumeration_IO (BorderStyle_Enum);
-   package SMIO is new Ada.Text_IO.Enumeration_IO (SortMode_Enum);
-   package ASMIO is new Ada.Text_IO.Enumeration_IO (AutoSizeMode_Enum);
    package ASCMIO is new Ada.Text_IO.Enumeration_IO (AutoSizeColumnMode_Enum);
-   package SBIO is new Ada.Text_IO.Enumeration_IO (ScrollBars_Enum);
-   package DRIO is new Ada.Text_IO.Enumeration_IO (DialogResult_Enum);
-   package CSIO is new Ada.Text_IO.Enumeration_IO (Cell_Style_Enum);
-   package LSEIO is new Ada.Text_IO.Enumeration_IO (Layout_Style_Enum);
-   package FSEIO is new Ada.Text_IO.Enumeration_IO (Frame_Shadow_Enum);
-   package BEIO is new Ada.Text_IO.Enumeration_IO (Baseline_Enum);
 
    Max_Gen : Integer := 1;
 
@@ -79,7 +63,6 @@ package body W2gtk_Pkg is
    Test17 : constant String := "Legends.Add(";
 
    --  specs
-   function Adjust_To_Gtk return Integer;
    function Parse_Resource_File (TWin           : Window_Pointer;
                                  Resx_Path      : String;
                                  Resx_File_Name : String) return Integer;
@@ -91,14 +74,7 @@ package body W2gtk_Pkg is
                                   Resx_File_Name : String) return Integer;
    function Parse_VB_File (Resx_Path      : String;
                            Resx_File_Name : String) return Integer;
-   procedure Dump (Path : String; File_Name : String; Instant : String);
    --  end of specs
-
-   -------------------------------------------------------------------------
-   function Adjust_To_Gtk return Integer is separate;
-
-   -------------------------------------------------------------------------
-   procedure Dump (Path : String; File_Name : String; Instant : String) is separate;
 
    -------------------------------------------------------------------------
    function Parse_Resource_File (TWin           : Window_Pointer;
@@ -161,7 +137,7 @@ package body W2gtk_Pkg is
 
                      when Str_Icon =>
                         TWin.Icon := new String'("");
-                        Debug (NLin, Resx_File_Name & ".resx"
+                        Debug (NLin, "WARNING: " & Resx_File_Name & ".resx"
                                & ": ignored window property "
                                & "Icon");
 
@@ -219,8 +195,8 @@ package body W2gtk_Pkg is
 
                      when Str_TrayHeight =>
                         TWin.TrayHeight := Get_Integer (Get_String (RFile));
-                        Debug (NLin, "Set Window Property TrayHeight " &
-                                 TWin.ToolTip.all);
+                        Debug (NLin, Sp (3) & "Set Window Property TrayHeight "
+                               & TWin.ToolTip.all);
 
                      when Str_Text =>
                         TWin.Title := new String'(Get_String (RFile));
@@ -236,7 +212,7 @@ package body W2gtk_Pkg is
                         end if;
 
                      when Str_RightToLeft =>
-                        Debug (NLin, Resx_File_Name & ".resx"
+                        Debug (NLin, "WARNING " & Resx_File_Name & ".resx"
                                & ": ignored window property "
                                & "RightToLeft");
 
@@ -362,7 +338,7 @@ package body W2gtk_Pkg is
                   if WT = null then
                      if Contains (Line (1 .. Len), "BindingNavigator")
                      then
-                        Debug (NLin, "Resource: Ignored Widget Property "
+                        Debug (NLin, "WARNING: Resource: Ignored Widget Property "
                                & Line (1 .. Len));
                         goto Continue_Loop;
                      end if;
@@ -390,13 +366,13 @@ package body W2gtk_Pkg is
                            end;
                         end if;
                      else
-                        Debug (NLin, "Resource: Ignored Widget Property "
+                        Debug (NLin, "WARNING: Resource: Ignored Widget Property "
                                & PName & " " & PAttrib);
                      end if;
                      goto Continue_Loop;
 
                   elsif Contains (Property, "BindingNavigator") then
-                     Debug (NLin, "Resource: Ignored Widget Property "
+                     Debug (NLin, "WARNING: Resource: Ignored Widget Property "
                             & PName & " " & PAttrib);
                      goto Continue_Loop;
                   end if;
@@ -416,15 +392,31 @@ package body W2gtk_Pkg is
                                & PName & ".ZOrder "
                                & Img (WT.Zorder));
 
-                     when Attr_Margin | Attr_Padding =>
+                     when Attr_Margin =>
                         WT.Margins := Get_Margin_Array (RFile);
                         Debug (NLin, Sp (3) & "Set Widget Property "
                                & PName
-                               & ". Margins "
+                               & ".Margins "
                                & Img (WT.Margins (1)) & ", " &
                                  Img (WT.Margins (2)) & ", " &
                                  Img (WT.Margins (3)) & ", " &
                                  Img (WT.Margins (4)));
+
+                     when Attr_Padding =>
+                        if WT.Widget_Type = GtkAlignment then
+                           WT.Paddings := Get_Margin_Array (RFile);
+                           Debug (NLin, Sp (3) & "Set Widget Property "
+                                  & PName
+                                  & ".Padding "
+                                  & Img (WT.Margins (1)) & ", " &
+                                    Img (WT.Margins (2)) & ", " &
+                                    Img (WT.Margins (3)) & ", " &
+                                    Img (WT.Margins (4)));
+                        else
+                           Debug (NLin,
+                                  "WARNING: Resource: Ignored Widget Property "
+                                  & PName & " " & PAttrib);
+                        end if;
 
                      when Attr_TabIndex =>
                         WT.TabIndex := Get_Integer (Get_String (RFile));
@@ -679,7 +671,7 @@ package body W2gtk_Pkg is
                                & Img (P0.One) & ", V=" & Img (P0.Two));
 
                      when Attr_Ignored | Attr_Image | Attr_Locked =>
-                        Debug (NLin, Resx_File_Name & ".resx"
+                        Debug (NLin, "WARNING: " & Resx_File_Name & ".resx"
                                & ": ignored widget property "
                                & PName & " " & PAttrib);
 
@@ -783,7 +775,7 @@ package body W2gtk_Pkg is
             if Child.Parent_Name /= null then
                if Child.Parent_Name.all /= Parent.Name.all then
                   Debug (NLin, "Designer 2: " & Img (NLin) & ": "
-                         & "Warning: " & Child.Name.all & ": "
+                         & "WARNING: " & Child.Name.all & ": "
                          & "Mismatch with Resource File: "
                          & Child.Parent_Name.all & " / "
                          & Parent.Name.all);
@@ -871,7 +863,7 @@ package body W2gtk_Pkg is
             if Child.Parent_Name /= null then
                if Child.Parent_Name.all /= Parent.Name.all then
                   Debug (NLin, "Designer 2: " & Img (NLin) & ": "
-                         & "Warning: " & Child.Name.all & ": "
+                         & "WARNING: " & Child.Name.all & ": "
                          & "Mismatch with Resource File: "
                          & Child.Parent_Name.all & " / "
                          & Parent.Name.all);
@@ -1037,14 +1029,14 @@ package body W2gtk_Pkg is
                          & DGVS (DGVS_Num).NullValue.all);
 
                when DGVS_Attr_Ignored =>
-                  Debug (NLin, Resx_File_Name
+                  Debug (NLin, "WARNING: " & Resx_File_Name
                          & ".Designer.vb (2)"
                          & ": Ignored DGVS property: "
                          & "DataGridViewStyle" & Img (DGVS_Num)
                          & " " & Line (Idx0 .. Idx1 - 1));
 
                when DGVS_No_Attribute =>
-                  Debug (NLin, Resx_File_Name
+                  Debug (NLin, "WARNING: " & Resx_File_Name
                          & ".Designer.vb (2)"
                          & ": Line" & NLin'Image
                          & ": unknown DGVS property: "
@@ -1068,7 +1060,7 @@ package body W2gtk_Pkg is
                Len := 0;
                return 0;
             end if;
-            Debug (NLin, "Designer 2: " & Img (NLin) & ": "
+            Debug (NLin, "Designer 2: "
                    & Line (Idx0 .. Len)
                    & ": widget not found");
             return -1;
@@ -1121,7 +1113,7 @@ package body W2gtk_Pkg is
                    or else
                      Contains (Line (Idx0 .. Len), Test17)
                then
-                  Debug (NLin, Resx_File_Name
+                  Debug (NLin, "WARNING: " & Resx_File_Name
                          & ".Designer.vb (2)"
                          & ": Line" & NLin'Image
                          & ": Designer: Ignored Widget Property: "
@@ -1129,7 +1121,7 @@ package body W2gtk_Pkg is
                   goto Continue_Loop;
 
                else
-                  Debug (NLin, Resx_File_Name
+                  Debug (NLin, "WARNING: " & Resx_File_Name
                          & ".Designer.vb (2)"
                          & ": Line" & NLin'Image
                          & ": Designer: cannot parse "
@@ -1161,7 +1153,7 @@ package body W2gtk_Pkg is
                   else
                      WT.Text := new String'(Trim (Line (Idx1 + 1 .. Len - 1),
                                             Ada.Strings.Both));
-                     Debug (NLin, "Set Widget Property "
+                     Debug (NLin, Sp (3) & "Set Widget Property "
                             & WT.Name.all & ".Text "
                             & Line (Idx1 + 1 .. Len - 1));
                   end if;
@@ -1624,29 +1616,69 @@ package body W2gtk_Pkg is
                          & ".Level "
                          & Img (Num));
 
-               when Attr_ScrollBars =>
+               when Attr_Scrollable =>
+                  if WT.Widget_Type = GtkNoteBook then
+                     if Contains (Line (Idx1 .. Len), "False") then
+                        WT.Scrollable := False;
+                        Debug (NLin, Sp (3) & "Set Widget Property "
+                               & WT.Name.all & ".Scrollable False");
+                     elsif Contains (Line (Idx1 .. Len), "True") then
+                        WT.Scrollable := True;
+                        Debug (NLin, Sp (3) & "Set Widget Property "
+                               & WT.Name.all & ".Scrollable True");
+                     end if;
+                  end if;
+
+               when Attr_HScrollBar =>
                   Idx2 := Index (Line (Idx1 .. Len), ".",
                                  Ada.Strings.Backward);
-                  if Contains (Line (Idx2 + 1 .. Len), "None") then
-                     WT.ScrollBars := None;
+                  if Contains (Line (Idx2 + 1 .. Len), "Always") then
+                     WT.H_ScrollBar := Always;
                      Debug (NLin, Sp (3) & "Set Widget Property "
-                            & WT.Name.all & ".ScrollBars "
-                            & "None");
-                  elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
-                     WT.ScrollBars := Both;
+                            & WT.Name.all & ".HScrollBar "
+                            & "Always");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Automatic") then
+                     WT.H_ScrollBar := Automatic;
                      Debug (NLin, Sp (3) & "Set Widget Property "
-                            & WT.Name.all & ".ScrollBars "
-                            & "Vertical");
-                  elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
-                     WT.ScrollBars := Both;
+                            & WT.Name.all & ".HScrollBar "
+                            & "Automatic");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Never") then
+                     WT.H_ScrollBar := Never;
                      Debug (NLin, Sp (3) & "Set Widget Property "
-                            & WT.Name.all & ".ScrollBars "
-                            & "Horizontal");
-                  elsif Contains (Line (Idx2 + 1 .. Len), "Both") then
-                     WT.ScrollBars := Both;
+                            & WT.Name.all & ".HScrollBar "
+                            & "Never");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "External") then
+                     WT.H_ScrollBar := External;
                      Debug (NLin, Sp (3) & "Set Widget Property "
-                            & WT.Name.all & ".ScrollBars "
-                            & "Both");
+                            & WT.Name.all & ".HScrollBar "
+                            & "External");
+                  else
+                     raise TIO.Data_Error;
+                  end if;
+
+               when Attr_VScrollBar =>
+                  Idx2 := Index (Line (Idx1 .. Len), ".",
+                                 Ada.Strings.Backward);
+                  if Contains (Line (Idx2 + 1 .. Len), "Always") then
+                     WT.V_ScrollBar := Always;
+                     Debug (NLin, Sp (3) & "Set Widget Property "
+                            & WT.Name.all & ".VScrollBar "
+                            & "Always");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Automatic") then
+                     WT.V_ScrollBar := Automatic;
+                     Debug (NLin, Sp (3) & "Set Widget Property "
+                            & WT.Name.all & ".VScrollBar "
+                            & "Automatic");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "Never") then
+                     WT.V_ScrollBar := Never;
+                     Debug (NLin, Sp (3) & "Set Widget Property "
+                            & WT.Name.all & ".VScrollBar "
+                            & "Never");
+                  elsif Contains (Line (Idx2 + 1 .. Len), "External") then
+                     WT.V_ScrollBar := External;
+                     Debug (NLin, Sp (3) & "Set Widget Property "
+                            & WT.Name.all & ".VScrollBar "
+                            & "External");
                   else
                      raise TIO.Data_Error;
                   end if;
@@ -2198,13 +2230,13 @@ package body W2gtk_Pkg is
                   null;
 
                when Attr_Ignored =>
-                  Debug (NLin, Resx_File_Name
+                  Debug (NLin, "WARNING: " & Resx_File_Name
                          & ".Designer.vb (2)"
                          & ": ignored property: "
                          & Line (Idx0 .. Len));
 
                when No_Attribute =>
-                  Debug (NLin, Resx_File_Name
+                  Debug (NLin, "WARNING: " & Resx_File_Name
                          & ".Designer.vb (2)"
                          & ": Line" & NLin'Image
                          & ": Designer: unknown property: "
@@ -2309,9 +2341,9 @@ package body W2gtk_Pkg is
             Found := True;
             TWin.Name := new String'(+Trim (Line (Idx0 + 14 .. Len),
                                      Ada.Strings.Both));
+            Insert_Window_By_Front (Win_List, TWin);
             TWin.Original_Name := new String'(TWin.Name.all);
             TWin.Top_Level     := True;
-            Insert_Window_By_Front (Win_List, TWin);
             Debug (NLin, Sp (3) & "Created GtkWindow " & TWin.Name.all);
             Debug (NLin, Sp (3) & "Set Window Property Name " & TWin.Name.all);
             exit;
@@ -2445,30 +2477,31 @@ package body W2gtk_Pkg is
          end if;
          Idx2 := Idx2 + 1; --  skip "."
          Idx3 := Len;  --  don't count final ()
-         WT := Find_Widget (TWin.Widget_List, +Line (Idx2 .. Idx3));
-         if WT /= null then
-            TIO.Close (DFile);
-            Debug (NLin, Sp (3) & Resx_File_Name & ".Designer.vb (1): "
-                   & ": Repeated Widget " & Line (Idx2 .. Idx3));
-            return -1;
-         end if;
+
          WT := new Widget_Properties
            (Widget_Type => Symbol_Tables.Get_Type (Line (Idx2 .. Idx3)));
          if WT.Widget_Type = No_Widget then
             TIO.Close (DFile);
             Debug (NLin, Sp (3) & Resx_File_Name & ".Designer.vb (1): "
-                   & ": unknown Widget " & Line (Idx2 .. Idx3));
+                   & ": unknown widget type " & Line (Idx2 .. Idx3));
             Debug (NLin, Sp (3) & Line (1 .. Len));
             return -1;
          end if;
 
-         WT.Name := new String'(+Line (Idx0 .. Idx1));
+         if Idx0 < Idx1 then
+            WT.Name := new String'(+Line (Idx0 .. Idx1));
+         else
+            Debug (NLin, Sp (3) & "User widget requires a Name");
+            return -1;
+         end if;
+
+         Insert_Widget_By_Tail (TWin, WT);
+
          if WT.Widget_Type = BindingNavigator then
             WT.Windows_Type :=
               new String'("System.Windows.Forms.BindingNavigator");
          elsif Starts_With (WT.Name.all, "Bindingnavigator")
-           and then
-             WT.Widget_Type = GtkButton
+           and then WT.Widget_Type = GtkButton
          then
             WT.Windows_Type :=
               new String'("System.Windows.Forms.ToolStripButton");
@@ -2481,8 +2514,6 @@ package body W2gtk_Pkg is
          elsif WT.Widget_Type = GtkButton then
             TWin.Has_Buttons := True;
          end if;
-
-         Insert_Widget_By_Tail (TWin, WT);
 
          Debug (NLin, Sp (3) & "Created "
                 & WT.Widget_Type'Image & " "
@@ -2714,6 +2745,14 @@ package body W2gtk_Pkg is
                             & " [Gtk " & WS.GtkName.all & "]"
                             & " => " & WS.Handler.all);
                   end if;
+               else
+                  Debug (0, "Warning"
+                         & ": repeated handler " & WS.Handler.all
+                         & ": No Glade, No Ada will be generated for this signal");
+                  Free (WS.Name);
+                  Free (WS.Handler);
+                  Free (WS.GtkName);
+                  Free (WS);
                end if;
             else
                WT := Find_Widget (Win_List.Widget_List, +WName);
@@ -2775,6 +2814,15 @@ package body W2gtk_Pkg is
                                & " [Gtk " & WS.GtkName.all & "]"
                                & " => " & WS.Handler.all);
                      end if;
+                  else
+                     Debug (0, "Warning"
+                            & ": repeated handler " & WS.Handler.all
+                            & ": No Glade, No Ada will be generated "
+                            & "for this signal");
+                     Free (WS.Name);
+                     Free (WS.Handler);
+                     Free (WS.GtkName);
+                     Free (WS);
                   end if;
                end if;
             end if;
@@ -2849,7 +2897,7 @@ package body W2gtk_Pkg is
                         begin
                            WTCD := Find_Widget (Win_List.Widget_List, WName);
                            if WTCD = null then
-                              Debug (NLin, "Warning: "
+                              Debug (NLin, "WARNING: "
                                      & Resx_File_Name & ".vb"
                                      & ": Line" & NLin'Image
                                      & ": cannot find widget "
@@ -2940,7 +2988,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all & ".PrevYear");
                      end if;
                      TS := new Signal_Block;
@@ -2949,7 +2997,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all & ".day_selected_double_click");
                      end if;
                      TS := new Signal_Block;
@@ -2958,7 +3006,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                             & WT.Name.all & ".day_selected");
                      end if;
                      TS := new Signal_Block;
@@ -2967,7 +3015,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all & ".clicked");
                      end if;
                      TS := new Signal_Block;
@@ -2976,7 +3024,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Year_Activate");
                      end if;
@@ -2986,7 +3034,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Year_Activate");
                      end if;
@@ -2996,7 +3044,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Month_Activate");
                      end if;
@@ -3006,7 +3054,7 @@ package body W2gtk_Pkg is
                                                & WT.Name.all);
                      B := Insert_Signal (WT, TS);
                      if B then
-                        Debug (0, Sp (3) & "Created  syntheticSignal "
+                        Debug (0, Sp (3) & "Created synthetic Signal "
                                & WT.Name.all
                                & ".Month_Activate");
                      end if;
@@ -3181,13 +3229,15 @@ package body W2gtk_Pkg is
                      Debug (0, Sp (3) & "Created synthetic Signal "
                             & TWin.Name.all & ".Load");
                   else
-                     Free (TS.Name);
-                     Free (TS);
                      Debug (0, Sp (3) & "Unable to create synthetic Signal "
                             & "for "
                             & TWin.Name.all & ".Load: "
                             & " repeated handler "
                             & "On_Load_" & TWin.Name.all);
+                     Free (TS.Name);
+                     Free (TS.Handler);
+                     Free (TS.GtkName);
+                     Free (TS);
                   end if;
                end if;
             end if;
@@ -3290,7 +3340,7 @@ package body W2gtk_Pkg is
          return Result;
       end if;
 
-      Result := Adjust_To_Gtk;
+      Result := W2gtk_Adjust_To_Gtk_Pkg.Adjust_To_Gtk;
       if Result /= 0 then
          return Result;
       end if;
@@ -3304,7 +3354,7 @@ package body W2gtk_Pkg is
          if Result < 0 then
             return Result;
          end if;
-         Dump (Glade_Path, Resx_File_Name, Instant);
+         W2gtk_Dump_Pkg.Dump (Glade_Path, Resx_File_Name, Instant);
       end if;
 
       return Result;
@@ -3335,6 +3385,7 @@ package body W2gtk_Pkg is
                   Mode => TIO.Out_File,
                   Name => Glade_Path & "/" & FileName & ".glade");
       Emit_GtkHeader (null, 0);
+      Emit_Additional_Information.Run;
       TWin := Win_List;
       while TWin /= null loop
          case TWin.Window_Type is

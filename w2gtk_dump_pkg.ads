@@ -10,19 +10,13 @@
 -- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
 -- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
 --                                                                          --
--- You should have received a copy of the GNU General Public License along  --
--- with this program; see the file COPYING3.                                --
--- If not, see <http://www.gnu.org/licenses/>.                              --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --
 ------------------------------------------------------------------------------
-with W2gtk_Decls;     use W2gtk_Decls;
 
-package Emit_Internals is
+package W2gtk_Dump_Pkg is
 
-   procedure Emit_Internal_Child_VBox (Me : Widget_Pointer;
-                                       Id : Integer);
-   procedure Emit_Internal_Child_Action_Area (Me : Widget_Pointer;
-                                              Id : Integer);
-   procedure Emit_Action_Widgets (Me : Window_Pointer;
-                                  Id : Integer);
+   procedure Dump (Path : String; File_Name : String; Instant : String);
 
-end Emit_Internals;
+end W2gtk_Dump_Pkg;

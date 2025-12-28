@@ -339,7 +339,6 @@ package body Symbol_Tables is
                   Attr_AlternatingRowsDefaultCellStyle);
       Wst.Insert ("EnableHeadersVisualStyles", Attr_EnableHeadersVisualStyles);
       Wst.Insert ("MultiSelect", Attr_MultiSelect);
-      Wst.Insert ("ScrollBars", Attr_ScrollBars);
       Wst.Insert ("ReadOnly", Attr_ReadOnly);
       Wst.Insert ("ColumnHeadersVisible", Attr_ColumnHeadersVisible);
       Wst.Insert ("RowHeadersVisible", Attr_RowHeadersVisible);
@@ -375,7 +374,10 @@ package body Symbol_Tables is
       Wst.Insert ("MovePreviousItem", Attr_MovePreviousItem);
       Wst.Insert ("PositionItem", Attr_PositionItem);
 
-      Wst.Insert ("HorizontalScrollbar", Attr_Ignored);
+      Wst.Insert ("Scrollable", Attr_Scrollable);  --  for notebooks
+      Wst.Insert ("HorizontalScrollbar", Attr_HScrollBar);  --  for all
+      Wst.Insert ("VerticalScrollbar", Attr_VScrollBar);  --  for all
+
       Wst.Insert ("ItemHeight", Attr_Ignored);
       Wst.Insert ("Dock", Attr_Ignored);
       Wst.Insert ("ImeMode", Attr_Ignored);

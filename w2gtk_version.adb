@@ -16,7 +16,7 @@
 ------------------------------------------------------------------------------
 package body W2gtk_Version is
 
-   Version_Number : constant String (1 .. 5) := "02.00";
+   Version_Number : constant String (1 .. 5) := "02.20";
 
    function Version return String is
    begin
