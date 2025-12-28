@@ -41,7 +41,7 @@ procedure W2gtk is
    procedure Print_Help;
    procedure Print_Help is
    begin
-      TIO.Put_Line ("w2gtk -rp wpath -rf wfile -gp gpath -gf gfile -h --help"
+      TIO.Put_Line ("usage: w2gtk -rp wpath -rf wfile -gp gpath -gf gfile -h --help"
                     & " -glade -dump -log -ap apath -ada main");
       TIO.Put_Line ("-h        produces this short help");
       TIO.Put_Line ("--help    produces this short help");

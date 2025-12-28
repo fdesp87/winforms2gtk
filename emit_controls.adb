@@ -16,414 +16,453 @@
 ------------------------------------------------------------------------------
 with GNAT.Strings;          use GNAT.Strings;
 with Emit_Tools;            use Emit_Tools;
+with Emit_Containers;       use Emit_Containers;
 
 package body Emit_Controls is
 
    ---------------------------------------------------------------------------
    --  Emit_GtkButton
    ---------------------------------------------------------------------------
-   procedure Emit_GtkButton (TWdg        : Widget_Pointer;
+   procedure Emit_GtkButton (Me          : Widget_Pointer;
                              Id          : Integer;
                              Object      : String;
-                             Position    : Integer;
                              Has_Default : Boolean;
-                             XY          : Boolean;
-                             Homog       : Boolean) is
-      Underline : constant Boolean := TWdg.Underline;
+                             XY          : Boolean) is
+      Child : Widget_Pointer;
+      Underline : constant Boolean := Me.Underline;
 
       procedure Emit_Button_Label;
       procedure Emit_Button_Label is
       begin
-         if TWdg.Text /= null and then TWdg.Text.all /= "" then
+         if Me.Text /= null and then Me.Text.all /= "" then
             Emit_Line (Sp (Id + 4) & "<property name=""label"" " &
                          "translatable=""yes"">" &
-                         TWdg.Text.all & "</property>");
+                         Me.Text.all & "</property>");
             if Underline then
                Emit_Property (Id + 4, "use-underline", Underline);
             end if;
-         elsif TWdg.Name /= null and then TWdg.Name.all /= "" then
+         elsif Me.Name /= null and then Me.Name.all /= "" then
             Emit_Line (Sp (Id + 4) & "<property name=""label"" " &
                          "translatable=""yes"">" &
-                         TWdg.Name.all & "</property>");
+                         Me.Name.all & "</property>");
             if Underline then
                Emit_Property (Id + 4, "use-underline", Underline);
             end if;
          end if;
       end Emit_Button_Label;
    begin
-      if TWdg.Associated_ColorButton /= null then
+      if Me.Associated_ColorButton /= null then
          return;
       end if;
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, Object, TWdg.Name.all);
-      if TWdg.GParent /= null
-        and then TWdg.GParent.Widget_Type /= BindingNavigator
-      then
-         Emit_Button_Label;
-      elsif TWdg.WParent /= null then
-         Emit_Button_Label;
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, Object, Me.Name.all);
+      if Me.Child_List /= null and then Me.Child_List.Stock then
+         null;
+      else
+         if Me.Wdg_Parent /= null
+           and then Me.Wdg_Parent.Widget_Type /= BindingNavigator
+         then
+            Emit_Button_Label;
+         elsif Me.Win_Parent /= null then
+            Emit_Button_Label;
+         end if;
       end if;
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
+
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", Me.Has_Focus);
       if Has_Default then
          Emit_Property (Id + 4, "can-default", True);
          Emit_Property (Id + 4, "has-default", True);
       end if;
+      if Me.Child_List /= null and then Me.Child_List.Stock then
+         Emit_Property (Id + 4, "focus-on-click", False);
+      end if;
       Emit_Property (Id + 4, "receives-default", True);
-      Emit_Button_Image (TWdg, Id + 4,
-                         Icon_Widget => (Object = "GtkToolButton"));
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
+      if Me.Child_List /= null and then not Me.Child_List.Stock then
+         Emit_Button_Image (Me, Id + 4,
+                            Icon_Widget => (Object = "GtkToolButton"));
+      end if;
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      if Me.Child_List /= null and then Me.Child_List.Stock then
+         Emit_Property (Id + 4, "relief", "none");
+      end if;
+      Emit_GtkSignal (Me, Id + 4);
+
+      Child := Me.Child_List;
+      while Child /= null loop
+         Emit_Widget_Child (Child, Id + 4);
+         Child := Child.Next;
+      end loop;
+
       Emit_Line (Sp (Id + 2) & "</object>");
-      if Position < 0 then
-         Emit_Packing_Child (TWdg, Id,
-                             Packing => True,
-                             XY => XY,
-                             Homog => Homog);
+      if Me.Wdg_Parent /= null and then
+        ((Me.Wdg_Parent.Widget_Type = GtkTabChild)
+        or (Me.Wdg_Parent.Widget_Type = GtkButtonBox))
+      then
+         Emit_Packing (Id + 2,
+                       Position   => Me.Child_Number,
+                       Expand     => False,
+                       Fill       => True,
+                       Padding    => Me.Padding,
+                       Pack_Start => True,
+                       Force      => True);
       else
-         Emit_Packing (Id + 2, Position, False, True, 0, True);
+         Emit_Packing_Child (Me, Id,
+                             Packing => True,
+                             XY      => XY,
+                             Homog   => False);
       end if;
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkButton: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkButton: " & Me.Name.all);
          raise;
    end Emit_GtkButton;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkEntry
    ---------------------------------------------------------------------------
-   procedure Emit_GtkEntry (TWdg : Widget_Pointer;
-                            Id   : Integer) is
+   procedure Emit_GtkEntry (Me : Widget_Pointer;
+                            Id : Integer) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkEntry", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, TWdg.Editable);
-      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
-      Emit_Password (TWdg, Id + 4);
-      if TWdg.Activates_Default then
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkEntry", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, Me.Editable);
+      Emit_Property (Id + 4, "has-focus", Me.Has_Focus);
+      Emit_Password (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      if Me.Activates_Default then
          Emit_Property (Id + 4, "activates-default", True);
       end if;
-      Emit_Has_Frame (TWdg, Id + 4);
-      if TWdg.MaxLength > 0 then
-         Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);
-         Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
+      Emit_Has_Frame (Me, Id + 4);
+      if Me.MaxLength > 0 then
+         Emit_Property (Id + 4, "width-chars", Me.MaxLength);
+         Emit_Property (Id + 4, "max-width-chars", Me.MaxLength);
       end if;
-      if TWdg.Text /= null and then TWdg.Text.all /= "" then
+      if Me.Text /= null and then Me.Text.all /= "" then
          Emit_Line (Sp (Id + 4) & "<property name=""text"" " &
                       "translatable=""yes"">" &
-                      TWdg.Text.all & "</property>");
-      elsif TWdg.Buffer /= null and then TWdg.Text_Buffer /= null then
-         Emit_Property (Id + 4, "buffer", TWdg.Buffer.Name.all);
+                      Me.Text.all & "</property>");
+      elsif Me.Buffer /= null and then Me.Text_Buffer /= null then
+         Emit_Property (Id + 4, "buffer", Me.Buffer.Name.all);
       end if;
-      Emit_Margin (TWdg, Id + 4);
-      if not TWdg.Editable then
+      Emit_Margin (Me, Id + 4);
+      if not Me.Editable then
          Emit_Property (Id + 4, "editable", False);
       end if;
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_Align (TWdg, Id + 4, Numeric => True);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_Align (Me, Id + 4, Numeric => True);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                           Packing => True,
                           XY => True,
                           Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkEntry: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkEntry: " & Me.Name.all);
          raise;
    end Emit_GtkEntry;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkSpinButton
    ---------------------------------------------------------------------------
-   procedure Emit_GtkSpinButton (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_GtkSpinButton (Me : Widget_Pointer;
+                                 Id : Integer) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkSpinButton", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      if TWdg.Text /= null and then TWdg.Text.all /= "" then
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkSpinButton", Me.Name.all);
+      Emit_Label (Me, Id + 4,
+                  UnderLine  => Me.Underline,
+                  Selectable => False);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      if Me.Text /= null and then Me.Text.all /= "" then
          Emit_Line (Sp (Id + 4) & "<property name=""text"" " &
                       "translatable=""yes"">" &
-                      TWdg.Text.all & "</property>");
+                      Me.Text.all & "</property>");
       end if;
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
       Emit_Property (Id + 4, "numeric", True);
       Emit_Property (Id + 4, "wrap", True);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                           Packing => True,
                           XY => True,
                           Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkSpinButton: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkSpinButton: " & Me.Name.all);
          raise;
    end Emit_GtkSpinButton;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkToggleButton
    ---------------------------------------------------------------------------
-   procedure Emit_GtkToggleButton (TWdg      : Widget_Pointer;
-                                   Id        : Integer;
-                                   Object    : String;
-                                   Underline : Boolean;
-                                   XY        : Boolean;
-                                   Homog     : Boolean) is
+   procedure Emit_GtkToggleButton (Me     : Widget_Pointer;
+                                   Id     : Integer;
+                                   Object : String;
+                                   XY     : Boolean;
+                                   Homog  : Boolean) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, Object, TWdg.Name.all);
-      Emit_Label (TWdg, Id + 4, UnderLine => Underline, Selectable => False);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, Object, Me.Name.all);
+      Emit_Label (Me, Id + 4,
+                  UnderLine  => Me.Underline,
+                  Selectable => False);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", Me.Has_Focus);
       Emit_Property (Id + 4, "receives-default", True);
-      Emit_Button_Image (TWdg, Id + 4,
+      Emit_Button_Image (Me, Id + 4,
                          Icon_Widget => (Object = "GtkToggleToolButton"));
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
-      if TWdg.Active then
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      if Me.Active then
          Emit_Property (Id + 4, "active", True);
       end if;
       Emit_Property (Id + 4, "draw-indicator", True);
       --  Emit_Attributes (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                                      Packing => True,
                                      XY      => XY,
                                      Homog   => Homog);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkToggleButton: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkToggleButton: " & Me.Name.all);
          raise;
    end Emit_GtkToggleButton;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkCheckButton
    ---------------------------------------------------------------------------
-   procedure Emit_GtkCheckButton (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_GtkCheckButton (Me : Widget_Pointer;
+                                  Id : Integer) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkCheckButton", TWdg.Name.all);
-      Emit_Label (TWdg, Id + 4, UnderLine => False, Selectable => False);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkCheckButton", Me.Name.all);
+      Emit_Label (Me, Id + 4,
+                  UnderLine => False,
+                  Selectable => False);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", Me.Has_Focus);
       Emit_Property (Id + 4, "receives-default", True);
-      Emit_Button_Image (TWdg, Id + 4, Icon_Widget => False);
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_CheckAlign (TWdg, Id + 4);
+      Emit_Button_Image (Me, Id + 4, Icon_Widget => False);
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      Emit_CheckAlign (Me, Id + 4);
       Emit_Property (Id + 4, "draw-indicator", True);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                                      Packing => True,
                                      XY => True,
                                      Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkCheckButton: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkCheckButton: " & Me.Name.all);
          raise;
    end Emit_GtkCheckButton;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkRadioButton
    ---------------------------------------------------------------------------
-   procedure Emit_GtkRadioButton (TWdg      : Widget_Pointer;
-                                  Id        : Integer;
-                                  Object    : String;
-                                  Underline : Boolean;
-                                  XY        : Boolean;
-                                  Homog     : Boolean) is
+   procedure Emit_GtkRadioButton (Me     : Widget_Pointer;
+                                  Id     : Integer;
+                                  Object : String;
+                                  XY     : Boolean;
+                                  Homog  : Boolean) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, Object, TWdg.Name.all);
-      Emit_Label (TWdg, Id + 4, UnderLine => Underline, Selectable => False);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, Object, Me.Name.all);
+      Emit_Label (Me, Id + 4,
+                  UnderLine => Me.Underline,
+                  Selectable => False);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", Me.Has_Focus);
       Emit_Property (Id + 4, "receives-default", True);
-      Emit_Button_Image (TWdg, Id + 4,
+      Emit_Button_Image (Me, Id + 4,
                          Icon_Widget => (Object = "GtkToolButton"));
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
-      if TWdg.Active then
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      if Me.Active then
          Emit_Property (Id + 4, "active", True);
       end if;
       Emit_Property (Id + 4, "draw-indicator", True);
       --  Emit_Attributes (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
-                                     Packing => True,
-                                     XY      => XY,
-                                     Homog   => Homog);
+      Emit_Packing_Child (Me, Id,
+                          Packing => True,
+                          XY      => XY,
+                          Homog   => Homog);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkRadioButton: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkRadioButton: " & Me.Name.all);
          raise;
    end Emit_GtkRadioButton;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkComboTextBox
    ---------------------------------------------------------------------------
-   procedure Emit_GtkComboTextBox (TWdg    : Widget_Pointer;
-                                   Id      : Integer;
-                                   Packing : Boolean) is
+   procedure Emit_GtkComboTextBox (Me : Widget_Pointer;
+                                   Id : Integer) is
       procedure Emit_Internal_GtkEntry (Id : Integer);
       procedure Emit_Internal_GtkEntry (Id : Integer) is
       begin
          Emit_Line (Sp (Id) & "<child internal-child=""entry"">");
-         Emit_Object (TWdg, Id + 2, "GtkEntry", TWdg.Name.all & "_textentry");
-         Emit_Property (Id + 4, "can-focus", TWdg.Editable);
-         if TWdg.ToolTip /= null and then TWdg.ToolTip.all /= "" then
+         Emit_Object (Me, Id + 2, "GtkEntry", Me.Name.all & "_TextEntry");
+         Emit_Property (Id + 4, "can-focus", Me.Editable);
+         if Me.ToolTip /= null and then Me.ToolTip.all /= "" then
             Emit_Line (Sp (Id + 4) & "<property name=""tooltip-text"" "
                        & "translatable=""yes"">" &
-                         TWdg.ToolTip.all & "</property>");
+                         Me.ToolTip.all & "</property>");
          end if;
-         if TWdg.Buffer /= null and then TWdg.Text_Buffer /= null then
-            Emit_Property (Id + 4, "buffer", TWdg.Buffer.Name.all);
+         if Me.Buffer /= null and then Me.Text_Buffer /= null then
+            Emit_Property (Id + 4, "buffer", Me.Buffer.Name.all);
          end if;
-         Emit_Has_Frame (TWdg, Id + 4);
-         if not TWdg.Editable then
+         Emit_Has_Frame (Me, Id + 4);
+         if not Me.Editable then
             Emit_Property (Id + 4, "editable", False);
          end if;
-         Emit_Align (TWdg, Id + 4, Numeric => False);
+         Emit_Align (Me, Id + 4, Numeric => False);
          Emit_Property (Id + 4, "activates-default", True);
-         if TWdg.MaxLength > 0 then
-            Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);
-            Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
+         if Me.MaxLength > 0 then
+            Emit_Property (Id + 4, "width-chars", Me.MaxLength);
+            Emit_Property (Id + 4, "max-width-chars", Me.MaxLength);
          end if;
-         if TWdg.ToolTip /= null and then TWdg.ToolTip.all /= "" then
+         if Me.ToolTip /= null and then Me.ToolTip.all /= "" then
             Emit_Line (Sp (Id + 4) & "<property name=""primary-icon-"
                        & "tooltip-text"" "
                        & "translatable=""yes"">" &
-                         TWdg.ToolTip.all & "</property>");
+                         Me.ToolTip.all & "</property>");
          end if;
          Emit_Line (Sp (Id + 2) & "</object>");
          Emit_Line (Sp (Id) & "</child>");
       end Emit_Internal_GtkEntry;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkComboBoxText", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      Emit_Property (Id + 4, "has-focus", TWdg.Has_Focus);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkComboBoxText", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      Emit_Property (Id + 4, "has-focus", Me.Has_Focus);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
       Emit_Property (Id + 4, "has-entry", True);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
 
       Emit_Internal_GtkEntry (Id + 4);
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
-                          Packing => Packing,
+      Emit_Packing_Child (Me, Id,
+                          Packing => True,
                           XY      => True,
                           Homog   => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkComboTextbox: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkComboTextbox: " & Me.Name.all);
          raise;
    end Emit_GtkComboTextBox;
 
    ---------------------------------------------------------------------------
    -- Emit_GtkFileChooserButton --
    ---------------------------------------------------------------------------
-   procedure Emit_GtkFileChooserButton (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_GtkFileChooserButton (Me : Widget_Pointer;
+                                        Id : Integer) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkFileChooserButton", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      Emit_ToolTip (TWdg, Id + 4);
-      if TWdg.OpenFileFilter /= null and then TWdg.OpenFileFilter.all /= ""
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkFileChooserButton", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      Emit_ToolTip (Me, Id + 4);
+      if Me.OpenFileFilter /= null and then Me.OpenFileFilter.all /= ""
       then
-         Emit_Property (Id + 4, "filter", TWdg.OpenFileFilter.all);
+         Emit_Property (Id + 4, "filter", Me.OpenFileFilter.all);
       end if;
-      if TWdg.OpenFileDialog /= null and then TWdg.OpenFileDialog.all /= ""
+      if Me.OpenFileDialog /= null and then Me.OpenFileDialog.all /= ""
       then
-         Emit_Property (Id + 4, "dialog", TWdg.OpenFileDialog.all);
+         Emit_Property (Id + 4, "dialog", Me.OpenFileDialog.all);
       end if;
-      if TWdg.OpenFileTitle /= null and then TWdg.OpenFileTitle.all /= ""
+      if Me.OpenFileTitle /= null and then Me.OpenFileTitle.all /= ""
       then
          Emit_Line (Sp (Id + 4) & "<property name=""title"""
-                    & " translatable=""yes"">" & TWdg.OpenFileTitle.all
+                    & " translatable=""yes"">" & Me.OpenFileTitle.all
                     & "</property>");
       end if;
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                           Packing => True,
                           XY => True,
                           Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkFileChooserButton: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkFileChooserButton: " & Me.Name.all);
          raise;
    end Emit_GtkFileChooserButton;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkColorButton
    ---------------------------------------------------------------------------
-   procedure Emit_GtkColorButton (TWdg : Widget_Pointer; Id : Integer) is
+   procedure Emit_GtkColorButton (Me : Widget_Pointer;
+                                  Id : Integer) is
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkColorButton", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkColorButton", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
       Emit_Line (Sp (Id + 4) & "<property name=""receives-default"">" &
                    "True" & "</property>");
-      if TWdg.AnyColor then
+      if Me.AnyColor then
          Emit_Line (Sp (Id + 4) & "<property name=""use-alpha"">" &
                       "True" & "</property>");
       end if;
-      if TWdg.FullOpen then
+      if Me.FullOpen then
          Emit_Line (Sp (Id + 4) & "<property name=""show-editor"">" &
                       "True" & "</property>");
       end if;
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                                      Packing => True,
                                      XY      => True,
                                      Homog   => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkColorButon: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkColorButon: " & Me.Name.all);
          raise;
    end Emit_GtkColorButton;
 

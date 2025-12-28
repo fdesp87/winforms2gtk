@@ -14,10 +14,13 @@
 -- a copy of the GCC Runtime Library Exception along with this program;     --
 -- see the file COPYING3.  If not, see <http://www.gnu.org/licenses/>.      --
 ------------------------------------------------------------------------------
-with W2gtk_Decls;
-separate (W2gtk_Pkg)
+with W2gtk_Decls;             use W2gtk_Decls;
+with GNAT.Strings;            use GNAT.Strings;
+with GNATCOLL.Tribooleans;    use GNATCOLL.Tribooleans;
+with GNATCOLL.Utils;          use GNATCOLL.Utils;
 
-function Adjust_To_Gtk return Integer is
+package body W2gtk_Adjust_To_Gtk_Pkg is
+
    TWin    : Window_Pointer;
    TWdg    : Widget_Pointer;
    TWdg0   : Widget_Pointer;
@@ -38,6 +41,100 @@ function Adjust_To_Gtk return Integer is
    --  Initially each widget list of a window is plain  --
    -------------------------------------------------------
 
+   -----------------------------------------------------------------------
+   procedure Visit_Widget_For_Close_Button_Signal_For_Gtknotebooks
+     (This : Widget_Pointer);
+   procedure Visit_Widget_For_Close_Button_Signal_For_Gtknotebooks
+     (This : Widget_Pointer) is
+      NTB    : Widget_Pointer;
+      TS     : Signal_Pointer;
+      WS     : Signal_Pointer;
+      Found  : Boolean := False;
+   begin
+      if This = null then
+         return;
+      end if;
+
+      if This.Widget_Type = GtkImage
+        and then This.Stock
+        and then (This.Wdg_Parent /= null
+                  and then
+                  This.Wdg_Parent.Widget_Type = GtkButton)
+        and then (This.Wdg_Parent.Wdg_Parent /= null
+                  and then
+                  This.Wdg_Parent.Wdg_Parent.Widget_Type = GtkTabChild)
+        and then (This.Wdg_Parent.Wdg_Parent.Wdg_Parent /= null
+                  and then
+                  This.Wdg_Parent.Wdg_Parent.Wdg_Parent.Widget_Type = GtkTabPage)
+        and then (This.Wdg_Parent.Wdg_Parent.Wdg_Parent.Wdg_Parent /= null
+                  and then
+                  This.Wdg_Parent.Wdg_Parent.Wdg_Parent.Wdg_Parent.Widget_Type
+                  = GtkNoteBook)
+      then
+         NTB := This.Wdg_Parent.Wdg_Parent.Wdg_Parent.Wdg_Parent;
+         TS := NTB.Signal_List;
+         while TS /= null loop
+            if TS.Name.all = "CloseButtonClick" then
+               WS := new Signal_Block;
+               WS.Name := New_String (TS.Name);
+               WS.Handler := New_String (TS.Handler);
+               B := Insert_Signal (This.Wdg_Parent, WS, True);  -- ignore duplicates
+               Counter := Counter + 1;
+               Debug (NLin, Sp (3) & Counter'Image
+                      & " Created Synthetic Signal "
+                      & WS.Name.all
+                      & " [Gtk " & WS.GtkName.all & "]"
+                      & " => " & WS.Handler.all
+                      & " for widget " & This.Wdg_Parent.Name.all
+                      & " [" & This.Widget_Type'Image & "]");
+               Found := True;
+               exit;
+            end if;
+            TS := TS.Next;
+         end loop;
+         if not Found then
+            TS := new Signal_Block;
+            TS.Name := new String'("CloseButtonClick");
+            TS.Handler := new String'("On_" & NTB.Name.all
+                                      & "Hide_Tab by_Closebutton");
+            B := Insert_Signal (NTB, TS);
+            if B then
+               Counter := Counter + 1;
+               Debug (NLin, Sp (3) & Counter'Image
+                      & "Created Synthetic Signal "
+                      & NTB.Name.all
+                      & " [Gtk " & TS.GtkName.all & "]"
+                      & " => " & TS.Handler.all
+                      & " for widget " & NTB.Name.all
+                      & " [" & NTB.Widget_Type'Image & "]");
+               WS := new Signal_Block;
+               WS.Name := New_String (TS.Name);
+               WS.Handler := New_String (TS.Handler);
+               B := Insert_Signal (This.Wdg_Parent, WS, True);  -- ignore duplicates
+               Debug (NLin, Sp (3) & Counter'Image
+                      & " Created Synthetic Signal "
+                      & WS.Name.all
+                      & " [Gtk " & WS.GtkName.all & "]"
+                      & " => " & WS.Handler.all
+                      & " for widget " & This.Name.all
+                      & " [" & This.Wdg_Parent.Widget_Type'Image & "]");
+            else
+               Debug (NLin, Sp (3) & "Unable to create Synthetic Signal "
+                      & NTB.Name.all
+                      & " [Gtk " & TS.GtkName.all & "]"
+                      & " => " & TS.Handler.all
+                      & " for widget " & NTB.Name.all
+                      & " [" & NTB.Widget_Type'Image & "]");
+               raise Program_Error;
+            end if;
+         end if;
+      end if;
+
+      Visit_Widget_For_Close_Button_Signal_For_Gtknotebooks (This.Next);
+      Visit_Widget_For_Close_Button_Signal_For_Gtknotebooks (This.Child_List);
+   end Visit_Widget_For_Close_Button_Signal_For_Gtknotebooks;
+
+   -----------------------------------------------------------------------
    procedure Visit_GtkTree_Widget_For_GtkBox
      (Parent : in out Widget_Pointer);
    procedure Visit_GtkTree_Widget_For_GtkBox
@@ -73,6 +170,7 @@ function Adjust_To_Gtk return Integer is
       Visit_GtkTree_Widget_For_GtkBox (Parent.Child_List);
    end Visit_GtkTree_Widget_For_GtkBox;
 
+   -----------------------------------------------------------------------
    procedure Visit_GtkTree_Widget_For_Columns (TWdg : Widget_Pointer);
    procedure Visit_GtkTree_Widget_For_Columns (TWdg : Widget_Pointer) is
       Num : Integer;
@@ -117,6 +215,15 @@ function Adjust_To_Gtk return Integer is
                               Debug (0, Sp (3) & Temp.Name.all
                                      & ": generated "
                                      & TS.Handler.all);
+                           else
+                              Debug (0, "Warning"
+                                     & ": repeated handler " & TS.Handler.all
+                                     & ": No Glade, No Ada will be generated "
+                                     & "for this signal");
+                              Free (TS.Name);
+                              Free (TS.Handler);
+                              Free (TS.GtkName);
+                              Free (TS);
                            end if;
                         end if;
                      end if;
@@ -143,10 +250,11 @@ function Adjust_To_Gtk return Integer is
       Visit_GtkTree_Widget_For_Columns (TWdg.Child_List);
    end Visit_GtkTree_Widget_For_Columns;
 
+   -----------------------------------------------------------------------
    procedure Recast_To_GtkNormalMenuItem (TWdg : in out Widget_Pointer);
    procedure Recast_To_GtkNormalMenuItem (TWdg : in out Widget_Pointer) is
       Temp   : Widget_Pointer;
-      Parent : constant Widget_Pointer := TWdg.GParent;
+      Parent : constant Widget_Pointer := TWdg.Wdg_Parent;
    begin
       Temp := new Widget_Properties (GtkMenuNormalItem);
       Copy_Common_Attributes (From => TWdg, To => Temp);
@@ -159,6 +267,7 @@ function Adjust_To_Gtk return Integer is
              & " => GtkMenuNormalItem");
    end Recast_To_GtkNormalMenuItem;
 
+   -----------------------------------------------------------------------
    procedure Visit_GtkMenuImageItem_Widget (TWdg : in out Widget_Pointer);
    procedure Visit_GtkMenuImageItem_Widget (TWdg : in out Widget_Pointer) is
    begin
@@ -179,6 +288,7 @@ function Adjust_To_Gtk return Integer is
       Visit_GtkMenuImageItem_Widget (TWdg.Child_List);
    end Visit_GtkMenuImageItem_Widget;
 
+   -----------------------------------------------------------------------
    procedure Visit_Use_Sort (TWdg : in Widget_Pointer);
    procedure Visit_Use_Sort (TWdg : in Widget_Pointer) is
    begin
@@ -190,7 +300,7 @@ function Adjust_To_Gtk return Integer is
         | DataGridViewCheckBoxColumn
       then
          if TWdg.SortMode /= NotSortable then
-            TWdg.GParent.Use_Sort := True;
+            TWdg.Wdg_Parent.Use_Sort := True;
             Found := Signal_Exists (TWdg, "Click");
             if not Found then
                TS := new Signal_Block;
@@ -199,11 +309,20 @@ function Adjust_To_Gtk return Integer is
                                          & TWdg.Name.all
                                          & "_Clicked");
                B := Insert_Signal (TWdg, TS); --  Click
-               if B then
-                  Debug (0, Sp (3) & "Created synthetic Signal "
-                         & TWdg.Name.all
-                         & ".clicked");
-               end if;
+                  if B then
+                     Debug (0, Sp (3) & "Created Synthetic Signal "
+                            & TWdg.Name.all
+                            & ".clicked");
+                  else
+                     Debug (0, "WARNING"
+                            & ": repeated handler " & TS.Handler.all
+                            & ": No Glade, No Ada will be generated "
+                            & "for this signal");
+                     Free (TS.Name);
+                     Free (TS.Handler);
+                     Free (TS.GtkName);
+                     Free (TS);
+                  end if;
             end if;
          end if;
       end if;
@@ -212,6 +331,7 @@ function Adjust_To_Gtk return Integer is
       Visit_Use_Sort (TWdg.Child_List);
    end Visit_Use_Sort;
 
+   -----------------------------------------------------------------------
    procedure Visit_Renumber_Children (TWdg : in Widget_Pointer);
    procedure Visit_Renumber_Children (TWdg : in Widget_Pointer) is
       TWdg0 : Widget_Pointer;
@@ -227,10 +347,10 @@ function Adjust_To_Gtk return Integer is
          TWdg.Num_Children  := TWdg.Num_Children + 1;
          if TWdg0.Name /= null then
             Debug (0, Sp (3) & TWdg0.Name.all
-                   & " renumbered to" & TWdg0.Child_Number'Image);
+                   & " renumbered to child num." & TWdg0.Child_Number'Image);
          else
             Debug (0, Sp (3) & TWdg0.Widget_Type'Image
-                   & " renumbered to" & TWdg0.Child_Number'Image);
+                   & " renumbered to child num." & TWdg0.Child_Number'Image);
          end if;
          TWdg0 := TWdg0.Next;
       end loop;
@@ -238,260 +358,204 @@ function Adjust_To_Gtk return Integer is
       Visit_Renumber_Children (TWdg.Next);
    end Visit_Renumber_Children;
 
+   -----------------------------------------------------------------------
+   -----------------------------------------------------------------------
    procedure Generate_Auxiliary_Windows;
    procedure Generate_Auxiliary_Windows is
    begin
       Debug (-1, "");
-      Debug (0, "Generate auxiliary windows");
+      Debug (0, "Generating auxiliary windows");
       Counter := 0;
       TWin := Win_List;
       while TWin /= null loop
          TWdg := TWin.Widget_List;
          while TWdg /= null loop
             case TWdg.Widget_Type is
-            when GtkFileChooserButton =>
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               if TWdg.OpenFileFilter /= null
-                 and then TWdg.OpenFileFilter.all /= ""
-               then
-                  NWin1 := new Window_Properties (GtkFileFilter);
-                  NWin1.Name := new String'("GtkFileFilter"
-                                            & "_" & TWdg.Name.all
-                                           );
-                  NWin1.Original_Name := new String'(TWdg.Name.all);
-                  NWin1.Title := TWdg.OpenFileTitle;
-                  NWin1.FilterString := new String'(TWdg.OpenFileFilter.all);
-                  Free (TWdg.OpenFileFilter);
-                  TWdg.OpenFileFilter := NWin1.Name;
-               end if;
-
-               NWin0 := new Window_Properties (GtkFileChooserDialog);
-               NWin0.Name := new String'("GtkileChooserDialog"
-                                         & "_" & TWdg.Name.all);
-               NWin0.Original_Name := new String'(TWdg.Name.all);
-               NWin0.Title := TWdg.OpenFileTitle;
-               NWin0.FilterName := NWin1.Name;
-               NWin0.Transient_For := TWin;
-               NWin0.Attached_To   := TWdg;
-               NWin0.Top_Level     := True;
-
-               if TWdg.OpenFileDialog = null then
-                  TWdg.OpenFileDialog := NWin0.Name;
-               end if;
-               Insert_Window_By_Front (Win_List_Aux, NWin0);
-               Counter := Counter + 1;
-               Debug (0, Sp (3) & Counter'Image & " "
-                      & "Generated filechooserdialog for "
-                      & NWin0.Name.all
-                      & " for " & TWdg.Name.all
-                      & " (" & TWdg.Widget_Type'Image & ")");
-
-               Insert_Window_By_Front (Win_List_Aux, NWin1);
-               Counter := Counter + 1;
-               Debug (0, Sp (3) & Counter'Image & " "
-                      & NWin1.Name.all
-                      & " for " & TWdg.Name.all
-                      & " (" & TWdg.Widget_Type'Image & ")");
-
-            when GtkEntry | GtkComboTextBox =>
-               if TWdg.Text_Buffer /= null
-                 and then TWdg.Text_Buffer.all /= ""
-               then
+               when GtkFileChooserButton =>
                   Num_Aux_Widgets := Num_Aux_Widgets + 1;
-                  NWin1 := new Window_Properties (GtkEntryBuffer);
-                  NWin1.Name := new String'("GtkEntryBuffer"
-                                            & "_" & TWdg.Name.all
-                                           );
-                  NWin1.Original_Name := new String'(TWdg.Name.all);
-                  NWin1.Associated_Widget := TWdg;
-                  TWdg.Buffer := NWin1;
-                  Insert_Window_By_Front (Win_List_Aux, NWin1);
+                  if TWdg.OpenFileFilter /= null
+                    and then TWdg.OpenFileFilter.all /= ""
+                  then
+                     NWin1 := new Window_Properties (GtkFileFilter);
+                     NWin1.Name := new String'("GtkFileFilter_"
+                                               & TWdg.Name.all);
+                     NWin1.Original_Name := New_String (TWdg.Name);
+                     NWin1.Title := TWdg.OpenFileTitle;
+                     NWin1.FilterString := new String'(TWdg.OpenFileFilter.all);
+                     Free (TWdg.OpenFileFilter);
+                     TWdg.OpenFileFilter := NWin1.Name;
+                  end if;
+
+                  NWin0 := new Window_Properties (GtkFileChooserDialog);
+                  NWin0.Name := new String'("GtkFileChooserDialog_"
+                                            & TWdg.Name.all);
+                  NWin0.Original_Name := New_String (TWdg.Name);
+                  NWin0.Title := TWdg.OpenFileTitle;
+                  NWin0.FilterName := New_String (NWin1.Name);
+                  NWin0.Transient_For := TWin;
+                  NWin0.Attached_To   := TWdg;
+                  NWin0.Top_Level     := True;
+
+                  if TWdg.OpenFileDialog = null then
+                     TWdg.OpenFileDialog := New_String (NWin0.Name);
+                  end if;
+                  Insert_Window_By_Front (Win_List_Aux, NWin0);
                   Counter := Counter + 1;
                   Debug (0, Sp (3) & Counter'Image & " "
-                         & "Generated entrybuffer for "
-                         & NWin1.Name.all
-                         & " for " & TWdg.Name.all
-                         & " (" & TWdg.Widget_Type'Image & ")");
-               end if;
-
-            when GtkListBox =>
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               NWin1 := new Window_Properties (GtkListStore);
-               NWin1.Name := new String'("GtkListStore"
-                                         & "_" & TWdg.Name.all
-                                        );
-               NWin1.Original_Name := new String'(TWdg.Name.all);
-               NWin1.Associated_Widget := TWdg;
-               TWdg.ListStore := NWin1;
-               Insert_Window_By_Front (Win_List_Aux, NWin1);
-               Counter := Counter + 1;
-               Debug (0, Sp (3) & Counter'Image & " "
-                      & "Generated liststore for "
-                      & NWin1.Name.all
-                      & " for " & TWdg.Name.all
-                      & " (" & TWdg.Widget_Type'Image & ")");
-
-            when GtkButton | GtkRadioButton
-               | GtkCheckButton | GtkToggleButton =>
-               if TWdg.ImagePath /= null then
-                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
-                  NWin1 := new Window_Properties (GtkImage);
-                  NWin1.Name := new String'("GtkImage"
-                                            & "_" & TWdg.Name.all
-                                           );
-                  NWin1.Original_Name := new String'(TWdg.Name.all);
-                  NWin1.Associated_Widget := TWdg;
-                  TWdg.Win_Image := NWin1;
-                  Insert_Window_By_Front (Win_List_Aux, NWin1);
-                  Counter := Counter + 1;
-                  Debug (0, Sp (3) & Counter'Image & " "
-                         & "Generated gtkimage for "
-                         & NWin1.Name.all
-                         & " for " & TWdg.Name.all
-                         & " (" & TWdg.Widget_Type'Image & ")");
-               end if;
-
-            when GtkMenuImageItem =>
-               if TWdg.ImageMenu /= null then
-                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
-                  NWin1 := new Window_Properties (GtkImage);
-                  NWin1.Name := new String'("GtkImage"
-                                            & "_" & TWdg.Name.all
-                                           );
-                  NWin1.Original_Name := new String'(TWdg.Name.all);
-                  NWin1.Associated_Widget := TWdg;
-                  TWdg.ImageMenuWin := NWin1;
-                  Insert_Window_By_Front (Win_List_Aux, NWin1);
-                  Counter := Counter + 1;
-                  Debug (0, Sp (3) & Counter'Image & " "
-                         & "Generated gtkimage for "
-                         & NWin1.Name.all
-                         & " for " & TWdg.Name.all
-                         & " (" & TWdg.Widget_Type'Image & ")");
-               end if;
-
-            when GtkDataGridView  | GtkTreeGridView =>
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               if TWdg.Widget_Type = GtkDataGridView
-                 and then
-                   not TWdg.Has_Expander
-               then
-                  NWin0 := new Window_Properties (GtkListStore);
-                  NWin0.Name := new String'("GtkListstore"
-                                            & "_"
-                                            & Normalize_Name (TWdg)
-                                           );
-                  NWin0.Original_Name := new String'(TWdg.Name.all);
-                  NWin0.Associated_Widget := TWdg;
-                  Counter := Counter + 1;
-                  Debug (0, Sp (3) & Counter'Image & " "
-                         & "Generated gtkliststore for "
+                         & "Generated filechooserdialog for "
                          & NWin0.Name.all
-                         & " for " & Normalize_Name (TWdg)
+                         & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
-               else
-                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
-                  NWin0 := new Window_Properties (GtkTreeStore);
-                  NWin0.Name := new String'("GtkTreeStore"
-                                            & "_"
-                                            & Normalize_Name (TWdg)
-                                           );
-                  NWin0.Original_Name := new String'(TWdg.Name.all);
-                  NWin0.Associated_Widget := TWdg;
+
+                  Insert_Window_By_Front (Win_List_Aux, NWin1);
                   Counter := Counter + 1;
                   Debug (0, Sp (3) & Counter'Image & " "
-                         & "Generated gtktreestore for "
-                         & NWin0.Name.all
-                         & " for " & Normalize_Name (TWdg)
+                         & NWin1.Name.all
+                         & " for " & TWdg.Name.all
                          & " (" & TWdg.Widget_Type'Image & ")");
-               end if;
-               --  generate the filter model
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               NWin1 := new Window_Properties (GtkModelFilter);
-               NWin1.Name := new String'("GtkModelFilter"
-                                         & "_"
-                                         & Normalize_Name (TWdg)
-                                        );
-               NWin1.Original_Name := new String'(TWdg.Name.all);
-               NWin1.Associated_Widget := TWdg;
-               NWin1.Underlaying_Model := NWin0;
-               Counter := Counter + 1;
-               Debug (0, Sp (3) & Counter'Image & " "
-                      & "Generated gtkmodelfilter for "
-                      & NWin1.Name.all
-                      & " for " & NWin0.Name.all
-                      & " (" & TWdg.Widget_Type'Image & ")");
-               --  generate the sort model
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               NWin2 := new Window_Properties (GtkModelSort);
-               NWin2.Name := new String'("GtkModelSort"
-                                         & "_"
-                                         & Normalize_Name (TWdg)
-                                        );
-               NWin2.Original_Name := new String'(TWdg.Name.all);
-               NWin2.Associated_Widget := TWdg;
-               NWin2.Underlaying_Model := NWin1;
-               Counter := Counter + 1;
-               Debug (0, Sp (3) & Counter'Image & " "
-                      & "Generated gtkmodelsort for "
-                      & NWin2.Name.all
-                      & " for " & NWin1.Name.all
-                      & " (" & TWdg.Widget_Type'Image & ")");
 
-               --   grab the model (sort)
-               TWdg.Model := NWin2;
+               when GtkEntry | GtkComboTextBox =>
+                  if TWdg.Text_Buffer /= null
+                    and then TWdg.Text_Buffer.all /= ""
+                  then
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     NWin1 := new Window_Properties (GtkEntryBuffer);
+                     NWin1.Name := new String'("GtkEntryBuffer_"
+                                               & TWdg.Name.all);
+                     NWin1.Original_Name := New_String (TWdg.Name);
+                     NWin1.Associated_Widget := TWdg;
+                     TWdg.Buffer := NWin1;
+                     Insert_Window_By_Front (Win_List_Aux, NWin1);
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated entrybuffer for "
+                            & NWin1.Name.all
+                            & " for " & TWdg.Name.all
+                            & " (" & TWdg.Widget_Type'Image & ")");
+                  end if;
 
-               --  insert the objects
-               Insert_Window_By_Front (Win_List_Aux, NWin2);
-               Insert_Window_By_Front (Win_List_Aux, NWin1);
-               Insert_Window_By_Front (Win_List_Aux, NWin0);
+               when GtkListBox =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  NWin1 := new Window_Properties (GtkListStore);
+                  NWin1.Name := new String'("GtkListStore_"
+                                            & TWdg.Name.all);
+                  NWin1.Original_Name := New_String (TWdg.Name);
+                  NWin1.Associated_Widget := TWdg;
+                  TWdg.ListStore := NWin1;
+                  Insert_Window_By_Front (Win_List_Aux, NWin1);
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated liststore for "
+                         & NWin1.Name.all
+                         & " for " & TWdg.Name.all
+                         & " (" & TWdg.Widget_Type'Image & ")");
 
-            when GtkTabPage =>
-               Num_Aux_Widgets := Num_Aux_Widgets + 1;
-               declare
-                  Wdg1 : Widget_Pointer;
-                  Wdg0 : Widget_Pointer;
-               begin
-                  --  create the tab box
-                  Wdg0 := new Widget_Properties (GtkTabChild);
-                  Wdg0.Name := new String'(TWdg.Name.all & "_Box");
-                  Wdg0.Parent_Name := new String'(TWdg.Name.all);
+               when GtkButton | GtkRadioButton
+                  | GtkCheckButton | GtkToggleButton =>
+                  if TWdg.ImagePath /= null then
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     NWin1 := new Window_Properties (GtkImage);
+                     NWin1.Name := new String'("GtkImage_"
+                                               & TWdg.Name.all);
+                     NWin1.Original_Name := New_String (TWdg.Name);
+                     NWin1.Associated_Widget := TWdg;
+                     TWdg.Win_Image := NWin1;
+                     Insert_Window_By_Front (Win_List_Aux, NWin1);
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtkimage for "
+                            & NWin1.Name.all
+                            & " for " & TWdg.Name.all
+                            & " (" & TWdg.Widget_Type'Image & ")");
+                  end if;
 
-                  Insert_Widget_By_Tail (TWin, Wdg0);
+               when GtkMenuImageItem =>
+                  if TWdg.ImageMenu /= null then
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     NWin1 := new Window_Properties (GtkImage);
+                     NWin1.Name := new String'("GtkImage_"
+                                               & TWdg.Name.all);
+                     NWin1.Original_Name := New_String (TWdg.Name);
+                     NWin1.Associated_Widget := TWdg;
+                     TWdg.ImageMenuWin := NWin1;
+                     Insert_Window_By_Front (Win_List_Aux, NWin1);
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtkimage for "
+                            & NWin1.Name.all
+                            & " for " & TWdg.Name.all
+                            & " (" & TWdg.Widget_Type'Image & ")");
+                  end if;
 
-                  Debug (0, Sp (3) & "Generated tab box "
-                         & Wdg0.Name.all
-                         & " for " & TWdg.Name.all);
+               when GtkDataGridView  | GtkTreeGridView =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  if TWdg.Widget_Type = GtkDataGridView
+                    and then
+                      not TWdg.Has_Expander
+                  then
+                     NWin0 := new Window_Properties (GtkListStore);
+                     NWin0.Name := new String'("GtkListStore_"
+                                               & Normalize_Name (TWdg));
+                     NWin0.Original_Name := New_String (TWdg.Name);
+                     NWin0.Associated_Widget := TWdg;
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtkliststore for "
+                            & NWin0.Name.all
+                            & " for " & Normalize_Name (TWdg)
+                            & " (" & TWdg.Widget_Type'Image & ")");
+                  else
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     NWin0 := new Window_Properties (GtkTreeStore);
+                     NWin0.Name := new String'("GtkTreeStore_"
+                                               & Normalize_Name (TWdg));
+                     NWin0.Original_Name := New_String (TWdg.Name);
+                     NWin0.Associated_Widget := TWdg;
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated gtktreestore for "
+                            & NWin0.Name.all
+                            & " for " & Normalize_Name (TWdg)
+                            & " (" & TWdg.Widget_Type'Image & ")");
+                  end if;
+                  --  generate the filter model
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  NWin1 := new Window_Properties (GtkModelFilter);
+                  NWin1.Name := new String'("GtkModelFilter_"
+                                            & Normalize_Name (TWdg));
+                  NWin1.Original_Name := New_String (TWdg.Name);
+                  NWin1.Associated_Widget := TWdg;
+                  NWin1.Underlaying_Model := NWin0;
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkmodelfilter for "
+                         & NWin1.Name.all
+                         & " for " & NWin0.Name.all
+                         & " (" & TWdg.Widget_Type'Image & ")");
+                  --  generate the sort model
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  NWin2 := new Window_Properties (GtkModelSort);
+                  NWin2.Name := new String'("GtkModelSort_"
+                                            & Normalize_Name (TWdg));
+                  NWin2.Original_Name := New_String (TWdg.Name);
+                  NWin2.Associated_Widget := TWdg;
+                  NWin2.Underlaying_Model := NWin1;
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkmodelsort for "
+                         & NWin2.Name.all
+                         & " for " & NWin1.Name.all
+                         & " (" & TWdg.Widget_Type'Image & ")");
 
-                  --  create the label
-                  Wdg1 := new Widget_Properties (GtkLabel);
-                  Wdg1.Name := new String'(TWdg.Name.all & "_Label");
-                  Wdg1.Windows_Type :=
-                    new String'("System.Windows.Forms.Label");
-                  Wdg1.Parent_Name := new String'(Wdg0.Name.all);
-                  Wdg1.Text := new String'(TWdg.Text.all);
+                  --   grab the model (sort)
+                  TWdg.Model := NWin2;
 
-                  Insert_Widget_By_Tail (TWin, Wdg1);
+                  --  insert the objects
+                  Insert_Window_By_Front (Win_List_Aux, NWin2);
+                  Insert_Window_By_Front (Win_List_Aux, NWin1);
+                  Insert_Window_By_Front (Win_List_Aux, NWin0);
 
-                  TWdg.The_Label := Wdg1;
-                  Debug (0, Sp (3) & "Generated gtklabel for "
-                         & Wdg1.Name.all & " from "
-                         & TWdg.Name.all);
-
-                  --  create the button
-                  Wdg1 := new Widget_Properties (GtkButton);
-                  Wdg1.Name := new String'(TWdg.Name.all & "_Button");
-                  Wdg1.Parent_Name := new String'(Wdg0.Name.all);
-
-                  Insert_Widget_By_Tail (TWin, Wdg1);
-
-                  TWdg.The_Button := Wdg1;
-                  Debug (0, Sp (3) & "Generated gtkbutton for "
-                         & Wdg1.Name.all & " from "
-                         & TWdg.Name.all);
-               end;
-
-            when others => null;
+               when others => null;
             end case;
             TWdg := TWdg.Next;
          end loop;
@@ -499,20 +563,220 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Generate_Auxiliary_Windows;
 
+   -----------------------------------------------------------------------
+   procedure Generate_Auxiliary_Widgets;
+   procedure Generate_Auxiliary_Widgets is
+      Wdg0 : Widget_Pointer;
+      Wdg1 : Widget_Pointer;
+      Wdg2 : Widget_Pointer;
+      Wdg3 : Widget_Pointer;
+   begin
+      Debug (-1, "");
+      Debug (0, "Generating auxiliary widgets");
+
+      --  scrolled windows
+      Counter := 0;
+      TWin := Win_List;
+      while TWin /= null loop
+         TWdg := TWin.Widget_List;
+         while TWdg /= null loop
+            case TWdg.Widget_Type is
+               when GtkDataGridView  | GtkTreeGridView =>
+                  --  generate the scrolled window if necessary
+                  if TWdg.H_ScrollBar = Always or TWdg.H_ScrollBar = Automatic
+                    or TWdg.V_ScrollBar = Always or TWdg.V_ScrollBar = Automatic
+                  then
+                     Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                     Wdg0 := new Widget_Properties (GtkScrolledWindow);
+                     Wdg0.Name := new String'(TWdg.Name.all & "_ScrolledWindow");
+                     Wdg0.Parent_Name := New_String (TWdg.Parent_Name);
+                     Wdg0.Wdg_Parent  := TWdg.Wdg_Parent;
+                     Wdg0.Win_Parent  := TWdg.Win_Parent;
+                     TWdg.Wdg_Parent  := Wdg0;
+
+                     Insert_Widget_By_Tail (TWin, Wdg0);
+                     --  name may have changed
+                     TWdg.Parent_Name := New_String (Wdg0.Name);
+
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & "Generated scrolled window "
+                            & Wdg0.Name.all
+                            & " for " & TWdg.Name.all
+                            & " [" & TWdg.Widget_Type'Image & "]");
+                  end if;
+
+               when others => null;
+            end case;
+            TWdg := TWdg.Next;
+         end loop;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+
+      --  notebook tabpages
+      Counter := 0;
+      TWin := Win_List;
+      while TWin /= null loop
+         TWdg := TWin.Widget_List;
+         while TWdg /= null loop
+            case TWdg.Widget_Type is
+               when GtkTabPage =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  --  create the tab box
+                  Wdg0 := new Widget_Properties (GtkTabChild);
+                  Wdg0.Name := new String'(TWdg.Name.all & "_Box");
+                  Wdg0.Parent_Name := New_String (TWdg.Name);
+
+                  Insert_Widget_By_Tail (TWin, Wdg0);
+
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated tab box "
+                         & Wdg0.Name.all
+                         & " for " & TWdg.Name.all
+                         & " [" & TWdg.Widget_Type'Image & "]");
+
+                  --  create the label
+                  Wdg1 := new Widget_Properties (GtkLabel);
+                  Wdg1.Name := new String'(TWdg.Name.all & "_Label");
+                  Wdg1.Windows_Type := new String'("System.Windows.Forms.Label");
+                  Wdg1.Parent_Name := new String'(Wdg0.Name.all);
+                  Wdg1.Text := new String'(TWdg.Text.all);
+
+                  Insert_Widget_By_Tail (TWin, Wdg1);
+
+                  TWdg.The_Label := Wdg1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtklabel "
+                         & Wdg1.Name.all & " for "
+                         & Wdg0.Name.all
+                         & " [" & Wdg0.Widget_Type'Image & "]");
+
+                  --  create the button
+                  Wdg2 := new Widget_Properties (GtkButton);
+                  Wdg2.Name := new String'(TWdg.Name.all & "_Button");
+                  Wdg2.Parent_Name := new String'(Wdg0.Name.all);
+
+                  Insert_Widget_By_Tail (TWin, Wdg2);
+
+                  TWdg.The_Button := Wdg1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkbutton "
+                         & Wdg2.Name.all & " for "
+                         & Wdg0.Name.all
+                         & " [" & Wdg0.Widget_Type'Image & "]");
+
+                  --  Note: the signal for this button is included later
+
+                  --  create the image within the button
+                  Wdg3 := new Widget_Properties (GtkImage);
+                  Wdg3.Name := new String'("Tab_Img_" & TWdg.Name.all);
+                  Wdg3.Parent_Name := new String'(Wdg2.Name.all);
+                  Wdg3.Stock := True;
+                  Wdg3.Image := new String'("gtk-close");
+
+                  Insert_Widget_By_Tail (TWin, Wdg3);
+
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated stock image "
+                         & Wdg3.Name.all & " for "
+                         & Wdg2.Name.all
+                         & " [" & Wdg2.Widget_Type'Image & "]");
+
+                  TWdg.The_Button := Wdg1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkbutton "
+                         & Wdg2.Name.all & " for "
+                         & Wdg0.Name.all
+                         & " [" & Wdg0.Widget_Type'Image & "]");
+
+               when others => null;
+            end case;
+            TWdg := TWdg.Next;
+         end loop;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+
+      --  frames
+      Counter := 0;
+      TWin := Win_List;
+      while TWin /= null loop
+         TWdg := TWin.Widget_List;
+         while TWdg /= null loop
+            case TWdg.Widget_Type is
+               when GtkFrame =>
+                  Num_Aux_Widgets := Num_Aux_Widgets + 1;
+                  --  create the alignment
+                  Wdg0 := new Widget_Properties (GtkAlignment);
+                  Wdg0.Name := new String'(TWdg.Name.all & "_Alignment");
+                  Wdg0.Parent_Name := New_String (TWdg.Name);
+
+                  Insert_Widget_By_Tail (TWin, Wdg0);
+
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkalignment "
+                         & Wdg0.Name.all
+                         & " for " & TWdg.Name.all
+                         & " [" & TWdg.Widget_Type'Image & "]");
+
+                  --  create the gtkfixed
+                  Wdg1 := new Widget_Properties (GtkFixed);
+                  Wdg1.Name := new String'(TWdg.Name.all & "_Fixed");
+                  Wdg1.Parent_Name := new String'(Wdg0.Name.all);
+
+                  Insert_Widget_By_Tail (TWin, Wdg1);
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & "Generated gtkfixed "
+                         & Wdg1.Name.all
+                         & " for " & Wdg0.Name.all
+                         & " [" & Wdg0.Widget_Type'Image & "]");
+
+                  --  move the children of TWdg to Wdg1
+                  Wdg3 := TWin.Widget_List;
+                  while Wdg3 /= null loop
+                     if Wdg3 = Wdg0 then
+                        null;
+                     elsif Wdg3.Parent_Name /= null
+                       and then Wdg3.Parent_Name.all = TWdg.Name.all
+                     then
+                        Free (Wdg3.Parent_Name);
+                        Wdg3.Parent_Name := New_String (Wdg1.Name);
+                        Debug (0, Sp (3) & Counter'Image & " "
+                               & "Moved "
+                               & Wdg3.Name.all
+                               & " to parent " & Wdg1.Name.all
+                               & " [" & Wdg1.Widget_Type'Image & "]");
+                     end if;
+                     Wdg3 := Wdg3.Next;
+                  end loop;
+
+               when others => null;
+            end case;
+            TWdg := TWdg.Next;
+         end loop;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+   end Generate_Auxiliary_Widgets;
+
+   -----------------------------------------------------------------------
    procedure Move_Windows_To_Auxiliary_List;
    procedure Move_Windows_To_Auxiliary_List is
    begin
       Debug (-1, "");
       Debug (0, "Move windows to auxiliary list");
+      Counter := 0;
       TWin := Win_List;
       loop
          TWin := Extract_First_Window (Win_List);
          exit when TWin = null;
          Insert_Window_By_Front (Win_List_Aux, TWin);
-         Debug (0, Sp (3) & Counter'Image & " Moved " & TWin.Name.all);
+         Counter := Counter + 1;
+         Debug (0, Sp (3) & Counter'Image & " " & TWin.Name.all);
       end loop;
    end Move_Windows_To_Auxiliary_List;
 
+   -----------------------------------------------------------------------
    procedure Reordering_Windows_In_Separate_Lists;
    procedure Reordering_Windows_In_Separate_Lists is
    begin
@@ -527,11 +791,11 @@ function Adjust_To_Gtk return Integer is
          if TWin.Top_Level then
             Insert_Window_By_Order (NWin0, TWin);
             Debug (0, Sp (3) & Counter'Image & " "
-                   & "Inserting Top Level Window by order " & TWin.Name.all);
+                   & "Inserting Top-Level Window by order " & TWin.Name.all);
          else
             Insert_Window_By_Order (Win_List, TWin);
             Debug (0, Sp (3) & Counter'Image & " "
-                   & "Inserting not Top Level Window by order " & TWin.Name.all);
+                   & "Inserting no-Top-Level Window by order " & TWin.Name.all);
          end if;
       end loop;
       --  here win_list_aux is empty
@@ -540,11 +804,13 @@ function Adjust_To_Gtk return Integer is
       end if;
    end Reordering_Windows_In_Separate_Lists;
 
+   -----------------------------------------------------------------------
    procedure Set_Some_Properties_Of_Toolstripstatuslabel;
    procedure Set_Some_Properties_Of_Toolstripstatuslabel is
    begin
       Debug (-1, "");
       Debug (0, "Set some properties of toolstripstatuslabel");
+      Counter := 0;
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -560,8 +826,9 @@ function Adjust_To_Gtk return Integer is
                         TWdg.Location.From_Left :=
                           Integer'Max (0, TWdg.Location.From_Left) +
                           Temp.Location.From_Left;
-                        Debug (0,
-                               Sp (3) & "ToolStripStatusLabel "
+                        Counter := Counter + 1;
+                        Debug (0, Sp (3) & Counter'Image & " "
+                               & "ToolStripStatusLabel "
                                & TWdg.Name.all
                                & ": Location adjusted");
                      end if;
@@ -574,11 +841,13 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Set_Some_Properties_Of_Toolstripstatuslabel;
 
+   -----------------------------------------------------------------------
    procedure Reordering_Sort_Models;
    procedure Reordering_Sort_Models is
    begin
       Debug (-1, "");
       Debug (0, "Reordering Sort Models");
+      Counter := 0;
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkListStore or TWin.Window_Type = GtkTreeStore then
@@ -587,18 +856,22 @@ function Adjust_To_Gtk return Integer is
             if NWin0 /= null then
                Extract_Window (Win_List, NWin0);
                Insert_Window (Root => Win_List, After => TWin, TWin => NWin0);
-               Debug (0, NWin0.Name.all);
+               Counter := Counter + 1;
+               Debug (0, Sp (3) & Counter'Image & " "
+                      & NWin0.Name.all);
             end if;
          end if;
          TWin := Next_Window (Win_List, TWin);
       end loop;
    end Reordering_Sort_Models;
 
+   -----------------------------------------------------------------------
    procedure Reordering_Filter_Models;
    procedure Reordering_Filter_Models is
    begin
       Debug (-1, "");
       Debug (0, "Reordering Filter Models");
+      Counter := 0;
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkListStore or TWin.Window_Type = GtkTreeStore then
@@ -607,13 +880,16 @@ function Adjust_To_Gtk return Integer is
             if NWin0 /= null then
                Extract_Window (Win_List, NWin0);
                Insert_Window (Root => Win_List, After => TWin, TWin => NWin0);
-               Debug (0, NWin0.Name.all);
+               Counter := Counter + 1;
+               Debug (0, Sp (3) & Counter'Image & " "
+                      & NWin0.Name.all);
             end if;
          end if;
          TWin := Next_Window (Win_List, TWin);
       end loop;
    end Reordering_Filter_Models;
 
+   -----------------------------------------------------------------------
    procedure Set_Have_Windows_And_Widgets;
    procedure Set_Have_Windows_And_Widgets is
    begin
@@ -666,11 +942,13 @@ function Adjust_To_Gtk return Integer is
       Debug (0, Sp (3) & "FileChooserButtons" & Have.FileChooserButtons'Image);
    end Set_Have_Windows_And_Widgets;
 
+   -----------------------------------------------------------------------
    function Reparenting_Widgets_From_Parent_Name return Integer;
    function Reparenting_Widgets_From_Parent_Name return Integer is
    begin
       Debug (-1, "");
       Debug (0, "Reparenting widgets from parent name");
+      Counter := 0;
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
@@ -678,31 +956,45 @@ function Adjust_To_Gtk return Integer is
             while TWdg /= null loop
                if TWdg.Parent_Name /= null then
                   if TWdg.Parent_Name.all = "$this" then
-                     TWdg.WParent := TWin;
+                     TWdg.Win_Parent := TWin;
                      Free (TWdg.Parent_Name);
-                     TWdg.Parent_Name := new String'(TWdg.WParent.Name.all);
-                     Debug (0, Sp (3) & "Reparenting Widget " & TWdg.Name.all
-                            & " to Window " & TWdg.WParent.Name.all);
+                     TWdg.Parent_Name := new String'(TWdg.Win_Parent.Name.all);
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
+                            & TWdg.Name.all
+                            & " [" & TWdg.Widget_Type'Image & "]"
+                            & " reparented to Window "
+                            & TWdg.Win_Parent.Name.all
+                            & " [" & TWdg.Win_Parent.Window_Type'Image & "]");
                   else
                      TWdg0 := Find_Widget (TWin.Widget_List,
                                            TWdg.Parent_Name.all);
                      if TWdg0 = null then
-                        Debug (0, Sp (3) & ("Widget " & TWdg.Name.all
+                        Debug (0, Sp (3)
+                               & "WARNING: Widget " & TWdg.Name.all
+                               & " [" & TWdg.Widget_Type'Image & "]"
                                & " without parent, "
-                               & " tried " & TWdg.Parent_Name.all));
+                               & " tried " & TWdg.Parent_Name.all);
                         return -1;
                      end if;
-                     TWdg.GParent := TWdg0;
-                     Debug (0, Sp (3) & "Reparenting Widget "
+                     TWdg.Wdg_Parent := TWdg0;
+                     Counter := Counter + 1;
+                     Debug (0, Sp (3) & Counter'Image & " "
                             & TWdg.Name.all
-                            & " to widget "
-                            & TWdg.GParent.Name.all);
+                            & " [" & TWdg.Widget_Type'Image & "]"
+                            & " reparented to widget "
+                            & TWdg.Wdg_Parent.Name.all
+                            & " [" & TWdg.Wdg_Parent.Widget_Type'Image & "]");
                   end if;
                else
-                  TWdg.WParent := TWin;
+                  TWdg.Win_Parent := TWin;
                   TWdg.Parent_Name := new String'(TWin.Name.all);
-                  Debug (0, Sp (3) & "Reparenting Widget " & TWdg.Name.all
-                         & " to Window " & TWdg.WParent.Name.all);
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image & " "
+                         & TWdg.Name.all
+                         & " [" & TWdg.Widget_Type'Image & "]"
+                         & " reparented to window " & TWdg.Win_Parent.Name.all
+                         & " [" & TWdg.Win_Parent.Window_Type'Image & "]");
                end if;
                TWdg := TWdg.Next;
             end loop;
@@ -712,6 +1004,7 @@ function Adjust_To_Gtk return Integer is
       return 0;
    end Reparenting_Widgets_From_Parent_Name;
 
+   -----------------------------------------------------------------------
    procedure Set_Maxlength_For_Non_Editable;
    procedure Set_Maxlength_For_Non_Editable is
    begin
@@ -762,6 +1055,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Set_Maxlength_For_Non_Editable;
 
+   -----------------------------------------------------------------------
    procedure Recasting_Menus_Separator;
    procedure Recasting_Menus_Separator is
    begin
@@ -774,9 +1068,9 @@ function Adjust_To_Gtk return Integer is
             TWdg := TWin.Widget_List;
             while TWdg /= null loop
                if TWdg.Widget_Type = GtkSeparatorToolItem then
-                  if TWdg.GParent.Widget_Type = GtkMenuBar or else
-                    TWdg.GParent.Widget_Type = GtkMenuItem or else
-                    TWdg.GParent.Widget_Type = GtkMenuImageItem
+                  if TWdg.Wdg_Parent.Widget_Type = GtkMenuBar or else
+                    TWdg.Wdg_Parent.Widget_Type = GtkMenuItem or else
+                    TWdg.Wdg_Parent.Widget_Type = GtkMenuImageItem
                   then
                      Temp := new Widget_Properties (GtkSeparatorMenuItem);
                      Copy_Common_Attributes (From => TWdg, To => Temp);
@@ -796,6 +1090,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Recasting_Menus_Separator;
 
+   -----------------------------------------------------------------------
    procedure Setting_Maxtabindex;
    procedure Setting_Maxtabindex is
    begin
@@ -819,6 +1114,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Setting_Maxtabindex;
 
+   -----------------------------------------------------------------------
    procedure Processing_Tabindex_And_Tabstop;
    procedure Processing_Tabindex_And_Tabstop is
    begin
@@ -869,6 +1165,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Processing_Tabindex_And_Tabstop;
 
+   -----------------------------------------------------------------------
    procedure Processing_Focus_Handler;
    procedure Processing_Focus_Handler is
    begin
@@ -894,9 +1191,20 @@ function Adjust_To_Gtk return Integer is
                                                      & "_Leave");
                            B := Insert_Signal (TWdg, TS);
                            if B then
-                              Debug (0, Sp (3) & "Created synthetic Signal "
+                              Debug (0, Sp (3) & "Created Synthetic Signal "
+                                     & ".leave"
+                                     & " for widget "
                                      & TWdg.Name.all
-                                     & ".leave");
+                                     & " [" & TWdg.Widget_Type'Image & "]");
+                           else
+                              Debug (0, "Warning"
+                                     & ": repeated handler " & TS.Handler.all
+                                     & ": No Glade, No Ada will be generated "
+                                     & "for this signal");
+                              Free (TS.Name);
+                              Free (TS.Handler);
+                              Free (TS.GtkName);
+                              Free (TS);
                            end if;
                         end if;
                      when others => null;
@@ -909,6 +1217,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Processing_Focus_Handler;
 
+   -----------------------------------------------------------------------
    procedure Selecting_The_Has_Focus_Widget;
    procedure Selecting_The_Has_Focus_Widget is
    begin
@@ -947,6 +1256,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Selecting_The_Has_Focus_Widget;
 
+   -----------------------------------------------------------------------
    procedure Setting_The_Focus_Chain;
    procedure Setting_The_Focus_Chain is
    begin
@@ -983,6 +1293,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Setting_The_Focus_Chain;
 
+   -----------------------------------------------------------------------
    procedure Inheritable_Attributes;
    procedure Inheritable_Attributes is
    begin
@@ -997,6 +1308,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Inheritable_Attributes;
 
+   -----------------------------------------------------------------------
    procedure Processing_Labels_With_Aspect_Frame;
    procedure Processing_Labels_With_Aspect_Frame is
    begin
@@ -1011,19 +1323,18 @@ function Adjust_To_Gtk return Integer is
                then
                   TWdg0 := new Widget_Properties (GtkAspectFrame);
                   TWdg0.Frame_Shadow := In_Shadow;
-                  TWdg0.Name := new String'(TWdg.Name.all);
-                  TWdg0.Parent_Name := new String'(TWdg.Name.all);
-                  TWdg0.GParent := TWdg.GParent;
-                  TWdg0.WParent := TWin;
-                  TWdg.GParent  := TWdg0;
-                  TWdg0.Size    := TWdg.Size;
-                  TWdg0.Location := TWdg.Location;
+                  TWdg0.Name := new String'(TWdg.Name.all & "_AspectFrame");
+                  TWdg0.Parent_Name  := new String'(TWdg.Name.all);
+                  TWdg0.Wdg_Parent   := TWdg.Wdg_Parent;
+                  TWdg.Wdg_Parent    := TWdg0;
+                  TWdg0.Size         := TWdg.Size;
+                  TWdg0.Location     := TWdg.Location;
                   TWdg0.Child_Number := TWdg.Child_Number;
-                  TWdg.Size     := (-1, -1);
+                  TWdg.Size          := (-1, -1);
 
                   Insert_Widget_By_Tail (TWin, TWdg0);
 
-                  Debug (0, Sp (3) & "Creating AspectFrame for label "
+                  Debug (0, Sp (3) & "Created widget AspectFrame for label "
                          & TWdg.Name.all);
                end if;
                TWdg := TWdg.Next;
@@ -1033,6 +1344,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Processing_Labels_With_Aspect_Frame;
 
+   -----------------------------------------------------------------------
    procedure Preparing_Action_Area;
    procedure Preparing_Action_Area is
    begin
@@ -1049,7 +1361,9 @@ function Adjust_To_Gtk return Integer is
                elsif TWin.Action_Buttons (Cancel_Response) /= null then
                   From_Top := TWin.Action_Buttons (Cancel_Response).Location.From_Top;
                else
-                  Debug (0, "OK and Cancel Buttons not found for action area, exiting");
+                  Debug (0, Sp (3)
+                         & "OK and Cancel Buttons not found "
+                         & "for action area, exiting");
                   exit;
                end if;
                TWdg := TWin.Widget_List;
@@ -1061,7 +1375,8 @@ function Adjust_To_Gtk return Integer is
                            if TWdg.Dialog_Result = None_Response then
                               TWdg.Dialog_Result := Delete_Response;
                            end if;
-                           Debug (0, "Delete button included in action area");
+                           Debug (0, Sp (3)
+                                  & "Delete button included in action area");
                            exit;
                         end if;
                      end if;
@@ -1074,6 +1389,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Preparing_Action_Area;
 
+   -----------------------------------------------------------------------
    procedure Preparing_Dialogs;
    procedure Preparing_Dialogs is
       WP_Internal_Child_Vbox        : Widget_Pointer;
@@ -1090,52 +1406,60 @@ function Adjust_To_Gtk return Integer is
          if TWin.Window_Type = GtkWindow and then TWin.Is_Dialog then
             WP_Internal_Child_Vbox := new Widget_Properties
               (Widget_Type => Internal_Child_VBox);
-            WP_Internal_Child_Vbox.WParent := TWin;
-            WP_Internal_Child_Vbox.GParent := null;
-            WP_Internal_Child_Vbox.Parent_Name := TWin.Name;
+            WP_Internal_Child_Vbox.Wdg_Parent := null;
+            WP_Internal_Child_Vbox.Parent_Name := New_String (TWin.Name);
             WP_Internal_Child_Vbox.Orientation := Vertical;
             WP_Internal_Child_Vbox.Spacing := 2;
             WP_Internal_Child_Vbox.Visible := False;
-            --  WP_Internal_Child_Vbox.Name := new String'("Internal Vbox");
+            WP_Internal_Child_Vbox.Name := new String'("WP_Internal_Child_Vbox");
+            Debug (0, Sp (3) & "Created widget "
+                   & WP_Internal_Child_Vbox.Widget_Type'Image);
 
             WP_GtkBox := new Widget_Properties (GtkBox);
-            WP_GtkBox.WParent := TWin;
-            WP_GtkBox.GParent := WP_Internal_Child_Vbox;
-            WP_GtkBox.Parent_Name := WP_Internal_Child_Vbox.Name;
+            WP_GtkBox.Wdg_Parent := WP_Internal_Child_Vbox;
+            WP_GtkBox.Parent_Name := New_String (WP_Internal_Child_Vbox.Name);
             WP_GtkBox.Orientation := Vertical;
             WP_GtkBox.Spacing := 2;
             WP_GtkBox.Visible := False;
-            --  WP_GtkBox.Name := new String'("Internal Gtkbox");
+            WP_GtkBox.Name := new String'("WP_GtkBox");
+            Debug (0, Sp (3) & "Created widget "
+                   & WP_GtkBox.Widget_Type'Image);
 
             WP_Internal_Child_Action_Area :=
               new Widget_Properties (Internal_Child_Action_Area);
-            WP_Internal_Child_Action_Area.WParent := TWin;
-            WP_Internal_Child_Action_Area.GParent := WP_GtkBox;
-            WP_Internal_Child_Action_Area.Parent_Name := WP_GtkBox.Name;
-            --  WP_Internal_Child_Action_Area.Name :=
-            --    new String'("Internal_Child_Action_Area");
+            WP_Internal_Child_Action_Area.Wdg_Parent := WP_GtkBox;
+            WP_Internal_Child_Action_Area.Parent_Name :=
+              New_String (WP_GtkBox.Name);
+            WP_Internal_Child_Action_Area.Name :=
+              new String'("WP_Internal_Child_Action_Area");
+            Debug (0, Sp (3) & "Created widget "
+                   & WP_Internal_Child_Action_Area.Widget_Type'Image);
 
             WP_GtkButtonBox := new Widget_Properties (GtkButtonBox);
-            WP_GtkButtonBox.WParent := TWin;
-            WP_GtkButtonBox.GParent := WP_Internal_Child_Action_Area;
-            WP_GtkButtonBox.Parent_Name := WP_Internal_Child_Action_Area.Name;
+            WP_GtkButtonBox.Wdg_Parent := WP_Internal_Child_Action_Area;
+            WP_GtkButtonBox.Parent_Name :=
+              New_String (WP_Internal_Child_Action_Area.Name);
             WP_GtkButtonBox.Layout_Style := Spread;
             WP_GtkButtonBox.Orientation := Vertical;
             WP_GtkButtonBox.Spacing := 0;
             WP_GtkButtonBox.Visible := False;
-            --  WP_GtkButtonBox.Name := new String'("Internal GtkButtonbox");
+            WP_GtkButtonBox.Name := new String'("WP_GtkButtonBox");
+            Debug (0, Sp (3) & "Created widget "
+                   & WP_GtkButtonBox.Widget_Type'Image);
 
             WP_GtkFixed := new Widget_Properties (GtkFixed);
-            WP_GtkFixed.Name := new String'(TWin.Name.all);
-            WP_GtkFixed.WParent := TWin;
-            WP_GtkFixed.GParent := WP_GtkBox;
+            WP_GtkFixed.Name := new String'(TWin.Name.all & "_Fixed");
+            WP_GtkFixed.Wdg_Parent := WP_GtkBox;
+            WP_GtkFixed.Parent_Name := New_String (WP_GtkBox.Name);
             WP_GtkFixed.Visible := True;
             WP_GtkFixed.Margins := TWin.Margins;
+            Debug (0, Sp (3) & "Created widget "
+                   & WP_GtkFixed.Widget_Type'Image);
 
             TWdg := TWin.Widget_List;
             while TWdg /= null loop
-               if TWdg.GParent = null then
-                  TWdg.GParent := WP_GtkFixed;
+               if TWdg.Wdg_Parent = null then
+                  TWdg.Wdg_Parent := WP_GtkFixed;
                   Free (TWdg.Parent_Name);
                   TWdg.Parent_Name := new String'(WP_GtkFixed.Name.all);
                end if;
@@ -1143,34 +1467,41 @@ function Adjust_To_Gtk return Integer is
             end loop;
 
             WP_Action_Widgets := new Widget_Properties (Action_Widgets);
-            WP_Action_Widgets.WParent := TWin;
-            WP_Action_Widgets.GParent := null;
-            WP_Action_Widgets.Parent_Name := TWin.Name;
-            WP_Internal_Child_Vbox.GParent := null;
+            WP_Action_Widgets.Win_Parent := TWin;
+            WP_Action_Widgets.Wdg_Parent := null;
+            WP_Action_Widgets.Parent_Name := New_String (TWin.Name);
+            WP_Action_Widgets.Name := new String'("WP_Action_Widgets");
+            Debug (0, Sp (3) & "Created widget "
+                   & WP_Internal_Child_Vbox.Widget_Type'Image);
 
             if TWin.Action_Buttons (Delete_Response) /= null then
                Unlink_Widget (TWin, TWin.Action_Buttons (Delete_Response));
-               TWin.Action_Buttons (Delete_Response).GParent := WP_GtkButtonBox;
+               TWin.Action_Buttons (Delete_Response).Wdg_Parent := WP_GtkButtonBox;
                Insert_Widget_By_Tail (TWin, TWin.Action_Buttons (Delete_Response));
+               Debug (0, Sp (3) & "Attached Delete Button to action Area");
             end if;
 
             if TWin.Action_Buttons (Cancel_Response) /= null then
                Unlink_Widget (TWin, TWin.Action_Buttons (Cancel_Response));
-               TWin.Action_Buttons (Cancel_Response).GParent := WP_GtkButtonBox;
+               TWin.Action_Buttons (Cancel_Response).Wdg_Parent := WP_GtkButtonBox;
                Insert_Widget_By_Tail (TWin, TWin.Action_Buttons (Cancel_Response));
+               Debug (0, Sp (3) & "Attached Cancel Button to action Area");
             end if;
 
             if TWin.Action_Buttons (OK_Response) /= null then
                Unlink_Widget (TWin, TWin.Action_Buttons (OK_Response));
-               TWin.Action_Buttons (OK_Response).GParent := WP_GtkButtonBox;
+               TWin.Action_Buttons (OK_Response).Wdg_Parent := WP_GtkButtonBox;
                Insert_Widget_By_Tail (TWin, TWin.Action_Buttons (OK_Response));
+               Debug (0, Sp (3) & "Attached OK Button to action Area");
             end if;
 
             TWin.Num_Children := 0;
             Insert_Widget_By_Tail (TWin, WP_Internal_Child_Vbox);
             Insert_Widget_By_Tail (TWin, WP_GtkBox);
+            Free (WP_GtkBox.Name);
             Insert_Widget_By_Tail (TWin, WP_Internal_Child_Action_Area);
             Insert_Widget_By_Tail (TWin, WP_GtkButtonBox);
+            Free (WP_GtkButtonBox.Name);
             Insert_Widget_By_Tail (TWin, WP_GtkFixed);
             Insert_Widget_By_Tail (TWin, WP_Action_Widgets);
 
@@ -1183,6 +1514,7 @@ function Adjust_To_Gtk return Integer is
    --  until now, each gtkwindow had a linear widget list --
    ---------------------------------------------------------
 
+   -----------------------------------------------------------------------
    procedure Relinking_To_The_Correct_Parent_List;
    procedure Relinking_To_The_Correct_Parent_List is
    begin
@@ -1201,6 +1533,7 @@ function Adjust_To_Gtk return Integer is
    --  now each gtkwindow is a tree with its widgets and so on --
    --------------------------------------------------------------
 
+   -----------------------------------------------------------------------
    procedure Removing_Gtkbox_With_Only_One_Child_Container;
    procedure Removing_Gtkbox_With_Only_One_Child_Container is
    begin
@@ -1215,6 +1548,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Removing_Gtkbox_With_Only_One_Child_Container;
 
+   -----------------------------------------------------------------------
    procedure Generating_Format_Columns;
    procedure Generating_Format_Columns is
    begin
@@ -1227,48 +1561,59 @@ function Adjust_To_Gtk return Integer is
          end if;
          TWin := Next_Window (Win_List, TWin);
       end loop;
+   end Generating_Format_Columns;
 
-      --  compute num_elements for stores. Must be after adjust format columns
+   procedure Compute_Num_Element_For_Stores;
+   procedure Compute_Num_Element_For_Stores is
+   begin
+      --  Must be after adjust format columns
       Debug (-1, "");
-      Debug (0, "Compute number of elements for models");
+      Debug (0, "Compute number of elements for Stores");
       TWin := Win_List;
       while TWin /= null loop
          case TWin.Window_Type is
-         when GtkListStore | GtkTreeStore =>
-            TWdg := TWin.Associated_Widget;
-            NCol := TWdg.Child_List;
-            while NCol /= null loop
-               TWin.Num_Elements := TWin.Num_Elements + 1;
-               case NCol.Widget_Type is
-                  when DataGridViewCheckBoxColumn =>
-                     TWin.Num_Elements := TWin.Num_Elements + 1;
-                     if not NCol.ReadOnly then
-                        TWin.Num_Elements := TWin.Num_Elements + 1;
-                     end if;
-                  when ExpandableColumn | DataGridViewTextBoxColumn =>
-                     if NCol.Text_Col_Properties.Fg_Color_Name_Column /= -1
-                     then
-                        TWin.Num_Elements := TWin.Num_Elements + 1;
-                     end if;
-                  when others => null;
-               end case;
-               NCol := NCol.Next;
-            end loop;
-            if DGVS /= null then
-               if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+            when GtkListStore | GtkTreeStore =>
+               TWdg := TWin.Associated_Widget;
+               NCol := TWdg.Child_List;
+               while NCol /= null loop
                   TWin.Num_Elements := TWin.Num_Elements + 1;
+                  case NCol.Widget_Type is
+                     when DataGridViewCheckBoxColumn =>
+                        TWin.Num_Elements := TWin.Num_Elements + 1;
+                        if not NCol.ReadOnly then
+                           TWin.Num_Elements := TWin.Num_Elements + 1;
+                        end if;
+                     when ExpandableColumn | DataGridViewTextBoxColumn =>
+                        if NCol.Text_Col_Properties.Fg_Color_Name_Column /= -1
+                        then
+                           TWin.Num_Elements := TWin.Num_Elements + 1;
+                        end if;
+                     when others => null;
+                  end case;
+                  NCol := NCol.Next;
+               end loop;
+               if DGVS /= null then
+                  if TWdg.AlternatingRowsDefaultCellStyle in DGVS'Range then
+                     TWin.Num_Elements := TWin.Num_Elements + 1;
+                  end if;
                end if;
-            end if;
-         when GtkModelFilter =>
-            TWin.Num_Elements := TWin.Underlaying_Model.Num_Elements;
-         when GtkModelSort =>
-            TWin.Num_Elements := TWin.Underlaying_Model.Num_Elements;
-         when others => null;
+               Debug (0, Sp (3) & TWin.Name.all
+                      & " =>" & TWin.Num_Elements'Image);
+            when GtkModelFilter =>
+               TWin.Num_Elements := TWin.Underlaying_Model.Num_Elements;
+               Debug (0, Sp (3) & TWin.Name.all
+                      & " =>" & TWin.Num_Elements'Image);
+            when GtkModelSort =>
+               TWin.Num_Elements := TWin.Underlaying_Model.Num_Elements;
+               Debug (0, Sp (3) & TWin.Name.all
+                      & " =>" & TWin.Num_Elements'Image);
+            when others => null;
          end case;
          TWin := Next_Window (Win_List, TWin);
       end loop;
-   end Generating_Format_Columns;
+   end Compute_Num_Element_For_Stores;
 
+   -----------------------------------------------------------------------
    procedure Recasting_Menus_Gtkmenuimageitem_With_No_Image;
    procedure Recasting_Menus_Gtkmenuimageitem_With_No_Image is
    begin
@@ -1284,6 +1629,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Recasting_Menus_Gtkmenuimageitem_With_No_Image;
 
+   -----------------------------------------------------------------------
    procedure Use_Sort_For_Datagrids_And_Treegrids;
    procedure Use_Sort_For_Datagrids_And_Treegrids is
    begin
@@ -1298,6 +1644,7 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Use_Sort_For_Datagrids_And_Treegrids;
 
+   -----------------------------------------------------------------------
    procedure Renumber_All;
    procedure Renumber_All is
    begin
@@ -1312,10 +1659,10 @@ function Adjust_To_Gtk return Integer is
                TWdg.Child_Number := TWin.Num_Children;
                if TWdg.Name /= null then
                   Debug (0, Sp (3) & TWdg.Name.all
-                         & " renumbered to" & TWdg.Child_Number'Image);
+                         & " renumbered to child num." & TWdg.Child_Number'Image);
                else
                   Debug (0, TWdg.Widget_Type'Image
-                         & " renumbered to" & TWdg.Child_Number'Image);
+                         & " renumbered to child num." & TWdg.Child_Number'Image);
                end if;
                TWin.Num_Children := TWin.Num_Children + 1;
                Visit_Renumber_Children (TWin.Widget_List);
@@ -1326,82 +1673,112 @@ function Adjust_To_Gtk return Integer is
       end loop;
    end Renumber_All;
 
-begin
-   if Win_List = null then
-      return -1; --  no windows
-   end if;
-   Debug (-1, "");
-   Debug (-1, "Adjusting to GTK");
+   -----------------------------------------------------------------------
+   procedure Insert_Close_Button_Signal_For_Gtknotebooks;
+   procedure Insert_Close_Button_Signal_For_Gtknotebooks is
+   begin
+      Debug (-1, "");
+      Debug (0, "Insert_Close_Button_Signal_For_Gtknotebooks");
 
-   -------------------------------------------------------
-   --  Initially each widget list of a window is plain  --
-   -------------------------------------------------------
+      Counter := 0;
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            Visit_Widget_For_Close_Button_Signal_For_Gtknotebooks (TWdg);
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
 
-   Generate_Auxiliary_Windows;
-
-   Move_Windows_To_Auxiliary_List;
-
-   Reordering_Windows_In_Separate_Lists;
+   end Insert_Close_Button_Signal_For_Gtknotebooks;
 
 
-   Join_Roots (Win_List, NWin0);
-   Debug (0, "Joined both windows list");
+   -----------------------------------------------------------------------
+   function Adjust_To_Gtk return Integer is
+   begin
+      if Win_List = null then
+         return -1; --  no windows
+      end if;
+      Debug (-1, "");
+      Debug (-1, "Adjusting to GTK");
 
-   Set_Some_Properties_Of_Toolstripstatuslabel;
+      -------------------------------------------------------
+      --  Initially each widget list of a window is plain  --
+      -------------------------------------------------------
 
-   Reordering_Sort_Models;
+      Generate_Auxiliary_Windows;
 
-   Reordering_Filter_Models;
+      Generate_Auxiliary_Widgets;
 
-   Set_Have_Windows_And_Widgets;
+      Move_Windows_To_Auxiliary_List;
 
-   Result := Reparenting_Widgets_From_Parent_Name;
-   if Result < 0 then
-      return Result;
-   end if;
+      Reordering_Windows_In_Separate_Lists;
 
-   Set_Maxlength_For_Non_Editable;
 
-   Recasting_Menus_Separator;
+      Join_Roots (Win_List, NWin0);
+      Debug (0, "Joined both windows list");
 
-   Setting_Maxtabindex;
+      Set_Some_Properties_Of_Toolstripstatuslabel;
 
-   Processing_Tabindex_And_Tabstop;
+      Reordering_Sort_Models;
 
-   Processing_Focus_Handler;
+      Reordering_Filter_Models;
 
-   Selecting_The_Has_Focus_Widget;
+      Set_Have_Windows_And_Widgets;
 
-   Setting_The_Focus_Chain;
+      Result := Reparenting_Widgets_From_Parent_Name;
+      if Result < 0 then
+         return Result;
+      end if;
 
-   Inheritable_Attributes;
+      Set_Maxlength_For_Non_Editable;
 
-   Processing_Labels_With_Aspect_Frame;
+      Recasting_Menus_Separator;
 
-   Preparing_Action_Area;
+      Setting_Maxtabindex;
 
-   Preparing_Dialogs;
+      Processing_Tabindex_And_Tabstop;
 
-   ---------------------------------------------------------
-   --  until now, each gtkwindow had a linear widget list --
-   ---------------------------------------------------------
+      Processing_Focus_Handler;
 
-   Relinking_To_The_Correct_Parent_List;
+      Selecting_The_Has_Focus_Widget;
 
-   --------------------------------------------------------------
-   --  now each gtkwindow is a tree with its widgets and so on --
-   --------------------------------------------------------------
+      Setting_The_Focus_Chain;
 
-   Removing_Gtkbox_With_Only_One_Child_Container;
+      Inheritable_Attributes;
 
-   Generating_Format_Columns;
+      Processing_Labels_With_Aspect_Frame;
 
-   Recasting_Menus_Gtkmenuimageitem_With_No_Image;
+      Preparing_Action_Area;
 
-   Use_Sort_For_Datagrids_And_Treegrids;
+      Preparing_Dialogs;
 
-   Renumber_All;
+      ---------------------------------------------------------
+      --  until now, each gtkwindow had a linear widget list --
+      ---------------------------------------------------------
 
-   Debug (-1, "End of Adjusting to GTK");
-   return 0;
-end Adjust_To_Gtk;
+      Relinking_To_The_Correct_Parent_List;
+
+      --------------------------------------------------------------
+      --  now each gtkwindow is a tree with its widgets and so on --
+      --------------------------------------------------------------
+
+      Removing_Gtkbox_With_Only_One_Child_Container;
+
+      Generating_Format_Columns;
+
+      Compute_Num_Element_For_Stores;
+
+      Recasting_Menus_Gtkmenuimageitem_With_No_Image;
+
+      Use_Sort_For_Datagrids_And_Treegrids;
+
+      Renumber_All;
+
+      Insert_Close_Button_Signal_For_Gtknotebooks;
+
+      Debug (-1, "End of Adjusting to GTK");
+      return 0;
+   end Adjust_To_Gtk;
+
+end W2gtk_Adjust_To_Gtk_Pkg;

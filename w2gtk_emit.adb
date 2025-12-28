@@ -54,29 +54,6 @@ package body W2gtk_Emit is
       Emit_Line ("</interface>");
    end Emit_GtkTrailer;
 
-
-   --  procedure Emit_Alignment (TWdg : Widget_Pointer; Id : Integer) is
-   --  begin
-   --     Emit_Child (TWdg, Id, False);
-   --     Emit_Object (TWdg, Id + 2, "GtkAlignment",
-   --                  "Alignment_" & TWdg.Name.all);
-   --     Emit_Name (TWdg, Id + 4);
-   --     Emit_WH_Request (TWdg, Id + 4);
-   --     Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-   --     Emit_Line (Sp (Id + 4)
-   --                & "<property name=""left-padding"">12</property>");
-   --
-   --     Child := TWdg.Child_List;
-   --     while Child /= null loop
-   --
-   --
-   --
-   --
-   --
-   --  end Emit_Alignment;
-   --
-
-
    -----------------------------------------------------------------------
    --  Emit_Store
    -----------------------------------------------------------------------
@@ -364,22 +341,17 @@ package body W2gtk_Emit is
       begin
          Emit_Line (Sp (Id + 6) & "<child internal-child=""action_area"">");
          Emit_Object (null, Id + 8, "GtkButtonBox", "");
-         Emit_Line (Sp (Id + 10) & "<property name=""can-focus"">False"
+         Emit_Line (Sp (Id + 10)
+                    & "<property name=""can-focus"">False"
                     & "</property>");
-         Emit_Line (Sp (Id + 10) & "<property name=""layout-style"">end"
+         Emit_Line (Sp (Id + 10)
+                    & "<property name=""layout-style"">end"
                     & "</property>");
-         Emit_Line (Sp (Id + 10) & "<child>");
-         Emit_Line (Sp (Id + 12) & "<placeholder/>");
-         Emit_Line (Sp (Id + 10) & "</child>");
-         Emit_Line (Sp (Id + 10) & "<child>");
-         Emit_Line (Sp (Id + 12) & "<placeholder/>");
-         Emit_Line (Sp (Id + 10) & "</child>");
+         Emit_Placeholder (Id + 10);
+         Emit_Placeholder (Id + 10);
          Emit_Line (Sp (Id + 8) & "</object>");
-         Emit_Line (Sp (Id + 8) & "<packing>");
-         Emit_Line (Sp (Id + 10) & "<property name=""expand"">False</property>");
-         Emit_Line (Sp (Id + 10) & "<property name=""fill"">False</property>");
-         Emit_Line (Sp (Id + 10) & "<property name=""position"">0</property>");
-         Emit_Line (Sp (Id + 8) & "</packing>");
+
+         Emit_Packing (Id + 8, 0, False, False, 0, True);
          Emit_Line (Sp (Id + 6) & "</child>");
       end Emit_Internal_Action_Area;
 
@@ -396,9 +368,7 @@ package body W2gtk_Emit is
 
          Emit_Internal_Action_Area;
 
-         Emit_Line (Sp (Id + 6) & "<child>");
-         Emit_Line (Sp (Id + 8) & "<placeholder/>");
-         Emit_Line (Sp (Id + 6) & "</child>");
+         Emit_Placeholder (Id + 6);
          Emit_Line (Sp (Id + 4) & "</object>");
          Emit_Line (Sp (Id + 2) & "</child>");
       end Emit_Internal_Vbox;
@@ -490,10 +460,10 @@ package body W2gtk_Emit is
    begin
       if TWin.Name /= null and then TWin.Name.all /= "" then
          Emit_Object (null, Id, "GtkDialog", TWin.Name.all);
-         Emit_Name (TWin, Id + 2);
       else
          Emit_Object (null, Id, "GtkDialog", "");
       end if;
+      Emit_Name (TWin, Id + 2);
       Emit_Property (Id + 2, "can-focus", False);
       if TWin.Title /= null and then TWin.Title.all /= "" then
          Emit_Line (Sp (Id + 2) & "<property name=""title"""
@@ -519,7 +489,7 @@ package body W2gtk_Emit is
       end if;
       Emit_Property (Id + 2, "type-hint", "dialog");
       Emit_Property (Id + 2, "gravity", "center");
-      Emit_GtkSignal (TWin, Id + 2);
+      Emit_GtkSignals (TWin, Id + 2);
 
       if TWin.Action_Buttons (OK_Response) /= null then
          Num_Buttons := Num_Buttons + 1;
@@ -552,9 +522,7 @@ package body W2gtk_Emit is
       else
          Emit_Object (null, Id, "GtkWindow", "");
       end if;
-      if TWin.Name /= null and then TWin.Name.all /= "" then
-         Emit_Name (TWin, Id + 2);
-      end if;
+      Emit_Name (TWin, Id + 2);
       if TWin.ToolTip /= null and then TWin.ToolTip.all /= "" then
          Emit_Line (Sp (Id + 2) & "<property name=""tooltip-text2"" "
                     & "translatable"
@@ -582,7 +550,7 @@ package body W2gtk_Emit is
       if TWin.Client_Size.Vert /= -1 then
          Emit_Property (Id + 2, "default-height", TWin.Client_Size.Vert);
       end if;
-      Emit_GtkSignal (TWin, Id + 2);
+      Emit_GtkSignals (TWin, Id + 2);
 
       while Child /= null loop
          Emit_Widget_Child (Child, Id + 2);

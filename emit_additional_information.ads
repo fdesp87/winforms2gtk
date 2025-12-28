@@ -14,15 +14,9 @@
 -- with this program; see the file COPYING3.                                --
 -- If not, see <http://www.gnu.org/licenses/>.                              --
 ------------------------------------------------------------------------------
-with W2gtk_Decls;     use W2gtk_Decls;
 
-package Emit_Internals is
+package Emit_Additional_Information is
 
-   procedure Emit_Internal_Child_VBox (Me : Widget_Pointer;
-                                       Id : Integer);
-   procedure Emit_Internal_Child_Action_Area (Me : Widget_Pointer;
-                                              Id : Integer);
-   procedure Emit_Action_Widgets (Me : Window_Pointer;
-                                  Id : Integer);
+   procedure Run;
 
-end Emit_Internals;
+end Emit_Additional_Information;

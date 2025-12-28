@@ -1,0 +1,25 @@
+
+containers
+	GtkFrame  REPASAR BIEN
+		GtkLabel
+		Alignment
+	Listbox
+		Selection
+	Toolbar
+		GtkSeparatorToolItem
+		GtkLabel
+		GtkComboBoxText
+		GtkButton
+		GtkEntry
+		GtkToolItem
+
+controls
+	Button
+		Label
+	GtkComboTextBox
+
+
+Resouces
+	tranparency => opacity
+dock => expand
+		

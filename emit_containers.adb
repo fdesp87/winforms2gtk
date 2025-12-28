@@ -37,7 +37,7 @@ package body Emit_Containers is
             null;
 
          when Action_Widgets =>
-            Emit_Action_Widgets (Child.WParent, Id);
+            Emit_Action_Widgets (Child.Win_Parent, Id);
 
          when BackgroundWorker =>
             null;
@@ -45,22 +45,21 @@ package body Emit_Containers is
          when BindingNavigator =>
             Emit_GtkToolBar (Child, Id);
 
+         when GtkAlignment =>
+            Emit_GtkAlignment (Child, Id);
+
          when GtkAspectFrame =>
             Emit_GtkAspectFrame (Child, Id);
 
          when GtkButton =>
             if From_ButtonBox then
                Emit_GtkButton (Child, Id, "GtkButton",
-                               Position    => Child.Child_Number,
                                Has_Default => Child.Dialog_Result = OK_Response,
-                               XY          => False,
-                               Homog       => False);
+                               XY          => False);
             else
                Emit_GtkButton (Child, Id, "GtkButton",
-                               Position    => -1,
                                Has_Default => Child.Dialog_Result = OK_Response,
-                               XY          => True,
-                               Homog       => False);
+                               XY          => True);
             end if;
 
          when GtkBox =>
@@ -83,13 +82,13 @@ package body Emit_Containers is
             null;
 
          when GtkComboTextBox =>
-            Emit_GtkComboTextBox (Child, Id,
-                                  Packing => True);
+            Emit_GtkComboTextBox (Child, Id);
+
          when GtkColorButton =>
             Emit_GtkColorButton (Child, Id);
 
          when GtkDataGridView =>
-            Emit_GtkDataGridView (Child, Id, 0);
+            Emit_GtkDataGridView (Child, Id);
 
          when GtkEntry =>
             Emit_GtkEntry (Child, Id);
@@ -132,13 +131,21 @@ package body Emit_Containers is
          when GtkNoteBook =>
             Emit_GtkNoteBook (Child, Id);
 
+         when GtkTabChild =>
+            Emit_GtkTabChild (Child, Id);
+
+         when GtkTabPage =>
+            Emit_GtkNotebookTabPage (Child, Id);
+
          when GtkRadioButton =>
             Emit_GtkRadioButton (Child, Id, "GtkRadioButton",
-                                 Underline => Child.Underline,
                                  XY => True, Homog => False);
 
          when GtkSeparatorToolItem =>
             null;
+
+         when GtkScrolledWindow =>
+            Emit_GtkScrolledWindow (Child, Id);
 
          when GtkStatusBar =>
             Emit_GtkStatusBar (Child, Id, 0);
@@ -146,15 +153,9 @@ package body Emit_Containers is
          when GtkSpinButton =>
             Emit_GtkSpinButton (Child, Id);
 
-         when GtkTabChild =>
-            null;
-
-         when GtkTabPage =>
-            null;  --  processed in GtkNotebook
 
          when GtkToggleButton =>
             Emit_GtkToggleButton (Child, Id, "GtkToggleButton",
-                                  Underline => Child.Underline,
                                   XY => True, Homog => False);
 
          when GtkToolBar =>
@@ -164,7 +165,7 @@ package body Emit_Containers is
             null;
 
          when GtkTreeGridView =>
-            Emit_GtkTreeView (Child, Id, 0);
+            Emit_GtkTreeView (Child, Id);
          when ExpandableColumn =>
             null; --  processed in Emit_GtkTreeView
          when DataGridViewTextBoxColumn =>
@@ -199,51 +200,52 @@ package body Emit_Containers is
    ---------------------------------------------------------------------------
    --  Emit_GtkBox
    ---------------------------------------------------------------------------
-   procedure Emit_GtkBox (TWdg : Widget_Pointer;
-                          Id   : Integer;
+   procedure Emit_GtkBox (Me : Widget_Pointer;
+                          Id : Integer;
                           Omit_Child : Boolean := False) is
       Child : Widget_Pointer;
       Pack_Start : Boolean;
    begin
       if not Omit_Child then
-         Emit_Child (TWdg, Id, False);
+         Emit_Child (Me, Id, False);
       end if;
-      if TWdg.Name /= null and then TWdg.Name.all /= "" then
-         Emit_Object (TWdg, Id + 2, "GtkBox", TWdg.Name.all);
+      if Me.Name /= null and then Me.Name.all /= "" then
+         Emit_Object (Me, Id + 2, "GtkBox", Me.Name.all);
       else
-         Emit_Object (TWdg, Id + 2, "GtkBox", "");
+         Emit_Object (Me, Id + 2, "GtkBox", "");
       end if;
-      Emit_Name (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      if TWdg.Orientation = Vertical then
+      Emit_Name (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      if Me.Orientation = Vertical then
          Emit_Property (Id + 4, "orientation", "vertical");
       end if;
-      if TWdg.Spacing > 0 then
-         Emit_Property (Id + 4, "spacing", TWdg.Spacing);
+      if Me.Spacing > 0 then
+         Emit_Property (Id + 4, "spacing", Me.Spacing);
       end if;
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          Emit_Widget_Child (Child, Id + 4);
          Child := Child.Next;
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      if TWdg.GParent /= null and then --  box attached to other widget
-        TWdg.GParent.Widget_Type /= Internal_Child_VBox
+      if Me.Wdg_Parent /= null and then --  box attached to other widget
+        Me.Wdg_Parent.Widget_Type /= Internal_Child_VBox
       then
-         case TWdg.FlowDirection is
+         case Me.FlowDirection is
             when LeftToRight => Pack_Start := True;
             when RightToLeft => Pack_Start := False;
             when TopDown     => Pack_Start := True;
             when BottomUp    => Pack_Start := False;
          end case;
          Emit_Packing (Id + 2,
-                       Position   => TWdg.Child_Number,
+                       Position   => Me.Child_Number,
                        Expand     => False,
                        Fill       => True,
-                       Padding    => TWdg.Padding,
-                       Pack_Start => Pack_Start);
+                       Padding    => Me.Padding,
+                       Pack_Start => Pack_Start,
+                       Force      => True);
       end if;
       if not Omit_Child then
          Emit_Line (Sp (Id) & "</child>");
@@ -253,64 +255,73 @@ package body Emit_Containers is
    ---------------------------------------------------------------------------
    -- Emit_GtkNoteBook --
    ---------------------------------------------------------------------------
-   procedure Emit_GtkNoteBook (TWdg : Widget_Pointer;
-                               Id   : Integer) is
+   procedure Emit_GtkNoteBook (Me : Widget_Pointer;
+                               Id : Integer) is
       Child : Widget_Pointer;
-      Position : Integer := 0;
+      Pack_Start : Boolean;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkNotebook", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      Emit_Align (TWdg, Id + 4, Numeric => True);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
-      if not TWdg.Show_Tabs then
-         Emit_Property (Id + 4, "show-tabs", TWdg.Show_Tabs);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkNotebook", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      Emit_Align (Me, Id + 4, Numeric => True);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      if not Me.Show_Tabs then
+         Emit_Property (Id + 4, "show-tabs", Me.Show_Tabs);
       end if;
-      if not TWdg.Show_Border then
-         Emit_Property (Id + 4, "show-border", TWdg.Show_Border);
+      if not Me.Show_Border then
+         Emit_Property (Id + 4, "show-border", Me.Show_Border);
       end if;
-      if TWdg.Scrollable then
-         Emit_Property (Id + 4, "scrollable", TWdg.Scrollable);
+      if Me.Scrollable then
+         Emit_Property (Id + 4, "scrollable", Me.Scrollable);
       end if;
-      if TWdg.Enable_Popups then
-         Emit_Property (Id + 4, "enable-popup", TWdg.Enable_Popups);
+      if Me.Enable_Popups then
+         Emit_Property (Id + 4, "enable-popup", Me.Enable_Popups);
       end if;
-      if TWdg.CloseButtonOnTabsInactiveVisible then
-         Emit_GtkSignal (TWdg, Id + 4);
-      else
-         Emit_GtkSignal (TWdg, Id + 4, Except => "CloseButtonClick");
-      end if;
+      Emit_GtkSignal (Me, Id + 4, Except => "CloseButtonClick");
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          if Child.Widget_Type /= GtkTabPage then
             raise Program_Error;
          end if;
-         Emit_GtkNotebookTab (Child, Id + 4);
-         Position := Position + 1;
+         Emit_Widget_Child (Child, Id);
          Child := Child.Next;
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing (Id + 2, TWdg.Child_Number,
-                    True, True, TWdg.Padding, True);
+
+      case Me.FlowDirection is
+         when LeftToRight => Pack_Start := True;
+         when RightToLeft => Pack_Start := False;
+         when TopDown     => Pack_Start := True;
+         when BottomUp    => Pack_Start := False;
+      end case;
+      Emit_Packing (Id + 2,
+                    Position   => Me.Child_Number,
+                    Expand     => True,
+                    Fill       => True,
+                    Padding    => Me.Padding,
+                    Pack_Start => True, --  Pack_Start,
+                    Force      => True);
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkNoteBook;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkFrame
    ---------------------------------------------------------------------------
-   procedure Emit_GtkFrame (TWdg : Widget_Pointer;
-                            Id   : Integer) is
+   procedure Emit_GtkFrame (Me : Widget_Pointer;
+                            Id : Integer) is
       procedure Emit_Frame_Label (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_Frame_Label (TWdg : Widget_Pointer; Id : Integer) is
       begin
          Emit_Child (TWdg, Id, True);
-         Emit_Object (TWdg, Id + 2, "GtkLabel", "label_" & TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkLabel", TWdg.Name.all & "_Label");
          Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-         Emit_Label (TWdg, Id + 4, UnderLine => False, Selectable => True);
+         Emit_Label (TWdg, Id + 4,
+                     UnderLine => False,
+                     Selectable => True);
          Emit_Attributes (TWdg, Id + 4);
          Emit_Line (Sp (Id + 2) & "</object>");
          Emit_Packing_Child (TWdg, Id,
@@ -322,11 +333,11 @@ package body Emit_Containers is
 
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkFrame", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkFrame", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
       Emit_Line (Sp (Id + 4) &
                       "<property name=""border-width"">0</property>");
       Emit_Line (Sp (Id + 4) &
@@ -335,67 +346,59 @@ package body Emit_Containers is
                       "<property name=""label-yalign"">0</property>");
       Emit_Line (Sp (Id + 4) &
                       "<property name=""shadow-type"">in</property>");
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
+      Emit_Margin (Me, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
 
-      Emit_Alignment (TWdg, Id + 4);
+      --  Emit_GtkAlignment (Me, Id + 4);    --  Deberia ser hijo de alignment
+      --
+      --  Emit_GtkFixed (Me, Id + 8);     --  Deberia ser hijo de alignment
 
-      Emit_GtkFixed (TWdg, Id + 8);
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
-         Emit_Widget_Child (Child, Id + 8);
+         Emit_Widget_Child (Child, Id + 4);
          Child := Child.Next;
       end loop;
 
-      Emit_Line (Sp (Id + 6) & "</object>");  --  gtkalignment
-
-      Emit_Packing_Child (TWdg, Id + 4,
-                          Packing => False,
-                          XY => True,
-                          Homog => False);
-      Emit_Line (Sp (Id + 4) & "</child>");
-
-      Emit_Frame_Label (TWdg, Id + 4);
+      Emit_Frame_Label (Me, Id + 4);
 
       Emit_Line (Sp (Id + 2) & "</object>");  --  gtkframe
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                           Packing => True,
                           XY => True,
                           Homog => False);
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkFrame: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkFrame: " & Me.Name.all);
          raise;
    end Emit_GtkFrame;
 
    ---------------------------------------------------------------------------
    --  Emit_AspectFrame
    ---------------------------------------------------------------------------
-   procedure Emit_GtkAspectFrame (TWdg : Widget_Pointer;
-                                  Id   : Integer) is
+   procedure Emit_GtkAspectFrame (Me : Widget_Pointer;
+                                  Id : Integer) is
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkAspectFrame",
-                   TWdg.Name.all & "_AspectFrame");
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkAspectFrame", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
       Emit_Line (Sp (Id + 4) & "<property name=""label-xalign"">0"
                  & "</property>");
       Emit_Line (Sp (Id + 4) & "<property name=""shadow-type"">in"
                  & "</property>");
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          Emit_Widget_Child (Child, Id);
          Child := Child.Next;
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                           Packing => True,
                           XY      => True,
                           Homog   => False);
@@ -405,34 +408,34 @@ package body Emit_Containers is
    ---------------------------------------------------------------------------
    --  Emit_GtkListBox
    ---------------------------------------------------------------------------
-   procedure Emit_GtkListBox (TWdg : Widget_Pointer;
-                              Id   : Integer) is
+   procedure Emit_GtkListBox (Me : Widget_Pointer;
+                              Id : Integer) is
 
       procedure Emit_Internal_GtkSelection (Id : Integer);
       procedure Emit_Internal_GtkSelection (Id : Integer) is
          TS : Signal_Pointer;
       begin
          Emit_Line (Sp (Id) & "<child internal-child=""selection"">");
-         Emit_Object (TWdg, Id + 2, "GtkTreeSelection",
-                      "Selection_" & TWdg.Name.all);
-         if TWdg.MultiSelect then
+         Emit_Object (Me, Id + 2, "GtkTreeSelection",
+                      Me.Name.all & "_Selection");
+         if Me.MultiSelect then
             Emit_Line (Sp (Id + 4) & "<property name=""mode"">multiple"
                        & "</property>");
          else
             Emit_Line (Sp (Id + 4) & "<property name=""mode"">browse"
                        & "</property>");
          end if;
-         TS := TWdg.Signal_List;
+         TS := Me.Signal_List;
          while TS /= null loop
             if TS.GtkName.all = "changed" then
-               Emit_One_GtkSignal (TS, Id + 4, TWdg.Name.all);
+               Emit_One_GtkSignal (TS, Id + 4, Me.Name.all);
                exit;
             end if;
             TS := TS.Next;
          end loop;
 
          Emit_Line (Sp (Id + 2) & "</object>");
-         Emit_Packing_Child (TWdg, Id,
+         Emit_Packing_Child (Me, Id,
                                         Packing => False,
                                         XY => True,
                                         Homog => False);
@@ -441,18 +444,18 @@ package body Emit_Containers is
 
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkTreeView", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4, Except => "SelectedIndexChanged");
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkTreeView", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      Emit_ToolTip (Me, Id + 4);
+      Emit_Margin (Me, Id + 4);
+      Emit_GtkSignal (Me, Id + 4, Except => "SelectedIndexChanged");
 
       Emit_Internal_GtkSelection (Id + 4);
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          Emit_Widget_Child (Child, Id + 4);
          Child := Child.Next;
@@ -460,7 +463,7 @@ package body Emit_Containers is
 
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing_Child (TWdg, Id,
+      Emit_Packing_Child (Me, Id,
                                      Packing => True,
                                      XY => True,
                                      Homog => False);
@@ -482,21 +485,21 @@ package body Emit_Containers is
    ---------------------------------------------------------------------------
    --  Emit_GtkMenuBar
    ---------------------------------------------------------------------------
-   procedure Emit_GtkMenuBar (TWdg : Widget_Pointer;
-                              Id   : Integer) is
+   procedure Emit_GtkMenuBar (Me : Widget_Pointer;
+                              Id : Integer) is
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      if TWdg.Name /= null and then TWdg.Name.all /= "" then
-         Emit_Object (TWdg, Id + 2, "GtkMenuBar", TWdg.Name.all);
+      Emit_Child (Me, Id, False);
+      if Me.Name /= null and then Me.Name.all /= "" then
+         Emit_Object (Me, Id + 2, "GtkMenuBar", Me.Name.all);
       else
-         Emit_Object (TWdg, Id + 2, "GtkMenuBar", "");
+         Emit_Object (Me, Id + 2, "GtkMenuBar", "");
       end if;
-      Emit_Name (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_Name (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      Emit_GtkSignal (Me, Id + 4);
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          case Child.Widget_Type is
             when GtkMenuImageItem  => Emit_GtkMenuImageItem (Child, Id + 4);
@@ -512,15 +515,15 @@ package body Emit_Containers is
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing (Id + 2, 0, False, True, TWdg.Padding, True);
+      Emit_Packing (Id + 2, 0, False, True, Me.Padding, True, Force => True);
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkMenuBar;
 
    ---------------------------------------------------------------------------
    -- Emit_GtkToolBar --
    ---------------------------------------------------------------------------
-   procedure Emit_GtkToolBar (TWdg : Widget_Pointer;
-                              Id   : Integer) is
+   procedure Emit_GtkToolBar (Me : Widget_Pointer;
+                              Id : Integer) is
       procedure Emit_SeparatorToolItem (TWdg : Widget_Pointer; Id : Integer);
       procedure Emit_SeparatorToolItem (TWdg : Widget_Pointer; Id : Integer) is
       begin
@@ -552,12 +555,14 @@ package body Emit_Containers is
          Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
          Emit_Margin (TWdg, Id + 4);
          Emit_ToolTip (TWdg, Id + 4);
-         Emit_Label (TWdg, Id + 4, TWdg.Underline, Selectable => True);
+         Emit_Label (TWdg, Id + 4,
+                     TWdg.Underline,
+                     Selectable => True);
          if TWdg.MaxLength > 0 then
             Emit_Property (Id + 4, "width-chars", TWdg.MaxLength);
             Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
          end if;
-         if TWdg.GParent.Widget_Type = BindingNavigator then
+         if TWdg.Wdg_Parent.Widget_Type = BindingNavigator then
             Emit_Property (Id + 4, "xalign", 0.5);
          else
             Emit_Align (TWdg, Id + 4, Numeric => True);
@@ -670,8 +675,7 @@ package body Emit_Containers is
          Sensitive : constant Boolean := TWdg.Enabled;
       begin
          Emit_Child (TWdg, Id, False);
-         Emit_Object (TWdg, Id + 2, "GtkToolItem",
-                      "toolitem_" & TWdg.Name.all);
+         Emit_Object (TWdg, Id + 2, "GtkToolItem", TWdg.Name.all & "_ToolItem");
          TWdg.Enabled := True;
          Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
          TWdg.Enabled := Sensitive;
@@ -694,7 +698,7 @@ package body Emit_Containers is
 
          Emit_Line (Sp (Id + 2) & "</object>");
          if TWdg.Widget_Type = GtkLabel
-           and then TWdg.GParent.Widget_Type = BindingNavigator
+           and then TWdg.Wdg_Parent.Widget_Type = BindingNavigator
          then
             Emit_Line (Sp (Id + 2) & "<packing>");
             Emit_Property (Id + 4, "expand", True);
@@ -711,18 +715,18 @@ package body Emit_Containers is
 
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkToolbar", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_ToolTip (TWdg, Id + 4);
-      Emit_Margin (TWdg, Id + 4);
-      if not TWdg.TB_Horiz then
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkToolbar", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_ToolTip (Me, Id + 4);
+      Emit_Margin (Me, Id + 4);
+      if not Me.TB_Horiz then
          Emit_Line (Sp (Id + 4) & "<property name=""orientation"">"
                     & "vertical" & "</property>");
       end if;
-      case TWdg.DStyle is
+      case Me.DStyle is
          when Unset => null;
          when Icons_Only =>
             Emit_Line (Sp (Id + 4) & "<property name=""toolbar-style"">"
@@ -737,13 +741,13 @@ package body Emit_Containers is
             Emit_Line (Sp (Id + 4) & "<property name=""toolbar-style"">"
                        & "both" & "</property>");
       end case;
-      if not TWdg.Show_Arrows then
+      if not Me.Show_Arrows then
          Emit_Line (Sp (Id + 4) & "<property name=""show-arrow"">"
                       & "False" & "</property>");
       end if;
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          case Child.Widget_Type is
             when GtkButton | GtkRadioButton | GtkToggleButton
@@ -763,53 +767,58 @@ package body Emit_Containers is
 
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing (Id + 2,
-                    TWdg.Child_Number, False, True, TWdg.Padding, True);
+                    Position   => Me.Child_Number,
+                    Expand     => False,
+                    Fill       => True,
+                    Padding    => Me.Padding,
+                    Pack_Start => True,
+                    Force      => True);
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkToolBar;
 
    ---------------------------------------------------------------------------
    --  Emit_GtkStatusBar
    ---------------------------------------------------------------------------
-   procedure Emit_GtkStatusBar (TWdg : Widget_Pointer;
-                                Id   : Integer;
+   procedure Emit_GtkStatusBar (Me : Widget_Pointer;
+                                Id : Integer;
                                 Pos  : Integer) is
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkStatusbar", TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkStatusbar", Me.Name.all);
+      Emit_Name (Me, Id + 4);
       if Pos = -1 then
-         Emit_WH_Request (TWdg, Id + 4);
+         Emit_WH_Request (Me, Id + 4);
       end if;
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      Emit_Align (TWdg, Id + 4, Numeric => False);
-      Emit_Margin (TWdg, Id + 4);
-      Emit_ToolTip (TWdg, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      Emit_Align (Me, Id + 4, Numeric => False);
+      Emit_Margin (Me, Id + 4);
+      Emit_ToolTip (Me, Id + 4);
       Emit_Property (Id + 4, "hexpand", False);
       Emit_Property (Id + 4, "orientation", "vertical");
       Emit_Property (Id + 4, "spacing", 2);
       --  Emit_Attributes (TWdg, Id + 4);
-      Emit_GtkSignal (TWdg, Id + 4);
+      Emit_GtkSignal (Me, Id + 4);
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
-         Emit_Widget_Child (Child, Id + 2);
+         Emit_Widget_Child (Child, Id + 4);
          Child := Child.Next;
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
       if Pos = -1 then
-         Emit_Packing_Child (TWdg, Id,
+         Emit_Packing_Child (Me, Id,
                                         Packing => True,
                                         XY => True,
                                         Homog => False);
       else
-         Emit_Packing (Id + 2, Pos, False, True, TWdg.Padding, True);
+         Emit_Packing (Id + 2, Pos, False, True, Me.Padding, True);
       end if;
       Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
-         TIO.Put_Line ("Emit GtkStatusBar: " & TWdg.Name.all);
+         TIO.Put_Line ("Emit GtkStatusBar: " & Me.Name.all);
          raise;
    end Emit_GtkStatusBar;
 
@@ -828,17 +837,17 @@ package body Emit_Containers is
    ---------------------------------------------------------------------------
    --  Emit_GtkButtonBox
    ---------------------------------------------------------------------------
-   procedure Emit_GtkButtonBox (TWdg : Widget_Pointer;
-                                Id   : Integer) is
+   procedure Emit_GtkButtonBox (Me : Widget_Pointer;
+                                Id : Integer) is
       Child   : Widget_Pointer;
    begin
-      if TWdg.Name = null then
-         Emit_Object (TWdg, Id + 2, "GtkButtonBox", "");
+      if Me.Name = null then
+         Emit_Object (Me, Id + 2, "GtkButtonBox", "");
       else
-         Emit_Object (TWdg, Id + 2, "GtkButtonBox", TWdg.Name.all);
+         Emit_Object (Me, Id + 2, "GtkButtonBox", Me.Name.all);
       end if;
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      case TWdg.Layout_Style is
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      case Me.Layout_Style is
          when Edge => null;
          when Spread => Emit_Property (Id + 4, "layout-style", "spread");
          when Start_Row => Emit_Property (Id + 4, "layout-style", "start");
@@ -847,7 +856,7 @@ package body Emit_Containers is
          when Expand => Emit_Property (Id + 4, "layout-style", "expand");
       end case;
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          Emit_Widget_Child (Child, Id + 4,
                             From_ButtonBox => True);
@@ -855,7 +864,13 @@ package body Emit_Containers is
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing (Id + 2, 0, False, False, 0, True);
+      Emit_Packing (Id + 2,
+                    Position   => Me.Child_Number,
+                    Expand     => False,
+                    Fill       => False,
+                    Padding    => Me.Padding,
+                    Pack_Start => True,
+                    Force      => True);
    end Emit_GtkButtonBox;
 
    ---------------------------------------------------------------------------
@@ -867,24 +882,36 @@ package body Emit_Containers is
    ---------------------------------------------------------------------------
    --  Emit_GtkFixed
    ---------------------------------------------------------------------------
-   procedure Emit_GtkFixed (TWdg : Widget_Pointer;
-                            Id   : Integer) is
+   procedure Emit_GtkFixed (Me : Widget_Pointer;
+                            Id : Integer) is
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkFixed", "GtkFixed_" & TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      Emit_Margin (TWdg, Id + 4);
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkFixed", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      Emit_Margin (Me, Id + 4);
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
          Emit_Widget_Child (Child, Id + 4);
          Child := Child.Next;
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Packing (Id + 2, 0, True, True, 0, True);
+      if Me.Wdg_Parent /= null
+        and then Me.Wdg_Parent.Widget_Type = GtkAlignment
+      then
+         null;
+      else
+         Emit_Packing (Id + 2,
+                       Position   => Me.Child_Number,
+                       Expand     => True,
+                       Fill       => True,
+                       Padding    => Me.Padding,
+                       Pack_Start => True,
+                       Force      => True);
+      end if;
       Emit_Line (Sp (Id) & "</child>");
    end Emit_GtkFixed;
 
@@ -909,72 +936,61 @@ package body Emit_Containers is
    ---------------------------------------------------------------------------
    --  Emit_ScrolledWindow
    ---------------------------------------------------------------------------
-   procedure Emit_ScrolledWindow (TWdg : Widget_Pointer;
-                                  Id   : Integer) is
+   procedure Emit_GtkScrolledWindow (Me : Widget_Pointer;
+                                     Id : Integer) is
       Child : Widget_Pointer;
-      Pos   : constant Integer := 1;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkScrolledWindow",
-                   "GtkScrolledWindow_" & TWdg.Name.all);
-      Emit_Property (Id + 4, "name", "GtkScrolledWindow_" & TWdg.Name.all);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, True);
-      case TWdg.ScrollBars is
-         when None => raise Program_Error;
-         when Vertical =>
-            Emit_Property (Id + 4, "hscrollbar-policy", "never");
-         when Horizontal =>
-            Emit_Property (Id + 4, "vscrollbar-policy", "never");
-         when Both =>
-            null;
-      end case;
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkScrolledWindow", Me.Name.all);
+      Emit_Property (Id + 4, "name", "GtkScrolledWindow_" & Me.Name.all);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, True);
+      Emit_Scrollbars_Policy (Me, Id + 4);
       Emit_Property (Id + 4, "shadow-type", "in");
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
-         Emit_Widget_Child (Child, Id + 2);
+         Emit_Widget_Child (Child, Id + 4);
          Child := Child.Next;
       end loop;
 
       Emit_Line (Sp (Id + 2) & "</object>");
-      if Pos > 0 then
-         Emit_Line (Sp (Id + 2) & "<packing>");
-         Emit_Property (Id + 4, "position", Pos);
-         Emit_Line (Sp (Id + 2) & "</packing>");
-
+      if Me.Wdg_Parent /= null and then
+        Me.Wdg_Parent.Widget_Type = GtkTabPage
+      then
+         Emit_Packing (Id + 2, Me.Wdg_Parent.Child_Number, False, True, 0, True);
+      else
+         Emit_Packing (Id + 2, Me.Child_Number, False, True, 0, True);
       end if;
       Emit_Line (Sp (Id) & "</child>");
-   end Emit_ScrolledWindow;
+   end Emit_GtkScrolledWindow;
 
    ---------------------------------------------------------------------------
    --  Emit_Alignment
    ---------------------------------------------------------------------------
-   procedure Emit_Alignment (TWdg : Widget_Pointer;
-                             Id   : Integer) is
+   procedure Emit_GtkAlignment (Me : Widget_Pointer;
+                             Id : Integer) is
       Child : Widget_Pointer;
    begin
-      Emit_Child (TWdg, Id, False);
-      Emit_Object (TWdg, Id + 2, "GtkAlignment",
-                   "Alignment_" & TWdg.Name.all);
-      Emit_Name (TWdg, Id + 4);
-      Emit_WH_Request (TWdg, Id + 4);
-      Emit_Visible_And_Can_Focus (TWdg, Id + 4, False);
-      Emit_Line (Sp (Id + 4)
-                 & "<property name=""left-padding"">12</property>");
+      Emit_Child (Me, Id, False);
+      Emit_Object (Me, Id + 2, "GtkAlignment", Me.Name.all);
+      Emit_Name (Me, Id + 4);
+      Emit_WH_Request (Me, Id + 4);
+      Emit_Visible_And_Can_Focus (Me, Id + 4, False);
+      Emit_Padding (Me, Id + 4);
 
-      Child := TWdg.Child_List;
+      Child := Me.Child_List;
       while Child /= null loop
-         Emit_Widget_Child (Child, Id + 2);
+         Emit_Widget_Child (Child, Id + 4);
          Child := Child.Next;
       end loop;
 
-      Emit_Line (Sp (Id + 6) & "</object>");  --  gtkalignment
-      Emit_Packing_Child (TWdg, Id + 4,
+      Emit_Line (Sp (Id + 2) & "</object>");  --  gtkalignment
+      Emit_Packing_Child (Me, Id + 2,
                           Packing => False,
                           XY => True,
                           Homog => False);
-      Emit_Line (Sp (Id + 4) & "</child>");
-   end Emit_Alignment;
+      Emit_Line (Sp (Id) & "</child>");
+   end Emit_GtkAlignment;
 
    --------------------------------------------------------------------------
    procedure Emit_GtkRevealer is

@@ -27,7 +27,8 @@ package W2gtk_Decls is
    package AC  renames Ada.Calendar;
 
    Default_Font_Size : constant := -9;
-   Default_Font_Name : constant String := "Calibri";
+   Default_Font_Name : constant String := "Sans";
+   Default_Alt_Color : constant String := "MistyRose";
 
    type DialogResult_Enum is (None_Response,
                               Reject_Response,
@@ -63,6 +64,8 @@ package W2gtk_Decls is
       One : Integer;
       Two : Integer;
    end record;
+
+   type ScrollBar_Policy_Enum is (Always, Automatic, Never, External);
 
    type Baseline_Enum is (Top, Center, Bottom);
 
@@ -117,8 +120,6 @@ package W2gtk_Decls is
                                     AllCellsExceptHeader, AllCells,
                                     DisplayedCellsExceptHeader, DisplayedCells,
                                     Fill);
-   type ScrollBars_Enum is (None, Horizontal, Vertical, Both);
-
    --  signals
    type Signal_Block;
    type Signal_Pointer is access all Signal_Block;
@@ -176,7 +177,7 @@ package W2gtk_Decls is
       Font_Weight    : String_Access    := null;
       Font_Underline : Boolean          := False;
       Format         : Cell_Format_Enum := Format_String;
-      Padding        : Margin_Array     := Null_Margin;
+      Padding        : Margin_Array     := (0, 0, 0, 0);
       WrapMode       : Boolean          := False;
       NullValue      : String_Access    := null;
    end record;
@@ -384,11 +385,11 @@ package W2gtk_Decls is
       --
       GtkButton, GtkRadioButton, GtkCheckButton, GtkToggleButton,
       --
-      GtkImage, GtkSpinButton, GtkFrame, GtkBox,
+      GtkImage, GtkSpinButton, GtkFrame, GtkBox, GtkAlignment,
       GtkStatusBar, GtkFileChooserButton,
       --
       GtkToolTip, GtkCalendar, GtkColorButton,
-      GtkListBox, GtkAspectFrame,
+      GtkListBox, GtkAspectFrame, GtkScrolledWindow,
       --
       GtkMenuBar, GtkSubMenu,
       GtkMenuItem, GtkMenuNormalItem, GtkMenuImageItem,
@@ -462,7 +463,9 @@ package W2gtk_Decls is
                                   Attr_EnableHeadersVisualStyles,
                                   Attr_MultiSelect,
                                   Attr_RowHeadersVisible,
-                                  Attr_ScrollBars,
+                                  Attr_HScrollBar,
+                                  Attr_VScrollBar,
+                                  Attr_Scrollable, --  only for notebooks
                                   Attr_Level,
                                   Attr_PaddingX,
                                   Attr_PaddingY,
@@ -500,8 +503,8 @@ package W2gtk_Decls is
       Num_Children   : Integer        := 0;    --  only for containers
 
       Parent_Name    : String_Access  := null;
-      WParent        : Window_Pointer := null; --  parent is a window
-      GParent        : Widget_Pointer := null; --  parent is a widget
+      Win_Parent     : Window_Pointer := null; --  parent is a window
+      Wdg_Parent     : Widget_Pointer := null; --  parent is a widget
       Child_Number   : Integer        := 0;    --  order in parent's child list
 
       Windows_Type   : String_Access  := null; --  this is the Windows type
@@ -523,6 +526,8 @@ package W2gtk_Decls is
       TextAlign      : TextAlign_Enum := None;
       AutoSize       : Boolean        := True;
       AutoSizeMode   : AutoSizeMode_Enum := GrowOnly;
+      H_ScrollBar    : ScrollBar_Policy_Enum := Automatic;
+      V_ScrollBar    : ScrollBar_Policy_Enum := Automatic;
 
       Font_Name      : String_Access  := null;
       Font_Size      : Integer        := Default_Font_Size;
@@ -545,6 +550,13 @@ package W2gtk_Decls is
       case Widget_Type is
          when No_Widget =>
             null;
+
+         when GtkAlignment =>
+            Halign   : Float := 0.5;
+            Valign   : Float := 0.5;
+            HScale   : Float := 1.0;
+            VScale   : Float := 1.0;
+            Paddings : Margin_Array := (0, 0, 0, 0);
 
          when GtkMenuItem | GtkSubMenu => null;
          when GtkSeparatorMenuItem => null;
@@ -581,7 +593,6 @@ package W2gtk_Decls is
                   RowHeadersWidthSizeMode
                               : RowHeadersWidthSizeMode_Enum := EnableResizing;
                   RowHeadersBorderStyle : RowHeadersBorderStyle_Enum := None;
-                  ScrollBars : ScrollBars_Enum := Both;
                   Use_Sort   : Boolean := False;
                   Model      : Window_Pointer  := null;
 
@@ -662,12 +673,6 @@ package W2gtk_Decls is
                when others => null;
             end case;
 
-         when GtkSpinButton =>
-            StartValue   : Integer := 0;
-            MaxValue     : Integer := 0;
-            MinValue     : Integer := 0;
-            Step         : Integer := 1;
-
          when GtkFileChooserButton
             | PrintDocument | PrintDialog | PageSetupDialog
             | FolderBrowserDialog | GtkToolTip | GtkColorButton
@@ -725,24 +730,41 @@ package W2gtk_Decls is
             MultiSelect : Boolean := False;
             ListStore   : Window_Pointer := null;
 
-         when GtkAspectFrame =>
-            H_Alignment      : Float   := 0.5;
-            V_Alignment      : Float   := 0.5;
-            Ratio_If_No_Obey : Float   := 1.0;
-            Obey             : Boolean := True;
-            Label_Xalign     : Float   := 0.0;
-            Label_Yalign     : Float   := 0.0;
+         when GtkAspectFrame | GtkScrolledWindow | GtkFrame =>
             Frame_Shadow     : Frame_Shadow_Enum := No_Shadow;
+            case Widget_Type is
+               when GtkScrolledWindow =>
+                  null;
+               when GtkAspectFrame | GtkFrame =>
+                  Label_Xalign : Float := 0.0;
+                  Label_Yalign : Float := 0.0;
+                  case Widget_Type is
+                    when GtkAspectFrame =>
+                        H_Alignment      : Float   := 0.5;
+                        V_Alignment      : Float   := 0.5;
+                        Ratio_If_No_Obey : Float   := 1.0;
+                        Obey             : Boolean := True;
+                     when others => null;
+                  end case;
+               when others => null;
+            end case;
 
          when GtkImage =>
             Image : String_Access := null;
+            Stock : Boolean := False;
 
          when GtkButton | GtkRadioButton | GtkCheckButton | GtkToggleButton
-              | GtkLabel | ToolStripStatusLabel
+              | GtkSpinButton | GtkLabel | ToolStripStatusLabel
             =>
-            Underline   : Boolean := False;
+            Underline : Boolean := False;
 
             case Widget_Type is
+               when GtkSpinButton =>
+                  StartValue   : Integer := 0;
+                  MaxValue     : Integer := 0;
+                  MinValue     : Integer := 0;
+                  Step         : Integer := 1;
+
                when GtkLabel | ToolStripStatusLabel =>
                   BorderStyle : BorderStyle_Enum := None;
 
@@ -766,8 +788,6 @@ package W2gtk_Decls is
                   end case;
                when others => null;
             end case;
-
-         when GtkFrame => null;
 
          when GtkBox | GtkButtonBox | Internal_Child_VBox =>
             Spacing     : Integer := 0;
@@ -793,9 +813,13 @@ package W2gtk_Decls is
       end case;
    end record;
 
-   Duplicate_Window_Name : exception;
+   Duplicated_Window_Name   : exception;
+   Duplicated_Widget_Name   : exception;
+   Window_Name_Not_Assigned : exception;
+   Widget_Name_Not_Assigned : exception;
 
    function Sp (N : Integer) return String;
+   function New_String (K : String_Access) return String_Access;
 
    procedure Debug (NLin : Integer; Msg : String);
 
@@ -830,9 +854,11 @@ package W2gtk_Decls is
                             WT   : Widget_Pointer);
    procedure Set_Have (WT : Widget_Pointer);
    function Insert_Signal (TWin : Window_Pointer;
-                           TS   : Signal_Pointer) return Boolean;
+                           TS   : Signal_Pointer;
+                           Ignore_Dup : Boolean := False) return Boolean;
    function Insert_Signal (TWdg : Widget_Pointer;
-                            TS   : Signal_Pointer) return Boolean;
+                           TS   : Signal_Pointer;
+                           Ignore_Dup : Boolean := False) return Boolean;
    function Signal_Exists (TWin : Window_Pointer;
                            Signal_Name : String) return Boolean;
    function Signal_Exists (TWdg        : Widget_Pointer;
@@ -845,8 +871,6 @@ package W2gtk_Decls is
                                      TWin : Window_Pointer);
    procedure Insert_Window_By_Front (Root : in out Window_Pointer;
                                      TWin : Window_Pointer);
-   procedure Insert_Window_By_Tail (Root : in out Window_Pointer;
-                                    TWin : Window_Pointer);
    function Extract_First_Window (Root : in out Window_Pointer) return Window_Pointer;
    procedure Extract_Window (Root : in out Window_Pointer;
                              TWin : Window_Pointer);
@@ -905,6 +929,14 @@ package W2gtk_Decls is
    Line   : String (1 .. 1024);
    Len    : Natural;
    NLin   : Integer;
+
+   procedure Iterate
+     (TWdg     : Widget_Pointer;
+      Callback : access procedure (TWdg : Widget_Pointer));
+   procedure Iterate
+     (TWin : Window_Pointer;
+      Callback : access procedure (TWdg : Widget_Pointer));
+
 
    procedure Free is new Ada.Unchecked_Deallocation (Signal_Block,
                                                      Signal_Pointer);

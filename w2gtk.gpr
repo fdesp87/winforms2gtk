@@ -27,11 +27,40 @@ project w2gtk is
    for Exec_Dir use ".";
 
    package Compiler is
-      for Switches ("Ada") use ("-g", "-O0", "-gnata", "-gnatVa", "-gnat2022",
-                                "-gnatQ", "-gnaty", "-gnateE", "-gnatwaCJe", 
-                                "-fstack-check",
-                                "-gnatwaCJeM", "-gnaty3abcefhiklM120nprst");
-
+      for Switches ("Ada") use
+        ("-g",             --  debug
+         "-gnat2022",      --  Ada 2022
+         "-gnatX",         --  GNAT extensions
+         "-O0",            --  optimization level 0
+         "-fstack-check",  --  stact check
+         "-gnata",         --  enable assettions
+         "-gnateE",        --  generate extra info in exception msgs
+         "-gnatQ",         --  generate ALI even if illegalities
+         "-gnatVa",        --  validity checking all
+         "-gnaty",         --  enable built-in style checks
+         "-gnaty3",        --  Identation level
+         "-gnatya",        --  Check attribute casing
+         "-gnatyb",        --  Blanks not allowed at statement end
+         "-gnatyc",        --  Check comments, double space
+         "-gnatye",        --  Check end/exit labels
+         "-gnatyf",        --  No form feeds or vertical tabs
+         "-gnatyh",        --  No horizontal tabs
+         "-gnatyi",        --  Check if-then layout
+         "-gnatyk",        --  Check keyword casing
+         "-gnatyl",        --  Check layout
+         "-gnatyM120",     --  Set maximum line length
+         "-gnatyn",        --  Check casing of entities in Standard
+         "-gnatyp",        --  Check pragma casing
+         "-gnatyr",        --  Check references
+         "-gnatys",        --  Check separate specs
+         "-gnatyS",        --  Check no statements after then/else
+         "-gnatyt",        --  Check token spacing
+--         "-gnatwe",        --  warnings and style checks are errors
+         "-gnatwa",        --  all optional warnings
+         "-gnatwC",        --  Suppress warnings on conditionals
+         "-gnatwJ",        --  Disable warnings on obsolescent features
+         "-gnatwM"         --  Disable warnings on modified but unreferenced variables
+        );
    end Compiler;
 
    package Binder is
