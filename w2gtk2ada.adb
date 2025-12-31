@@ -253,21 +253,19 @@ package body W2Gtk2Ada is
    --  Emit Signal_Bodies  --
    --------------------------
    First_Radio_Button : Widget_Pointer := null;
-   procedure Emit_RB_Group (TWdg : Widget_Pointer);
-   procedure Emit_RB_Group (TWdg : Widget_Pointer) is
+   procedure Process_RB_Group (TWdg : Widget_Pointer);
+   procedure Process_RB_Group (TWdg : Widget_Pointer) is
    begin
       if TWdg.Widget_Type = GtkRadioButton then
-         if First_Radio_Button = null then
-            First_Radio_Button := TWdg;
-         else
-            TIO.Put_Line (Sp (6) & "RB_Group := "
-                          & "Me." & First_Radio_Button.Name.all
-                          & ".Get_Group;");
-            TIO.Put_Line (Sp (6) & "Me." & TWdg.Name.all
-                          & ".Set_Group (RB_Group);");
+         if TWdg.Wdg_Parent /= null and then
+           TWdg.Wdg_Parent.Widget_Type = GtkFixed
+         then
+            if First_Radio_Button = null then
+               First_Radio_Button := TWdg;
+            end if;
          end if;
       end if;
-   end Emit_RB_Group;
+   end Process_RB_Group;
 
    procedure Emit_Time_Picker_CSS (TWdg : Widget_Pointer);
    procedure Emit_Time_Picker_CSS (TWdg : Widget_Pointer) is
@@ -386,10 +384,13 @@ package body W2Gtk2Ada is
                TIO.Put_Line (Sp (3) & "begin");
                if TS.Name.all = "Load" then
                   if Have.Radio_Buttons > 0 then
-                     Iterate (Win_List, Emit_RB_Group'Access);
-                     TIO.Put_Line (Sp (6) & "Me." & First_Radio_Button.Name.all
-                                   & ".Set_Active (True);");
-                     TIO.New_Line;
+                     Iterate (Win_List, Process_RB_Group'Access);
+                     if First_Radio_Button /= null then
+                        TIO.Put_Line (Sp (6) & "Me."
+                                      & First_Radio_Button.Name.all
+                                      & ".Set_Active (True);");
+                        TIO.New_Line;
+                     end if;
                   end if;
                   if Have.Date_Pickers + Have.Time_Pickers > 0 then
                      Iterate (Win_List, Emit_Init_Date_Time_Pickers'Access);
@@ -1385,11 +1386,13 @@ package body W2Gtk2Ada is
 
                end if;
             else
-               TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & " :=");
-               TIO.Put_Line (Sp (8)
-                          & To_Gtk (TWdg, True)
-                          & " (Builder.Get_Object (");
-               TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all) & "));");
+               if TWdg.Name /= null then
+                  TIO.Put_Line (Sp (6) & "OC." & TWdg.Name.all & " :=");
+                  TIO.Put_Line (Sp (8)
+                                & To_Gtk (TWdg, True)
+                                & " (Builder.Get_Object (");
+                  TIO.Put_Line (Sp (8) & Quoted (TWdg.Name.all) & "));");
+               end if;
             end if;
 
             case TWdg.Widget_Type is
@@ -1523,8 +1526,10 @@ package body W2Gtk2Ada is
                           & "Gtk_Button" & ";");
          end if;
       else
-         TIO.Put_Line (Sp (6) & TWdg.Name.all & " : "
-                       & To_Gtk (TWdg, True) & ";");
+         if TWdg.Name /= null then
+            TIO.Put_Line (Sp (6) & TWdg.Name.all & " : "
+                          & To_Gtk (TWdg, True) & ";");
+         end if;
       end if;
       case TWdg.Widget_Type is
          when GtkDataGridView | GtkTreeGridView =>

@@ -507,12 +507,14 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
                   else
                      Num_Aux_Widgets := Num_Aux_Widgets + 1;
                      NWin0 := new Window_Properties (GtkTreeStore);
-                     NWin0.Name := new String'("GtkTreeStore_"
+                     --  NWin0.Name := new String'("GtkTreeStore_"
+                     NWin0.Name := new String'("GtkListStore_"
                                                & Normalize_Name (TWdg));
                      NWin0.Original_Name := New_String (TWdg.Name);
                      NWin0.Associated_Widget := TWdg;
                      Counter := Counter + 1;
                      Debug (0, Sp (3) & Counter'Image & " "
+                            --  & "Generated gtktreestore for "
                             & "Generated gtktreestore for "
                             & NWin0.Name.all
                             & " for " & Normalize_Name (TWdg)

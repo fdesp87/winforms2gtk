@@ -89,6 +89,8 @@ package body Emit_Additional_Information is
       Emit_Line (Sp (10) & "<col id=""0"">" & Row_Name & "</col>");
       if Tooltip = null then
          Emit_Line (Sp (10) & "<col id=""1"" translatable=""yes""></col>");
+      elsif Tooltip.all = "" then
+         Emit_Line (Sp (10) & "<col id=""1"" translatable=""yes""></col>");
       else
          Emit_Line (Sp (10) & "<col id=""1"" translatable=""yes"">"
                     & Tooltip.all & "</col>");
@@ -135,6 +137,7 @@ package body Emit_Additional_Information is
       else
          Emit_Line (Sp (10) & "<col id=""10"">False</col>");
       end if;
+
       if Font_Name = null then
          Emit_Line (Sp (10) & "<col id=""11"" translatable=""Yes"">"
                     & Default_Font_Name & "</col>");
@@ -294,6 +297,34 @@ package body Emit_Additional_Information is
    end Emit_Columns_And_Data;
 
    --------------------------------------------------------------------------
+   procedure Emit_Focus_Column_And_Data (TWin : Window_Pointer);
+   procedure Emit_Focus_Column_And_Data (TWin : Window_Pointer) is
+      TWdg : Widget_Pointer := TWin.TabFocusList;
+   begin
+      Emit_Line (Sp (4) & "<columns>");
+      Emit_Line (Sp (6) & "<!-- column-name Widget -->");
+      Emit_Line (Sp (6) & "<column type=""gchararray""/>");
+      Emit_Line (Sp (4) & "</columns>");
+      Emit_Line (Sp (4) & "<data>");
+      loop
+         case TWdg.Widget_Type is
+            when GtkEntry | GtkComboTextBox | GtkButton |
+                 GtkRadioButton | GtkCheckButton | GtkToggleButton |
+                 GtkSpinButton | GtkFileChooserButton | GtkColorButton |
+                 GtkCalendar | GtkListBox | GtkTabPage
+               =>
+               Emit_Line (Sp (8) & "<row>");
+               Emit_Line (Sp (10) & "<col id=""0"">" & TWdg.Name.all & "</col>");
+               Emit_Line (Sp (8) & "</row>");
+            when others => null;
+         end case;
+         TWdg := TWdg.Next_Focus;
+         exit when TWdg = TWin.TabFocusList;
+      end loop;
+      Emit_Line (Sp (4) & "</data>");
+   end Emit_Focus_Column_And_Data;
+
+   --------------------------------------------------------------------------
    procedure Run is
       TWin : Window_Pointer;
    begin
@@ -306,6 +337,15 @@ package body Emit_Additional_Information is
                      Emit_Object (null, 2, "GtkListStore",
                                   TWin.Name.all & "_Additional_Information");
                      Emit_Columns_And_Data (TWin.Associated_Widget);
+                     Emit_Line ("  " & "</object>");
+                  end if;
+               end if;
+            when GtkWindow =>
+               if TWin.TabFocusList /= null then
+                  if TWin.Name /= null and then TWin.Name.all /= "" then
+                     Emit_Object (null, 2, "GtkListStore",
+                                  TWin.Name.all & "_Focus_List");
+                     Emit_Focus_Column_And_Data (TWin);
                      Emit_Line ("  " & "</object>");
                   end if;
                end if;

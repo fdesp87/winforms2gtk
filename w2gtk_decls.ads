@@ -805,7 +805,8 @@ package W2gtk_Decls is
 
          when GtkSeparatorToolItem => null;
 
-         when GtkFixed  => null;
+         when GtkFixed  =>
+            First_RadioButton : Widget_Pointer := null;
 
          when Internal_Child_Action_Area => null;
          when Action_Widgets => null;

@@ -312,7 +312,15 @@ package body Emit_Controls is
          Emit_Property (Id + 4, "active", True);
       end if;
       Emit_Property (Id + 4, "draw-indicator", True);
-      --  Emit_Attributes (TWdg, Id + 4);
+      if Me.Wdg_Parent /= null and then
+        Me.Wdg_Parent.Widget_Type = GtkFixed
+      then
+         if Me.Wdg_Parent.First_RadioButton = null then
+            Me.Wdg_Parent.First_RadioButton := Me;
+         end if;
+         Emit_Property (Id + 4, "group",
+                        Me.Wdg_Parent.First_RadioButton.Name.all);
+      end if;
       Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
       Emit_Packing_Child (Me, Id,
