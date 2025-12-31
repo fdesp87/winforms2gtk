@@ -20,8 +20,9 @@ package Emit_Containers is
 
    procedure Emit_Widget_Child (Child : Widget_Pointer;
                                 Id    : Integer;
-                                From_ButtonBox : Boolean := False;
-                                Omit_Child     : Boolean := False);
+                                From_ButtonBox   : Boolean := False;
+                                Omit_Child       : Boolean := False;
+                                Label_Selectable : Boolean := True);
    procedure Emit_GtkBox (Me : Widget_Pointer;
                           Id : Integer;
                           Omit_Child : Boolean := False);

@@ -36,7 +36,8 @@ package body Emit_Auxiliary is
 
       Child := Me.Child_List;
       while Child /= null loop
-         Emit_Widget_Child (Child, Id + 4);
+         Emit_Widget_Child (Child, Id + 4,
+                            Label_Selectable => False);
          Child := Child.Next;
       end loop;
 

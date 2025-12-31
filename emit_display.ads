@@ -18,9 +18,10 @@ with W2gtk_Decls;     use W2gtk_Decls;
 
 package Emit_Display is
 
-   procedure Emit_GtkLabel (Me    : Widget_Pointer;
-                            Id      : Integer;
-                            Packing : Boolean);
+   procedure Emit_GtkLabel (Me         : Widget_Pointer;
+                            Id         : Integer;
+                            Packing    : Boolean;
+                            Selectable : Boolean);
    procedure Emit_GtkImage (Me : Widget_Pointer;
                             Id : Integer);
    procedure Emit_GtkTreeView (Me : Widget_Pointer;

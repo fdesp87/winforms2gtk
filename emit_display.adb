@@ -22,9 +22,10 @@ package body Emit_Display is
    ---------------------------------------------------------------------------
    -- Emit_GtkLabel --
    ---------------------------------------------------------------------------
-   procedure Emit_GtkLabel (Me : Widget_Pointer;
-                            Id : Integer;
-                            Packing : Boolean) is
+   procedure Emit_GtkLabel (Me         : Widget_Pointer;
+                            Id         : Integer;
+                            Packing    : Boolean;
+                            Selectable : Boolean) is
    begin
       if Me.BorderStyle /= None then
 
@@ -35,8 +36,8 @@ package body Emit_Display is
          Emit_Property (Id + 8, "has-focus", Me.Has_Focus);
          Emit_Align (Me, Id + 8, Numeric => False);
          Emit_Label (Me, Id + 8,
-                     UnderLine => Me.Underline,
-                     Selectable => True);
+                     UnderLine  => Me.Underline,
+                     Selectable => Selectable);
          if Me.MaxLength > 0 then
             Emit_Property (Id + 8, "width-chars", Me.MaxLength);
             Emit_Property (Id + 8, "max-width-chars", Me.MaxLength);
@@ -62,7 +63,7 @@ package body Emit_Display is
          Emit_ToolTip (Me, Id + 4);
          Emit_Label (Me, Id + 4,
                      UnderLine => Me.Underline,
-                     Selectable => True);
+                     Selectable => Selectable);
          Emit_Align (Me, Id + 4, Numeric => True);
          Emit_Attributes (Me, Id + 4);
          Emit_GtkSignal (Me, Id + 4);

@@ -29,8 +29,9 @@ package body Emit_Containers is
    ----------------------------------------------------------------------
    procedure Emit_Widget_Child (Child : Widget_Pointer;
                                 Id    : Integer;
-                                From_ButtonBox : Boolean := False;
-                                Omit_Child     : Boolean := False) is
+                                From_ButtonBox   : Boolean := False;
+                                Omit_Child       : Boolean := False;
+                                Label_Selectable : Boolean := True) is
    begin
       case Child.Widget_Type is
          when No_Widget =>
@@ -106,7 +107,10 @@ package body Emit_Containers is
             Emit_GtkImage (Child, Id);
 
          when GtkLabel =>
-            Emit_GtkLabel (Child, Id, Packing => True);
+            Emit_GtkLabel (Me         => Child,
+                           Id         => Id,
+                           Packing    => True,
+                           Selectable => Label_Selectable);
 
          when GtkListBox =>
             Emit_GtkListBox (Child, Id);
@@ -192,7 +196,10 @@ package body Emit_Containers is
             null;
 
          when ToolStripStatusLabel =>
-            Emit_GtkLabel (Child, Id, Packing => True);
+            Emit_GtkLabel (Me         => Child,
+                           Id         => Id,
+                           Packing    => True,
+                           Selectable => Label_Selectable);
 
       end case;
    end Emit_Widget_Child;
