@@ -117,21 +117,11 @@ package body Emit_Display is
       Emit_ToolTip (Me, Id + 4);
       Emit_GtkSignal (Me, Id + 4);
       Emit_Line (Sp (Id + 2) & "</object>");
-      Emit_Line (Sp (Id) & "</child>");
-      --  if Me.Wdg_Parent.Widget_Type = GtkButton then
-      --     Emit_Packing (Id + 2,
-      --                   Position   => Me.Child_Number,
-      --                   Expand     => False,
-      --                   Fill       => True,
-      --                   Padding    => Me.Padding,
-      --                   Pack_Start => True,
-      --                   Force      => True);
-      --  else
       Emit_Packing_Child (Me, Id,
                           Packing => True,
                           XY      => True,
                           Homog   => False);
-      --  end if;
+      Emit_Line (Sp (Id) & "</child>");
    exception
       when others =>
          TIO.Put_Line ("Emit GtkImage: " & Me.Name.all);

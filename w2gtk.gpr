@@ -21,17 +21,26 @@ with "strings_edit";
 
 project w2gtk is
 
+   type Build_Type is ("Debug", "Optimize");
+   Build : Build_Type := external ("BUILD", "Debug");
+
    for Source_Dirs use ("."); -- source files
    for Object_Dir use "./obj";
    for Main use ("w2gtk.adb");
    for Exec_Dir use ".";
 
    package Compiler is
-      for Switches ("Ada") use
-        ("-g",             --  debug
-         "-gnat2022",      --  Ada 2022
+      case Build is
+         when "Debug" =>
+            for Switches ("Ada") use ("-g", "-O0");
+         when "Optimize" =>
+            for Switches ("Ada") use
+              ("-O2", "-gnatn");
+      end case;
+
+      for Switches ("Ada") use Compiler'Switches ("Ada") &
+        ("-gnat2022",      --  Ada 2022
          "-gnatX",         --  GNAT extensions
-         "-O0",            --  optimization level 0
          "-fstack-check",  --  stact check
          "-gnata",         --  enable assettions
          "-gnateE",        --  generate extra info in exception msgs
@@ -64,7 +73,12 @@ project w2gtk is
    end Compiler;
 
    package Binder is
-      for Switches ("Ada") use ("-E");
+      case Build is
+         when "Debug" =>
+             for Default_Switches ("Ada") use ("-E");
+         when "Optimize" =>
+             null;
+      end case;
    end Binder;
    package Builder is
       for Switches ("ada") use ("-j4");
