@@ -24,7 +24,7 @@ with W2gtk_Version;         use W2gtk_Version;
 with Emit_Tools;            use Emit_Tools;
 with Emit_Containers;       use Emit_Containers;
 
-package body W2gtk_Emit is
+package body Emit_Top_Level is
    package TIO renames Ada.Text_IO;
 
    procedure Emit_GtkDialog (TWin : Window_Pointer;
@@ -454,7 +454,6 @@ package body W2gtk_Emit is
 
    procedure Emit_GtkDialog (TWin : Window_Pointer;
                              Id : Integer) is
-      Num_Buttons : Integer := 0;
       Child : Widget_Pointer := TWin.Widget_List;
       --  assume TWin is a dialog
    begin
@@ -490,16 +489,6 @@ package body W2gtk_Emit is
       Emit_Property (Id + 2, "type-hint", "dialog");
       Emit_Property (Id + 2, "gravity", "center");
       Emit_GtkSignals (TWin, Id + 2);
-
-      if TWin.Action_Buttons (OK_Response) /= null then
-         Num_Buttons := Num_Buttons + 1;
-      end if;
-      if TWin.Action_Buttons (Cancel_Response) /= null then
-         Num_Buttons := Num_Buttons + 1;
-      end if;
-      if TWin.Action_Buttons (Delete_Response) /= null then
-         Num_Buttons := Num_Buttons + 1;
-      end if;
 
       while Child /= null loop
          Emit_Widget_Child (Child, Id + 2);
@@ -574,4 +563,4 @@ package body W2gtk_Emit is
       end if;
    end Emit_GtkWindow;
 
-end W2gtk_Emit;
+end Emit_Top_Level;

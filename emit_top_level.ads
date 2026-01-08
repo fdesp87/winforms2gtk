@@ -16,7 +16,7 @@
 ------------------------------------------------------------------------------
 with W2gtk_Decls; use W2gtk_Decls;
 
-package W2gtk_Emit is
+package Emit_Top_Level is
 
    procedure Emit_GtkHeader (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkWindow (TWin : Window_Pointer; Id : Integer);
@@ -30,4 +30,4 @@ package W2gtk_Emit is
    procedure Emit_GtkModelSort (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkTrailer (TWin : Window_Pointer; Id : Integer);
 
-end W2gtk_Emit;
+end Emit_Top_Level;

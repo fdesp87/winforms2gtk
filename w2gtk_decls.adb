@@ -1579,6 +1579,35 @@ package body W2gtk_Decls is
    -- Contains --
    --------------
 
+   function Get_DialogResult_Enum (Source : String) return DialogResult_Enum is
+   begin
+      if Source = "None" then
+         return None_Response;
+      elsif Source = "OK" then
+         return OK_Response;
+      elsif Source = "Cancel" then
+         return Cancel_Response;
+      elsif Source = "Abort" then
+         return Reject_Response;
+      elsif Source = "Retry" then
+         return Retry_Response;
+      elsif Source = "Ignore" then
+         return Ignore_Response;
+      elsif Source = "Yes" then
+         return Yes_Response;
+      elsif Source = "No" then
+         return No_Response;
+      elsif Source = "TryAgain" then
+         return TryAgain_Response;
+      else
+         return Pending_Response;
+      end if;
+   end Get_DialogResult_Enum;
+
+   --------------
+   -- Contains --
+   --------------
+
    function Contains (Source : String; Pattern : String) return Boolean is
       Idx0 : Integer;
       LC_Source  : constant String := To_Lower (Source);
@@ -2004,13 +2033,17 @@ package body W2gtk_Decls is
          when No_Response           => return "-9";
          when Apply_Response        => return "-10";
          when Help_Response         => return "-11";
-         when Delete_Response       => return "-96"; --  invented
-         when Retry_Response        => return "-97"; --  invented
-         when Ignore_Response       => return "-98"; --  invented
-         when TryAgain_Response     => return "-99"; --  invented
+         when User1_Response        => return "-91";   --  invented
+         when User2_Response        => return "-92";   --  invented
+         when User3_Response        => return "-93";   --  invented
+         when User4_Response        => return "-94";   --  invented
+         when User5_Response        => return "-95";   --  invented
+         when Delete_Response       => return "-96";   --  invented
+         when Retry_Response        => return "-97";   --  invented
+         when Ignore_Response       => return "-98";   --  invented
+         when TryAgain_Response     => return "-99";   --  invented
+         when others                => return "-1000"; --  invented
       end case;
-      --  others in gtk: Reject=-2, Accept=-3, Delete (from titlebar) = -4
-      --                 Help = -11
    end To_Gtk;
 
    --------------------

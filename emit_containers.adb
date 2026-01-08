@@ -570,7 +570,8 @@ package body Emit_Containers is
             Emit_Property (Id + 4, "max-width-chars", TWdg.MaxLength);
          end if;
          if TWdg.Wdg_Parent.Widget_Type = BindingNavigator then
-            Emit_Property (Id + 4, "xalign", 0.5);
+            --  Emit_Property (Id + 4, "xalign", 0.5);
+            Emit_Align (TWdg, Id + 4, Numeric => True);
          else
             Emit_Align (TWdg, Id + 4, Numeric => True);
          end if;

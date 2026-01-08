@@ -26,25 +26,36 @@ package W2gtk_Decls is
    package TIO renames Ada.Text_IO;
    package AC  renames Ada.Calendar;
 
-   Default_Font_Size : constant := -9;
-   Default_Font_Name : constant String := "Sans";
-   Default_Alt_Color : constant String := "MistyRose";
+   Default_Font_Size    : constant := -9;
+   Default_Font_Weight  : constant String_Access := new String'("Normal");
+   Default_Font_Name    : constant String_Access := new String'("Sans");
+   Default_Alt_Color    : constant String_Access := new String'("MistyRose");
+   Default_Fg_Color     : constant String_Access := new String'("Black");
+   Default_Bg_Color     : constant String_Access := new String'("white");
+   Default_Sel_Fg_Color : constant String_Access := new String'("white");
+   Default_Sel_Bg_Color : constant String_Access := new String'("Blue");
 
-   type DialogResult_Enum is (None_Response,
+   type DialogResult_Enum is (Pending_Response,
+                              None_Response,
+                              Cancel_Response,
                               Reject_Response,
                               Accept_Response,
                               Delete_Event_Response,
-                              OK_Response,
-                              Cancel_Response,
                               Close_Response,
                               Yes_Response,
                               No_Response,
                               Apply_Response,
                               Help_Response,
+                              User1_Response,
+                              User2_Response,
+                              User3_Response,
+                              User4_Response,
+                              User5_Response,
                               Delete_Response,
                               Retry_Response,
                               Ignore_Response,
-                              TryAgain_Response);
+                              TryAgain_Response,
+                              OK_Response);
 
    type Margin_Array is array (Integer range 1 .. 4) of Integer;
    Null_Margin : constant Margin_Array := (others => -1);
@@ -290,10 +301,10 @@ package W2gtk_Decls is
                         GtkModelSort,
                         GtkModelFilter,
                         GtkImage);
-   type Window_Properties;
-   type Window_Pointer is access all Window_Properties;
-   type Widget_Properties;
-   type Widget_Pointer is access all Widget_Properties;
+   type Window_Block;
+   type Window_Pointer is access all Window_Block;
+   type Widget_Block;
+   type Widget_Pointer is access all Widget_Block;
 
    type Action_Buttons_Array is array (DialogResult_Enum) of Widget_Pointer;
 
@@ -313,7 +324,7 @@ package W2gtk_Decls is
                                  Str_Accept_Button,
                                  Str_Cancel_Button);
 
-   type Window_Properties (Window_Type : Window_Enum) is record
+   type Window_Block (Window_Type : Window_Enum) is record
       Next           : Window_Pointer := null;
       Prev           : Window_Pointer := null;
       Name           : String_Access  := null; --  it is id
@@ -416,6 +427,8 @@ package W2gtk_Decls is
       Action_Widgets);
 
    type Widget_Attribute_Enum is (No_Attribute, Attr_Ignored,
+
+                                  Attr_DialogResult,
                                   Attr_Anchor, Attr_ZOrder,
                                   Attr_Margin, Attr_Padding,
                                   Attr_TabIndex, Attr_Text,
@@ -496,7 +509,7 @@ package W2gtk_Decls is
                                   Attr_PositionItem,
                                   Attr_FlowDirection);
 
-   type Widget_Properties (Widget_Type  : Widget_Enum) is record
+   type Widget_Block (Widget_Type  : Widget_Enum) is record
       Next           : Widget_Pointer := null; -- non circular list
       Prev           : Widget_Pointer := null; -- non circular list
       Child_List     : Widget_Pointer := null; --  only for containers
@@ -778,7 +791,7 @@ package W2gtk_Decls is
 
                   case Widget_Type is
                      when GtkButton =>
-                        Dialog_Result : DialogResult_Enum := None_Response;
+                        Dialog_Result : DialogResult_Enum := Pending_Response;
                         Associated_ColorButton : Widget_Pointer;
 
                      when GtkCheckButton =>
@@ -884,6 +897,9 @@ package W2gtk_Decls is
                          Root2 : in out Window_Pointer);
    procedure Set_Have (WP : Window_Pointer);
 
+   function Get_DialogResult_Enum (Source : String) return DialogResult_Enum;
+   function To_Gtk (D : DialogResult_Enum) return String;
+
    function Contains (Source : String; Pattern : String) return Boolean;
    function Get_Integer (Data : String) return Integer;
    function Get_Pair (Data : String) return Pair;
@@ -916,7 +932,6 @@ package W2gtk_Decls is
    function To_Gtk (T : Window_Pointer) return String;
    function To_Gtk (T       : Widget_Pointer;
                     For_Ada : Boolean := False) return String;
-   function To_Gtk (D : DialogResult_Enum) return String;
    function "+" (Str : String) return String is (GNATCOLL.Utils.Capitalize (Str));
 
    RFile : TIO.File_Type; --  resource     (in)
@@ -941,9 +956,9 @@ package W2gtk_Decls is
 
    procedure Free is new Ada.Unchecked_Deallocation (Signal_Block,
                                                      Signal_Pointer);
-   procedure Free is new Ada.Unchecked_Deallocation (Window_Properties,
+   procedure Free is new Ada.Unchecked_Deallocation (Window_Block,
                                                      Window_Pointer);
-   procedure Free is new Ada.Unchecked_Deallocation (Widget_Properties,
+   procedure Free is new Ada.Unchecked_Deallocation (Widget_Block,
                                                      Widget_Pointer);
    procedure Free is new Ada.Unchecked_Deallocation (DGVS_Array,
                                                      DGVS_Array_Pointer);

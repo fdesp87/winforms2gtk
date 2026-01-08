@@ -24,7 +24,7 @@ with GNAT.Calendar.Time_IO;
 with GNATCOLL.Tribooleans;    use GNATCOLL.Tribooleans;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with W2gtk_Decls;             use W2gtk_Decls;
-with W2gtk_Emit;              use W2gtk_Emit;
+with Emit_Top_Level;          use Emit_Top_Level;
 with Symbol_Tables;
 with W2gtk_Backups;           use W2gtk_Backups;
 with W2gtk_Version;           use W2gtk_Version;
@@ -53,6 +53,7 @@ package body W2gtk_Pkg is
    Test18 : constant String := "Dim resources As System.ComponentModel";
    Test19 : constant String := "Dim DataGridViewCellStyle";
    Test20 : constant String := "DataGridViewCellStyle";
+   Test21 : constant String := "System.Windows.Forms.DialogResult.";
 
    Test3  : constant String := "Items.AddRange";
    Test4  : constant String := "DropDownItems.AddRange";
@@ -2222,6 +2223,25 @@ package body W2gtk_Pkg is
                      raise TIO.Data_Error;
                   end if;
 
+               when Attr_DialogResult =>
+                  if WT.Widget_Type /= GtkButton then
+                     Debug (NLin, "WARNING: " & Resx_File_Name
+                            & ".Designer.vb (2)"
+                            & ": dialog result for a non button widget: "
+                            & Line (Idx0 .. Len));
+                  else
+                     Idx3 := Index (Line (Idx1 .. Len), Test21);
+                     if Idx3 < Idx1 then
+                        raise TIO.Data_Error;
+                     end if;
+                     Idx3 := Idx3 + Test21'Length;
+                     WT.Dialog_Result :=
+                       Get_DialogResult_Enum (Line (Idx3 .. Len));
+                     Debug (NLin, Sp (3) & "Set Widget Property "
+                            & WT.Name.all & ".DialogResult "
+                            & Line (Idx3 .. Len));
+                  end if;
+
                when Attr_AddNewItem | Attr_CountItem
                   | Attr_DeleteItem | Attr_MoveFirstItem
                   | Attr_MoveLastItem | Attr_MoveNextItem
@@ -2337,7 +2357,7 @@ package body W2gtk_Pkg is
          Idx0 := Index (Line (1 .. Len), Test8);
          if Idx0 in 1 .. Len then
             Debug (NLin, Line (1 .. Len));
-            TWin := new Window_Properties (GtkWindow);
+            TWin := new Window_Block (GtkWindow);
             Found := True;
             TWin.Name := new String'(+Trim (Line (Idx0 + 14 .. Len),
                                      Ada.Strings.Both));
@@ -2478,7 +2498,7 @@ package body W2gtk_Pkg is
          Idx2 := Idx2 + 1; --  skip "."
          Idx3 := Len;  --  don't count final ()
 
-         WT := new Widget_Properties
+         WT := new Widget_Block
            (Widget_Type => Symbol_Tables.Get_Type (Line (Idx2 .. Idx3)));
          if WT.Widget_Type = No_Widget then
             TIO.Close (DFile);

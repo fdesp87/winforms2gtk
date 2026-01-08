@@ -1293,7 +1293,7 @@ package body W2Gtk2Ada is
                           & "Font_Name => " & Quoted (HS.Font_Name.all) & ",");
          else
             TIO.Put_Line (Sp (9)
-                          & "Font_Name => " & Quoted (Default_Font_Name) & ",");
+                          & "Font_Name => " & Quoted (Default_Font_Name.all) & ",");
          end if;
          TIO.Put_Line (Sp (9) & "Font_Size => " & Img (HS.Font_Size) & ",");
          if HS.Font_Weight /= null then

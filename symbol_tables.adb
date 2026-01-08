@@ -262,6 +262,7 @@ package body Symbol_Tables is
    procedure Initialize_Widgets_Attributes_Symbol_Table is
       Wst : Widgets_Attributes_Map.Map renames Widgets_Attributes_Symbol_Table;
    begin
+      Wst.Insert ("DialogResult", Attr_DialogResult);
       Wst.Insert ("Anchor", Attr_Anchor);
       Wst.Insert ("ZOrder", Attr_ZOrder);
       Wst.Insert ("Margin", Attr_Margin);
@@ -392,7 +393,6 @@ package body Symbol_Tables is
       Wst.Insert ("Tag", Attr_Ignored);
       Wst.Insert ("FormattingEnabled", Attr_Ignored);
       Wst.Insert ("DropDownStyle", Attr_Ignored);
-      Wst.Insert ("DialogResult", Attr_Ignored);
       Wst.Insert ("AllowDrop", Attr_Ignored);
       Wst.Insert ("FlatStyle", Attr_Ignored);
       Wst.Insert ("ShowNetwork", Attr_Ignored);

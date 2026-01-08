@@ -101,7 +101,7 @@ package body Emit_Additional_Information is
       Emit_Line (Sp (10) & "<col id=""5"">" & Img (Ypad) & "</col>");
       if Foreground = null then
          Emit_Line (Sp (10) & "<col id=""6"" translatable=""yes"">"
-                    & "Black" & "</col>");
+                    & Default_Fg_Color.all & "</col>");
       else
          Emit_Line (Sp (10) & "<col id=""6"" translatable=""yes"">"
                     & Foreground.all & "</col>");
@@ -109,10 +109,10 @@ package body Emit_Additional_Information is
       if Background = null then
          if Row_Name = "ALT_BG" then
             Emit_Line (Sp (10) & "<col id=""7"" translatable=""yes"">"
-                       & Default_Alt_Color & "</col>");
+                       & Default_Alt_Color.all & "</col>");
          else
             Emit_Line (Sp (10) & "<col id=""7"" translatable=""yes"">"
-                       & "White" & "</col>");
+                       & Default_Bg_Color.all & "</col>");
          end if;
       else
          Emit_Line (Sp (10) & "<col id=""7"" translatable=""yes"">"
@@ -120,14 +120,14 @@ package body Emit_Additional_Information is
       end if;
       if SelForeground = null then
          Emit_Line (Sp (10) & "<col id=""8"" translatable=""yes"">"
-                    & "White" & "</col>");
+                    & Default_Sel_Fg_Color.all & "</col>");
       else
          Emit_Line (Sp (10) & "<col id=""8"" translatable=""yes"">"
                     & SelForeground.all & "</col>");
       end if;
       if SelBackground = null then
          Emit_Line (Sp (10) & "<col id=""9"" translatable=""yes"">"
-                    & "Blue" & "</col>");
+                    & Default_Sel_Bg_Color.all & "</col>");
       else
          Emit_Line (Sp (10) & "<col id=""9"" translatable=""yes"">"
                     & SelBackground.all & "</col>");
@@ -140,14 +140,14 @@ package body Emit_Additional_Information is
 
       if Font_Name = null then
          Emit_Line (Sp (10) & "<col id=""11"" translatable=""Yes"">"
-                    & Default_Font_Name & "</col>");
+                    & Default_Font_Name.all & "</col>");
       else
          Emit_Line (Sp (10) & "<col id=""11"" translatable=""Yes"">"
                     & Font_Name.all & "</col>");
       end if;
       if Font_Weight = null then
          Emit_Line (Sp (10) & "<col id=""12"" translatable=""yes"">"
-                    & "Normal" & "</col>");
+                    & Default_Font_Weight.all & "</col>");
       else
          Emit_Line (Sp (10) & "<col id=""12"" translatable=""yes"">"
                     & Font_Weight.all & "</col>");
@@ -157,8 +157,8 @@ package body Emit_Additional_Information is
    end Emit_Row;
 
    --------------------------------------------------------------------------
-   procedure Process_Column_Header (TWdg : Widget_Pointer);
-   procedure Process_Column_Header (TWdg : Widget_Pointer) is
+   procedure Process_Data_Column_Header (TWdg : Widget_Pointer);
+   procedure Process_Data_Column_Header (TWdg : Widget_Pointer) is
       HS : DataGridViewStyle;
       Alt_BG_Color : String_Access;
    begin
@@ -185,11 +185,11 @@ package body Emit_Additional_Information is
                       Tooltip    => Alt_BG_Color);
          end if;
       end if;
-   end Process_Column_Header;
+   end Process_Data_Column_Header;
 
    --------------------------------------------------------------------------
-   procedure Process_Columns (TWdg : Widget_Pointer);
-   procedure Process_Columns (TWdg : Widget_Pointer) is
+   procedure Process_Data_Columns (TWdg : Widget_Pointer);
+   procedure Process_Data_Columns (TWdg : Widget_Pointer) is
       Col    : Widget_Pointer;
       I      : Integer;
       Xalign : Float := 0.0;
@@ -199,7 +199,8 @@ package body Emit_Additional_Information is
       Col := TWdg.Child_List;
       while Col /= null loop
          case Col.Widget_Type is
-            when ExpandableColumn | DataGridViewTextBoxColumn
+            when ExpandableColumn
+               | DataGridViewTextBoxColumn
                | DataGridViewCheckBoxColumn =>
                if Col.DefaultCellStyle in DGVS.all'Range then
                   I := Col.DefaultCellStyle;
@@ -254,7 +255,7 @@ package body Emit_Additional_Information is
                         end if;
                         Last := DGVS (I).Name.all'Last;
                         Emit_Row
-                          (Row_Name      => DGVS (I).Name.all (5 .. Last),
+                          (Row_Name      => DGVS (I).Name.all,
                            Tooltip       => Col.ToolTip,
                            Xalign        => Xalign,
                            Yalign        => Yalign,
@@ -271,20 +272,44 @@ package body Emit_Additional_Information is
 
                      when others => null;
                   end case;
+               else
+                  Emit_Row
+                    (Row_Name =>
+                       (if (Col.Widget_Type = ExpandableColumn
+                        or Col.Widget_Type = DataGridViewTextBoxColumn)
+                        then "CRT_" & Col.Name.all
+                        else "CRTG_" & Col.Name.all),
+                     Tooltip       => Col.ToolTip,
+                     Xalign        =>
+                       (if (Col.Widget_Type = ExpandableColumn
+                        or Col.Widget_Type = DataGridViewTextBoxColumn)
+                        then 0.0 else 0.5),
+                     Yalign        => 0.5,
+                     Xpad          => 0,
+                     Ypad          => 0,
+                     Foreground    => Default_Fg_Color,
+                     Background    => Default_Bg_Color,
+                     SelForeground => Default_Sel_Fg_Color,
+                     SelBackground => Default_Sel_Bg_Color,
+                     Underline     => False,
+                     Font_Name     => Default_Font_Name,
+                     Font_Weight   => Default_Font_Weight,
+                     Font_Size     => Default_Font_Size);
+
                end if;
             when others => null;
          end case;
          Col := Col.Next;
       end loop;
-   end Process_Columns;
+   end Process_Data_Columns;
 
    --------------------------------------------------------------------------
    procedure Emit_Data (TWdg : Widget_Pointer);
    procedure Emit_Data (TWdg : Widget_Pointer) is
    begin
       Emit_Line (Sp (4) & "<data>");
-      Process_Columns (TWdg);
-      Process_Column_Header (TWdg);
+      Process_Data_Columns (TWdg);
+      Process_Data_Column_Header (TWdg);
       Emit_Line (Sp (4) & "</data>");
    end Emit_Data;
 

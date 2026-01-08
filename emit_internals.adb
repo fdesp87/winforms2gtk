@@ -68,33 +68,20 @@ package body Emit_Internals is
    begin
       Emit_Line (Sp (Id) & "<action-widgets>");
       Debug (-1, Sp (Id) & "action-widgets");
-      TWdg := Me.Action_Buttons (Delete_Response);
-      if TWdg /= null then
-         Emit_Line (Sp (Id + 2) & "<action-widget response="""
-                    & To_Gtk (TWdg.Dialog_Result)
-                    & """>"
-                    & TWdg.Name.all
-                    & "</action-widget>");
-         Debug (-1, Sp (Id + 2) & "action-widget response for Delete Button");
-      end if;
-      TWdg := Me.Action_Buttons (Cancel_Response);
-      if TWdg /= null then
-         Emit_Line (Sp (Id + 2) & "<action-widget response="""
-                    & To_Gtk (TWdg.Dialog_Result)
-                    & """>"
-                    & TWdg.Name.all
-                    & "</action-widget>");
-         Debug (-1, Sp (Id + 2) & "action-widget response for Cancel Button");
-      end if;
-      TWdg := Me.Action_Buttons (OK_Response);
-      if TWdg /= null then
-         Emit_Line (Sp (Id + 2) & "<action-widget response="""
-                    & To_Gtk (TWdg.Dialog_Result)
-                    & """>"
-                    & TWdg.Name.all
-                    & "</action-widget>");
-         Debug (-1, Sp (Id + 2) & "action-widget response for Accept Button");
-      end if;
+
+      for Bt in DialogResult_Enum loop
+         if Me.Action_Buttons (Bt) /= null then
+            TWdg := Me.Action_Buttons (Bt);
+            Emit_Line (Sp (Id + 2) & "<action-widget response="""
+                       & To_Gtk (TWdg.Dialog_Result)
+                       & """>"
+                       & TWdg.Name.all
+                       & "</action-widget>");
+            Debug (-1, Sp (Id + 2) & "action-widget response for "
+                   & TWdg.Name.all & " Button");
+         end if;
+      end loop;
+
       Emit_Line (Sp (Id) & "</action-widgets>");
    end Emit_Action_Widgets;
 
