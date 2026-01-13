@@ -1357,81 +1357,74 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
       TWin := Win_List;
       while TWin /= null loop
          if TWin.Window_Type = GtkWindow then
-            if TWin.Action_Buttons (OK_Response) /= null or
-              TWin.Action_Buttons (Cancel_Response) /= null
-            then
-               if TWin.Action_Buttons (OK_Response) = null and then
-                 TWin.Action_Buttons (Cancel_Response) = null
-               then
-                  Debug (0, Sp (3)
-                         & "OK and Cancel Buttons not found "
-                         & "for action area, exiting");
-                  exit;
-               else
-                  Debug (0, Sp (3)
-                         & "OK and/or Cancel Buttons detected");
-               end if;
-               TWdg := TWin.Widget_List;
-               while TWdg /= null loop
-                  if TWdg.Widget_Type = GtkButton then
-                     if TWdg.Win_Parent /= null and then
-                       TWdg.Win_Parent.Window_Type = GtkWindow
-                       and then TWdg.Dialog_Result /= None_Response
-                     then
-                        if TWdg.Text.all = "Delete" then
-                           TWin.Action_Buttons (Delete_Response) := TWdg;
-                           TWdg.Dialog_Result := Delete_Response;
-                           Debug (0, Sp (3)
-                                  & "Delete button included in action area");
-                        else
-                           case User_Response is
-                              when 0 =>
-                                 User_Response := User_Response + 1;
-                                 TWin.Action_Buttons (User1_Response) := TWdg;
-                                 TWdg.Dialog_Result := User1_Response;
-                                 Debug (0, Sp (3)
-                                        & TWdg.Text.all
-                                        & " button included in action area");
-                              when 1 =>
-                                 User_Response := User_Response + 1;
-                                 TWin.Action_Buttons (User2_Response) := TWdg;
-                                 TWdg.Dialog_Result := User2_Response;
-                                 Debug (0, Sp (3)
-                                        & TWdg.Text.all
-                                        & " button included in action area");
-                              when 2 =>
-                                 User_Response := User_Response + 1;
-                                 TWin.Action_Buttons (User3_Response) := TWdg;
-                                 TWdg.Dialog_Result := User3_Response;
-                                 Debug (0, Sp (3)
-                                        & TWdg.Text.all
-                                        & " button included in action area");
-                              when 3 =>
-                                 User_Response := User_Response + 1;
-                                 TWin.Action_Buttons (User4_Response) := TWdg;
-                                 TWdg.Dialog_Result := User4_Response;
-                                 Debug (0, Sp (3)
-                                        & TWdg.Text.all
-                                        & " button included in action area");
-                              when 4 =>
-                                 User_Response := User_Response + 1;
-                                 TWin.Action_Buttons (User5_Response) := TWdg;
-                                 TWdg.Dialog_Result := User5_Response;
-                                 Debug (0, Sp (3)
-                                        & TWdg.Text.all
-                                        & " button included in action area");
-                              when 5 =>
-                                 Debug (0, Sp (3)
-                                        & "Max 5 buttons included in action area");
-                                 exit;
-                                 when others => null;
-                           end case;
-                        end if;
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.Widget_Type = GtkButton then
+                  if TWdg.Win_Parent /= null and then
+                    TWdg.Win_Parent.Window_Type = GtkWindow
+                    and then TWdg.Dialog_Result /= None_Response
+                  then
+                     if TWdg.Text.all = "Delete" then
+                        TWin.Action_Buttons (Delete_Response) := TWdg;
+                        TWdg.Dialog_Result := Delete_Response;
+                        Debug (0, Sp (3)
+                               & "Delete button included in action area");
+                     elsif TWdg = TWin.Action_Buttons (OK_Response) then
+                        TWdg.Dialog_Result := OK_Response;
+                        Debug (0, Sp (3)
+                               & "OK button included in action area");
+                     elsif TWdg = TWin.Action_Buttons (Cancel_Response) then
+                        TWdg.Dialog_Result := Cancel_Response;
+                        Debug (0, Sp (3)
+                               & "OK button included in action area");
+                     else
+                        case User_Response is
+                           when 0 =>
+                              User_Response := User_Response + 1;
+                              TWin.Action_Buttons (User1_Response) := TWdg;
+                              TWdg.Dialog_Result := User1_Response;
+                              Debug (0, Sp (3)
+                                     & TWdg.Text.all
+                                     & " button included in action area");
+                           when 1 =>
+                              User_Response := User_Response + 1;
+                              TWin.Action_Buttons (User2_Response) := TWdg;
+                              TWdg.Dialog_Result := User2_Response;
+                              Debug (0, Sp (3)
+                                     & TWdg.Text.all
+                                     & " button included in action area");
+                           when 2 =>
+                              User_Response := User_Response + 1;
+                              TWin.Action_Buttons (User3_Response) := TWdg;
+                              TWdg.Dialog_Result := User3_Response;
+                              Debug (0, Sp (3)
+                                     & TWdg.Text.all
+                                     & " button included in action area");
+                           when 3 =>
+                              User_Response := User_Response + 1;
+                              TWin.Action_Buttons (User4_Response) := TWdg;
+                              TWdg.Dialog_Result := User4_Response;
+                              Debug (0, Sp (3)
+                                     & TWdg.Text.all
+                                     & " button included in action area");
+                           when 4 =>
+                              User_Response := User_Response + 1;
+                              TWin.Action_Buttons (User5_Response) := TWdg;
+                              TWdg.Dialog_Result := User5_Response;
+                              Debug (0, Sp (3)
+                                     & TWdg.Text.all
+                                     & " button included in action area");
+                           when 5 =>
+                              Debug (0, Sp (3)
+                                     & "Max 5 buttons included in action area");
+                              exit;
+                              when others => null;
+                        end case;
                      end if;
                   end if;
-                  TWdg := TWdg.Next;
-               end loop;
-            end if;
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
          end if;
          TWin := Next_Window (Win_List, TWin);
       end loop;

@@ -120,14 +120,14 @@ package body Emit_Top_Level is
             when DataGridViewCheckBoxColumn =>
                if Col.CheckBox_Col_Properties.Active_Column /= -1 then
                   Emit_Line (Sp (Id + 4) & "<!-- column-name "
-                             & Col.Name.all & "_data"
+                             & Col.Name.all & "_Data"
                              & " -->");
                   Emit_Line (Sp (Id + 4)
                              & "<column type=""gboolean""/>");
 
                   if not Col.ReadOnly then
                      Emit_Line (Sp (Id + 4) & "<!-- column-name "
-                                & Col.Name.all & "_activatable"
+                                & Col.Name.all & "_Activatable"
                                 & " -->");
                      Emit_Line (Sp (Id + 4)
                                 & "<column type=""gboolean""/>");
@@ -136,7 +136,7 @@ package body Emit_Top_Level is
             when ExpandableColumn | DataGridViewTextBoxColumn =>
                if Col.Text_Col_Properties.Fg_Color_Name_Column /= -1 then
                   Emit_Line (Sp (Id + 4) & "<!-- column-name "
-                             & Col.Name.all & "_fg_color"
+                             & Col.Name.all & "_Fg_Color"
                              & " -->");
                   Emit_Line (Sp (Id + 4)
                              & "<column type=""gchararray""/>");
