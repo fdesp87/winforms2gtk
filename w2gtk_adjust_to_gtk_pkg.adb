@@ -217,7 +217,7 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
                                      & ": generated "
                                      & TS.Handler.all);
                            else
-                              Debug (0, "Warning"
+                              Debug (0, "WARNING: "
                                      & ": repeated handler " & TS.Handler.all
                                      & ": No Glade, No Ada will be generated "
                                      & "for this signal");
@@ -1364,6 +1364,10 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
                     TWdg.Win_Parent.Window_Type = GtkWindow
                     and then TWdg.Dialog_Result /= None_Response
                   then
+                     if TWdg.Text = null then
+                        Debug (0, "WARNING: "
+                               & "Button " & TWdg.Name.all & " has no Text");
+                     end if;
                      if TWdg.Text.all = "Delete" then
                         TWin.Action_Buttons (Delete_Response) := TWdg;
                         TWdg.Dialog_Result := Delete_Response;

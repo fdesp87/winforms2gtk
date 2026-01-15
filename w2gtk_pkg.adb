@@ -671,7 +671,8 @@ package body W2gtk_Pkg is
                                & PName & ".Size H="
                                & Img (P0.One) & ", V=" & Img (P0.Two));
 
-                     when Attr_Ignored | Attr_Image | Attr_Locked =>
+                     when Attr_Ignored | Attr_Image | Attr_Locked
+                        | Attr_HScrollBar | Attr_VScrollBar =>
                         Debug (NLin, "WARNING: " & Resx_File_Name & ".resx"
                                & ": ignored widget property "
                                & PName & " " & PAttrib);
