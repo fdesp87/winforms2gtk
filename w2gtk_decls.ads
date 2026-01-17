@@ -832,6 +832,8 @@ package W2gtk_Decls is
    Window_Name_Not_Assigned : exception;
    Widget_Name_Not_Assigned : exception;
 
+   function Is_Container (TWdg : Widget_Pointer) return Boolean;
+
    function Sp (N : Integer) return String;
    function New_String (K : String_Access) return String_Access;
 

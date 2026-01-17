@@ -1448,7 +1448,9 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
       Debug (0, "Preparing_Dialogs");
       TWin := Win_List;
       while TWin /= null loop
-         if TWin.Window_Type = GtkWindow and then TWin.Is_Dialog then
+         if TWin.Window_Type = GtkWindow
+           and then TWin.Is_Dialog
+         then
             WP_Internal_Child_Vbox := new Widget_Block
               (Widget_Type => Internal_Child_VBox);
             WP_Internal_Child_Vbox.Wdg_Parent := null;
@@ -1568,6 +1570,54 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
    --------------------------------------------------------------
    --  now each gtkwindow is a tree with its widgets and so on --
    --------------------------------------------------------------
+
+   procedure Preparing_GtkWindows_With_No_Boxes;
+   procedure Preparing_GtkWindows_With_No_Boxes is
+      WP_GtkFixed : Widget_Pointer;
+      Counter : Integer := 0;
+   begin
+      Debug (-1, "");
+      Debug (0, "Preparing_GtkWindows_With_No_Boxes");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow
+           and then not TWin.Is_Dialog
+           and then not Is_Container (TWin.Widget_List)
+         then
+            WP_GtkFixed := new Widget_Block (GtkFixed);
+            WP_GtkFixed.Wdg_Parent := null;
+            WP_GtkFixed.Parent_Name := New_String (TWin.Name);
+            WP_GtkFixed.Name := new String'(TWin.Name.all & "_Fixed");
+            WP_GtkFixed.Visible := True;
+            WP_GtkFixed.Margins := TWin.Margins;
+            Debug (0, Sp (3) & "Created widget "
+                   & WP_GtkFixed.Widget_Type'Image);
+
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.Win_Parent = TWin then
+                  TWdg.Win_Parent := null;
+                  Free (TWdg.Parent_Name);
+                  TWdg.Parent_Name := new String'(WP_GtkFixed.Name.all);
+                  TWdg.Wdg_Parent := WP_GtkFixed;
+                  Counter := Counter + 1;
+                  Debug (0, Sp (3) & Counter'Image
+                         & " Widget " & TWdg.Name.all
+                         & " [" & TWdg.Widget_Type'Image & "]"
+                         & " attached to " & WP_GtkFixed.Name.all);
+               end if;
+               TWdg := TWdg. Next;
+            end loop;
+
+            WP_GtkFixed.Num_Children := TWin.Num_Children;
+            TWin.Num_Children := 1;
+            WP_GtkFixed.Child_List := TWin.Widget_List;
+            TWin.Widget_List := WP_GtkFixed;
+
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+   end Preparing_GtkWindows_With_No_Boxes;
 
    -----------------------------------------------------------------------
    procedure Removing_Gtkbox_With_Only_One_Child_Container;
@@ -1873,6 +1923,8 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
       --------------------------------------------------------------
       --  now each gtkwindow is a tree with its widgets and so on --
       --------------------------------------------------------------
+
+      Preparing_GtkWindows_With_No_Boxes;
 
       Removing_Gtkbox_With_Only_One_Child_Container;
 

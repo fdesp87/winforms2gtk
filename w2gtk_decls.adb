@@ -28,6 +28,24 @@ package body W2gtk_Decls is
    Test4  : constant String := "</value>";
    Test6  : constant String := "<value />";
 
+   -------------------
+   -- id_fcontainer --
+   -------------------
+
+   function Is_Container (TWdg : Widget_Pointer) return Boolean is
+   begin
+      if TWdg = null then
+         return True; --  this impedes the generation of a gtkfixed
+      end if;
+      case TWdg.Widget_Type is
+         when GtkBox | GtkButtonBox | GtkFixed | GtkFrame
+            | GtkNoteBook | GtkScrolledWindow | GtkStatusBar
+            | GtkToolBar | GtkTreeGridView | Internal_Child_VBox =>
+            return True;
+         when others => return False;
+      end case;
+   end Is_Container;
+
    --------
    -- sp --
    --------
@@ -575,7 +593,7 @@ package body W2gtk_Decls is
    procedure Unlink_Widget (Parent : Window_Pointer;
                             WT     : Widget_Pointer) is
    begin
-      if Parent.Widget_List = WT then       --  first item
+      if Parent.Widget_List = WT then     --  first item
          if WT.Next = null then           --  and last item
             Parent.Widget_List := null;
          else                             --  first but more items
