@@ -563,4 +563,29 @@ package body Emit_Top_Level is
       end if;
    end Emit_GtkWindow;
 
+   -----------------------------------------------------------------------
+   --  Emit_Adjustment
+   -----------------------------------------------------------------------
+
+   procedure Emit_GtkAdjustment (TWin : Window_Pointer;
+                                 Id   : Integer) is
+      TWdg : constant Widget_Pointer := TWin.The_Spin;
+   begin
+      Emit_Object (null, Id, "GtkAdjustment", TWin.Name.all);
+      if TWdg.MinValue /= 0 then
+         Emit_Property (Id + 2, "lower", TWdg.MinValue);
+      end if;
+      if TWdg.MaxValue /= 0 then
+         Emit_Property (Id + 2, "upper", TWdg.MaxValue);
+      end if;
+      if TWdg.MinValue /= 0 then
+         Emit_Property (Id + 2, "value", TWdg.StartValue);
+      end if;
+      if TWdg.Step /= 0 then
+         Emit_Property (Id + 2, "step-increment", TWdg.Step);
+      end if;
+      Emit_GtkSignals (TWin, Id + 2);
+      Emit_Line (Sp (Id) & "</object>");
+   end Emit_GtkAdjustment;
+
 end Emit_Top_Level;

@@ -3428,6 +3428,8 @@ package body W2gtk_Pkg is
                Emit_GtkModelFilter (TWin, 2);
             when GtkModelSort =>
                Emit_GtkModelSort (TWin, 2);
+            when GtkAdjustment =>
+               Emit_GtkAdjustment (TWin, 2);
          end case;
          TWin := Next_Window (Win_List, TWin);
       end loop;

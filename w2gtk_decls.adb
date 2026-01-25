@@ -18,6 +18,7 @@ with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Integer_Text_IO;
 with Ada.Float_Text_IO;
+with Gtkada;
 with Symbol_Tables;
 
 package body W2gtk_Decls is
@@ -1969,6 +1970,7 @@ package body W2gtk_Decls is
          when GtkModelSort         => return "Gtk_Tree_Model_Sort";
          when GtkModelFilter       => return "Gtk_Tree_Model_Filter";
          when GtkImage             => return "Gtk_Image";
+         when GtkAdjustment        => return "Gtk_Adjustment";
       end case;
    end To_Gtk;
 

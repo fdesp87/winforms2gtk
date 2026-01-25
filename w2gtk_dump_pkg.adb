@@ -434,6 +434,10 @@ package body W2gtk_Dump_Pkg is
             end case;
             Dump_Signal_List;
 
+         when GtkAdjustment =>
+            Put_Property ("Spin Button");
+            Put_String_Access (TWin.The_Spin.Name);
+
       end case;
    end Dump_Window;
 
@@ -934,6 +938,9 @@ package body W2gtk_Dump_Pkg is
 
             Put_Property ("Step");
             Put_Integer (TWdgP.Step);
+
+            Put_Property ("Adjustment");
+            Put_String_Access (TWdgP.The_Adjustment.Name);
 
          when GtkFileChooserButton
             | PrintDocument | PrintDialog | PageSetupDialog

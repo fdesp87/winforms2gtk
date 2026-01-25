@@ -300,7 +300,8 @@ package W2gtk_Decls is
                         GtkTreeStore,
                         GtkModelSort,
                         GtkModelFilter,
-                        GtkImage);
+                        GtkImage,
+                        GtkAdjustment);
    type Window_Block;
    type Window_Pointer is access all Window_Block;
    type Widget_Block;
@@ -383,6 +384,8 @@ package W2gtk_Decls is
                   Underlaying_Model : Window_Pointer;
                when others => null;
             end case;
+         when GtkAdjustment =>
+            The_Spin : Widget_Pointer;
       end case;
    end record;
    Win_List : Window_Pointer := null;
@@ -773,10 +776,11 @@ package W2gtk_Decls is
 
             case Widget_Type is
                when GtkSpinButton =>
-                  StartValue   : Integer := 0;
-                  MaxValue     : Integer := 0;
-                  MinValue     : Integer := 0;
-                  Step         : Integer := 1;
+                  StartValue     : Integer := 0;
+                  MaxValue       : Integer := 0;
+                  MinValue       : Integer := 0;
+                  Step           : Integer := 1;
+                  The_Adjustment : Window_Pointer := null;
 
                when GtkLabel | ToolStripStatusLabel =>
                   BorderStyle : BorderStyle_Enum := None;

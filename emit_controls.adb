@@ -192,6 +192,7 @@ package body Emit_Controls is
       Emit_Align (Me, Id + 4, Numeric => False);
       Emit_Margin (Me, Id + 4);
       Emit_ToolTip (Me, Id + 4);
+      Emit_Property (Id + 4, "adjustment", Me.The_Adjustment.Name.all);
       Emit_Property (Id + 4, "numeric", True);
       Emit_Property (Id + 4, "wrap", True);
       Emit_GtkSignal (Me, Id + 4);

@@ -29,5 +29,6 @@ package Emit_Top_Level is
    procedure Emit_GtkModelFilter (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkModelSort (TWin : Window_Pointer; Id : Integer);
    procedure Emit_GtkTrailer (TWin : Window_Pointer; Id : Integer);
+   procedure Emit_GtkAdjustment (TWin : Window_Pointer; Id : Integer);
 
 end Emit_Top_Level;

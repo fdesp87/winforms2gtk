@@ -157,7 +157,6 @@ package body Emit_Containers is
          when GtkSpinButton =>
             Emit_GtkSpinButton (Child, Id);
 
-
          when GtkToggleButton =>
             Emit_GtkToggleButton (Child, Id, "GtkToggleButton",
                                   XY => True, Homog => False);

@@ -1548,6 +1548,35 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
       end loop;
    end Preparing_Dialogs;
 
+   -----------------------------------------------------------------------
+   procedure Processing_Spin_Buttons;
+   procedure Processing_Spin_Buttons is
+   begin
+      Debug (-1, "");
+      Debug (0, "Preparing Spin Buttons Adjustments");
+      TWin := Win_List;
+      while TWin /= null loop
+         if TWin.Window_Type = GtkWindow then
+            TWdg := TWin.Widget_List;
+            while TWdg /= null loop
+               if TWdg.Widget_Type = GtkSpinButton then
+                  NWin0 := new Window_Block (GtkAdjustment);
+                  NWin0.Name := new String'(TWdg.Name.all & "_Adjustment");
+                  NWin0.The_Spin := TWdg;
+                  TWdg.The_Adjustment := TWin;
+
+                  Insert_Window_By_Front (Win_List, NWin0);
+
+                  Debug (0, Sp (3) & "Created adjustment for spin button "
+                         & TWdg.Name.all);
+               end if;
+               TWdg := TWdg.Next;
+            end loop;
+         end if;
+         TWin := Next_Window (Win_List, TWin);
+      end loop;
+  end Processing_Spin_Buttons;
+
    ---------------------------------------------------------
    --  until now, each gtkwindow had a linear widget list --
    ---------------------------------------------------------
@@ -1913,6 +1942,8 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
       Preparing_Action_Area;
 
       Preparing_Dialogs;
+
+      Processing_Spin_Buttons;
 
       ---------------------------------------------------------
       --  until now, each gtkwindow had a linear widget list --
