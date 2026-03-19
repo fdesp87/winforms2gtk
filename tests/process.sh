@@ -33,7 +33,6 @@ Process Forms View_Asset
 Process Forms View_Trans
 
 Process Forms/Filters Filter_Register
-
 Process Forms/Filters Filter_Exchange_Rates
 Process Forms/Filters Filter_Holdings
 Process Forms/Filters Filter_Index_Quotes
@@ -84,6 +83,7 @@ Process Forms/Upd internet_parameters
 Process Forms/Upd Update_Parameters
 Process Forms/Upd Upd_Initfile
 Process Forms/Upd Upd_TransPer
+Process Forms/Upd Upd_Periodic_Check
 
 Process Forms/Charts Chart
 Process Forms/Charts Chart_Full_Sto_Parameters
