@@ -1563,7 +1563,7 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
                   NWin0 := new Window_Block (GtkAdjustment);
                   NWin0.Name := new String'(TWdg.Name.all & "_Adjustment");
                   NWin0.The_Spin := TWdg;
-                  TWdg.The_Adjustment := TWin;
+                  TWdg.The_Adjustment := NWin0;
 
                   Insert_Window_By_Front (Win_List, NWin0);
 
@@ -1575,7 +1575,7 @@ package body W2gtk_Adjust_To_Gtk_Pkg is
          end if;
          TWin := Next_Window (Win_List, TWin);
       end loop;
-  end Processing_Spin_Buttons;
+   end Processing_Spin_Buttons;
 
    ---------------------------------------------------------
    --  until now, each gtkwindow had a linear widget list --
